@@ -63,28 +63,10 @@ pipeline_steps <- list(
     description = "Generate PCA plots colored by metadata variables"
   ),
   list(
-    id = 2,
-    name = "Cell Count Analysis",
-    script = "02_Cell_Count_Analysis.R",
-    description = "Analyze distribution of cells per donor"
-  ),
-  list(
     id = 3,
     name = "Read Depth Analysis",
     script = "03_Read_Depth_Analysis.R",
     description = "Analyze distribution of reads per cell"
-  ),
-  list(
-    id = 4,
-    name = "Gene Expression Summary",
-    script = "04_Gene_Expression_Summary.R",
-    description = "Calculate gene-level statistics"
-  ),
-  list(
-    id = 5,
-    name = "QC Metrics",
-    script = "05_QC_Metrics.R",
-    description = "Calculate and visualize QC metrics"
   ),
   list(
     id = 6,

@@ -2,8 +2,8 @@
 # MASTER RUNNER: DE Diagnostics Pipeline
 # PURPOSE: Run all diagnostic steps in sequence with automatic logging
 # USAGE: Rscript R/de_diagnostics/run_pipeline.R [steps]
-#        Optional: Specify steps as space-separated numbers (e.g., "1 2 3 6")
-#        Default: Run all steps (1-6)
+#        Optional: Specify steps as space-separated numbers (e.g., "4 5")
+#        Default: Run all remaining steps (4, 5)
 # ==============================================================================
 
 suppressPackageStartupMessages({
@@ -44,8 +44,8 @@ if (length(args) > 0) {
   steps_to_run <- as.integer(strsplit(args[1], " ")[[1]])
   message(sprintf("Running steps: %s", paste(steps_to_run, collapse = ", ")))
 } else {
-  steps_to_run <- 1:6
-  message("Running all steps (1-6)")
+  steps_to_run <- c(4, 5)
+  message("Running all steps (4, 5)")
 }
 
 # ==============================================================================
@@ -53,24 +53,6 @@ if (length(args) > 0) {
 # ==============================================================================
 
 pipeline_steps <- list(
-  list(
-    id = 1,
-    name = "DE Density Plots",
-    script = "01_DE_Density_Plots.R",
-    description = "Density plots of DE metrics across cell types"
-  ),
-  list(
-    id = 2,
-    name = "Split PCA Validation",
-    script = "02_Split_PCA_Validation.R",
-    description = "GT-vs-Validation PCA diagnostics for cartesian splits"
-  ),
-  list(
-    id = 3,
-    name = "Split DEG Recovery",
-    script = "03_Split_DEG_Recovery.R",
-    description = "Compare split GT vs full GT DE results for recovery assessment"
-  ),
   list(
     id = 4,
     name = "DEG Chromosome Grid",
@@ -82,12 +64,6 @@ pipeline_steps <- list(
     name = "Shared Gene Diagnostics",
     script = "05_Shared_Gene_Diagnostics.R",
     description = "Paired cross-CT comparisons of 23 shared truth genes (Wilcoxon, correlations, scatter plots)"
-  ),
-  list(
-    id = 6,
-    name = "Subtype Expression Divergence",
-    script = "06_Subtype_Expression_Divergence.R",
-    description = "Oligo subtype UMI distributions for 23 shared truth genes (violin plots, Wilcoxon tests)"
   )
 )
 

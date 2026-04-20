@@ -1,0 +1,63 @@
+### ICL Neuro compute server (where all pipelines were executed)
+### Captured: 2026-04-20 14:01 UTC
+
+---
+uname -a
+---
+Linux server-03 6.8.0-107-generic #107-Ubuntu SMP PREEMPT_DYNAMIC Fri Mar 13 19:51:50 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux
+
+---
+hostname
+---
+server-03
+
+---
+OS
+---
+Ubuntu 24.04.2 LTS (noble)
+
+---
+CPU (nproc)
+---
+64 logical cores
+
+---
+Memory (free -h)
+---
+               total        used        free      shared  buff/cache   available
+Mem:           251Gi        16Gi       123Gi       2.8Mi       114Gi       235Gi
+Swap:             0B          0B          0B
+
+---
+Disks (df -h, relevant mounts)
+---
+/dev/vda1       116G   84G   32G  73% /
+/dev/vdc        1.2T  918G  203G  82% /mnt/data2
+/dev/vdb        984G  850G   84G  92% /mnt/data
+/dev/vda16      881M  117M  703M  15% /boot
+/dev/vda15      105M  6.2M   99M   6% /boot/efi
+
+(Pipeline data lives on /mnt/data -> /mnt/data/shared/poweranalysis)
+
+---
+R version
+---
+R version 4.5.1 (2025-06-13) -- "Great Square Root"
+Platform: x86_64-pc-linux-gnu
+
+---
+BLAS / LAPACK
+---
+BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3
+LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.26.so
+LAPACK version 3.12.0
+
+---
+Notes
+---
+- This is a shared multi-user server at Imperial College London / UK DRI.
+- All Rscript invocations pass through a hardened gateway script
+  (`~/bin/cbert-gateway.sh`) that restricts reads/writes to
+  `/mnt/data/chrisc/Power_Analysis_Paper` and `/mnt/data/shared/poweranalysis`.
+- No GPUs used by this pipeline; all analyses are CPU-bound
+  (DESeq2, glm, base R matrix ops).

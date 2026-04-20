@@ -19,7 +19,7 @@ N_CORES <- 18
 
 # Steps to run (can be overridden by command line)
 # Options: "all", or comma-separated step numbers like "1,2,3"
-STEPS_TO_RUN <- "3,7"
+STEPS_TO_RUN <- "3,5"
 
 # ==============================================================================
 # ==============================================================================
@@ -104,18 +104,6 @@ steps <- list(
   ),
   list(
     id = 5,
-    name = "Cross-Cell-Type Aggregation",
-    script = "05_Visualise_Cross_CellType.R",
-    description = "Pool results across cell types for aggregated heatmaps"
-  ),
-  list(
-    id = 6,
-    name = "Astro Variants Visualization",
-    script = "06_Visualise_Astro_Variants.R",
-    description = "Generate comparison plots for Astro depth-equalized and fewer-cells variants"
-  ),
-  list(
-    id = 7,
     name = "Continuous Grid Visualization",
     script = "07_Visualise_Continuous_Grid.R",
     description = "Generate interpolated continuous heatmaps with bilinear interpolation"

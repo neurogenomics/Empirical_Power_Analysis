@@ -160,9 +160,8 @@ N_CORES <- 12
 # ==============================================================================
 
 # Which steps to run by default (override via command-line args)
-# Steps: 1=PCA, 2=Cell Counts, 3=Read Depth, 4=Gene Expression, 5=QC Metrics,
-#        6=DE Filtering Summary
-STEPS_TO_RUN <- 6
+# Steps: 1=PCA, 3=Read Depth, 6=DE Filtering Summary
+STEPS_TO_RUN <- c(1, 3, 6)
 
 # ==============================================================================
 # 11. FORCE RECALCULATION

@@ -18,7 +18,6 @@
 #            3 = Annotate DEGs
 #            4 = Sex chromosome analysis
 #            5 = Visualise bulk vs SC concordance
-#            6 = Recovery by expression level
 #
 # Examples:
 #   Rscript run_pipeline.R                # Run all steps
@@ -32,7 +31,7 @@
 # These settings are used for both RStudio background jobs and command line
 # (Command line arguments override these if provided)
 
-STEPS_TO_RUN <- 1:6     # Which steps to run (1:6 = all, or e.g., c(1,2))
+STEPS_TO_RUN <- 1:5     # Which steps to run (1:5 = all, or e.g., c(1,2))
 
 # ==============================================================================
 
@@ -93,8 +92,7 @@ scripts <- c(
   "02_Collect_Consistent_DEGs.R",
   "03_Annotate_DEGs.R",
   "04_Sex_Chr_Analysis.R",
-  "05_Visualise_Bulk_vs_SC.R",
-  "06_Recovery_By_Expression.R"
+  "05_Visualise_Bulk_vs_SC.R"
 )
 
 # Print banner

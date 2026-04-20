@@ -15,7 +15,7 @@
 
 # Steps to run (can be overridden by command line)
 # Options: "all", or comma-separated step numbers like "1,2,3"
-STEPS_TO_RUN <- "1,2,3,4,5"
+STEPS_TO_RUN <- "1,2,3,4"
 
 # ==============================================================================
 # COMMAND LINE ARGUMENT PARSING
@@ -131,12 +131,6 @@ steps <- list(
     name = "Gene Audit Matrix",
     script = "04_Gene_Audit_Matrix.R",
     description = "Audit gene composition across datasets by chromosome, biotype, and PAR status"
-  ),
-  list(
-    id = 5,
-    name = "Misc Analyses",
-    script = "05_Misc_Analyses.R",
-    description = "Ad-hoc analyses: shared-gene pairwise LFC correlations across datasets"
   )
 )
 

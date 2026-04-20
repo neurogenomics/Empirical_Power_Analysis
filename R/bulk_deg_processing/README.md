@@ -43,14 +43,6 @@ This pipeline processes bulk RNA-seq differential expression data from multi-tis
    - Generate bulk volcano plot (global)
    - Output: 15 plots per cell type × per SC dataset + 1 global bulk volcano
 
-6. **Recovery by Expression Level** (`06_Recovery_By_Expression.R`)
-   - Bin bulk-significant genes by SC pseudobulk mean expression (baseMean quintiles)
-   - 4-category recovery (Recovered/Insignificant/NA-Filtered/Absent), direction-aware
-   - Gene universe: intersection of genes expressed in both bulk and SC
-   - Generate stacked bar charts per quintile with consistent colour palette
-   - Two figures per cell type: raw baseMean scale and log2(baseMean + 1) scale
-   - Output: 2 PNG plots + 1 CSV summary per cell type × per SC dataset
-
 ---
 
 ## Inputs Expected
@@ -82,8 +74,6 @@ This pipeline processes bulk RNA-seq differential expression data from multi-tis
 - `Datalink/Bulk_Analysis/Sex_Chr_Proportions_Intervals.csv` - Sex chromosome analysis summary
 - `Datalink/Bulk_Analysis/{CT}/*.png` - Bulk-vs-SC concordance plots (15 per cell type × per SC dataset)
 - `Datalink/Bulk_Analysis/Bulk_Results/Bulk_Volcano_Plot.png` - Bulk volcano plot
-- `Datalink/Bulk_Analysis/recovery_by_expression/{CT}_{Dataset}_{scale}.png` - Recovery by expression plots
-- `Datalink/Bulk_Analysis/recovery_by_expression/{CT}_{Dataset}_summary.csv` - Recovery by expression summaries
 
 ### Toy Test Outputs
 - `Datalink/Bulk_Analysis/toy/` - All outputs from minimal test run (first 1000 genes)
@@ -117,7 +107,7 @@ VIS_HIST_YLIM <- c(0, 5)                     # Histogram Y-axis limits
 # BioMart version (Ensembl 109 — best available for GTEx v8 gene IDs)
 ENSEMBL_VERSION <- 109
 
-# Recovery classification (Steps 05 & 06)
+# Recovery classification (Step 05)
 # 4 categories: Recovered, Insignificant, NA-Filtered, Absent
 # Direction-aware: Recovered requires FDR < 0.05 AND matching LFC sign
 RECOVERY_COLORS <- c(Recovered="#00BA38", Insignificant="#E7B800",

@@ -14,6 +14,7 @@
 #   3 = Model Coefficients & Summary (from Power Curve Fitting exports)
 #   4 = FDP Summary (from Full Ground Truth diagnostics)
 #   5 = Validate All Exports
+#   6 = Autosomal vs Sex-Chromosome Truth Gene Properties
 # ==============================================================================
 
 N_CORES <- 12
@@ -67,7 +68,10 @@ steps <- list(
        desc = "Read FDP_Summary.csv, format for paper source data tables"),
   list(id = 5, name = "Validate Exports",
        script = file.path(SCRIPT_DIR, "05_Validate_Exports.R"),
-       desc = "Check all expected CSVs exist, row counts correct, no NAs in key columns")
+       desc = "Check all expected CSVs exist, row counts correct, no NAs in key columns"),
+  list(id = 6, name = "Autosomal vs Sex-Chr Summary",
+       script = file.path(SCRIPT_DIR, "06_Autosomal_vs_SexChr_Summary.R"),
+       desc = "Build _scratch_autosomal_vs_sexchr_summary.csv for paper Table (line 589)")
 )
 
 # ==============================================================================
