@@ -1,0 +1,60 @@
+# R runtime artifacts
+.Rhistory
+.Rapp.history
+.RData
+.Ruserdata
+*.Rproj.user/
+*.Rcheck/
+
+# Environment
+.Renviron
+.Rprofile
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# macOS / Windows noise
+.DS_Store
+Thumbs.db
+
+# Pipeline intermediates that are not distributed
+# (regenerable; the repo ships only the paper-cited final artifacts under Datalink/)
+Datalink/Shards/**
+!Datalink/Shards/.gitkeep
+Datalink/raw_data/**
+!Datalink/raw_data/.gitkeep
+Datalink/Run_Output_Logs/
+Datalink/**/checkpoints/
+Datalink/**/Shard_Cache/
+Datalink/**/Fitting_Data/
+
+# Serialised R objects — too large for Git; regenerate from pipelines
+*.qs
+*.rds
+*.rda
+
+# Raw single-cell formats
+*.h5
+*.h5ad
+*.h5Seurat
+*.tar
+*.tar.gz
+*.mtx
+*.loom
+
+# Compiled documents
+*.html
+*.aux
+*.log
+*.pdf.synctex.gz
+
+# Python caches (analysis auxiliary)
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# File-sync conflict markers (guard against accidental re-introduction)
+*.sync-conflict-*
