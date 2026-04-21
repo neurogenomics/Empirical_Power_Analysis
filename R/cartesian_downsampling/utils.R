@@ -271,7 +271,8 @@ run_deseq_worker <- function(agg_result,
                               cat_vars = CATEGORICAL_VARS,
                               save_path_results, 
                               save_path_log,
-                              min_gene_count = MIN_GENE_COUNT) {
+                              min_gene_count = MIN_GENE_COUNT,
+                              fit_type = if (exists("DE_FIT_TYPE")) DE_FIT_TYPE else "parametric") {
   
   # Unpack aggregation result
   pb_sce <- agg_result$sce
@@ -348,12 +349,12 @@ run_deseq_worker <- function(agg_result,
   
   # Run DESeq2 with error handling
   dds <- tryCatch({
-    suppressMessages(DESeq2::DESeq(dds, parallel = FALSE, quiet = TRUE))
+    suppressMessages(DESeq2::DESeq(dds, fitType = fit_type, parallel = FALSE, quiet = TRUE))
   }, error = function(e) {
     # If DESeq fails, try with simpler model
     log_warning("DESeq2 failed with current model: %s. Trying sex-only model.", e$message)
     DESeq2::design(dds) <- as.formula(paste0("~ ", sex_col))
-    suppressMessages(DESeq2::DESeq(dds, parallel = FALSE, quiet = TRUE))
+    suppressMessages(DESeq2::DESeq(dds, fitType = fit_type, parallel = FALSE, quiet = TRUE))
   })
   
   # Get coefficient name for sex contrast
