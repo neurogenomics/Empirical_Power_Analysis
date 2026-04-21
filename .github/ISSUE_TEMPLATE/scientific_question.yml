@@ -1,0 +1,34 @@
+name: Scientific question
+description: Question about methods, results, or interpretation
+labels: [science]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What are you unclear about?
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context from the paper
+      description: Figure / table / section you are asking about
+    validations:
+      required: true
+
+  - type: textarea
+    id: attempted
+    attributes:
+      label: What you've tried
+      description: What did you check in the paper / code / supplementary?
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-flight
+      options:
+        - label: I've read the relevant section of `paper/paper.Rmd`
+        - label: I've checked `docs/architecture.md` for design rationale
+        - label: I've searched existing issues tagged `science`

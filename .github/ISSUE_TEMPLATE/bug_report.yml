@@ -1,0 +1,51 @@
+name: Bug report
+description: Report a reproducible failure in the pipeline
+labels: [bug]
+body:
+  - type: input
+    id: nextflow-version
+    attributes:
+      label: Nextflow version
+      description: Output of `nextflow -version`
+    validations:
+      required: true
+
+  - type: dropdown
+    id: profile
+    attributes:
+      label: Execution profile
+      options: [standard, slurm, test, custom]
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: What did you expect? What happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: Minimal command sequence that triggers the bug
+      render: bash
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Paste the contents of `.nextflow.log` and `work/<hash>/.command.err` for the failing task
+      render: shell
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-flight
+      options:
+        - label: I've verified this reproduces on the current `main` branch
+        - label: I've searched existing issues
