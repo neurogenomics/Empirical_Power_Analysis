@@ -136,27 +136,58 @@ CATEGORICAL_VARS <- c("Source", "self_reported_ethnicity", "disease")
 # ==============================================================================
 
 # Default number of cores for parallel processing
-# Can be overridden by setting N_CORES before sourcing this file
+# Can be overridden by setting N_CORES before sourcing this file.
+# Default lowered from 24 -> 20 (2026-04-21) per Chris Crampton: on the
+# neurogenomics shared box, 64-core Multicore runs hit OOM because R's GC
+# breaks copy-on-write semantics on donor-shard lapply. 20 runs stable;
+# push higher only with Snow backend (see BPPARAM_BACKEND below) or after
+# migrating to Nextflow per-grid-cell SLURM dispatch.
 if (!exists("N_CORES")) {
-  N_CORES <- 24
+  N_CORES <- 20
+}
+
+# Parallel backend selector. Two options:
+#   "Multicore" (DEFAULT) — fork-based, fast spawn. On Linux, R's GC can
+#                           break copy-on-write semantics and inflate RSS
+#                           under load; capped at N_CORES ~= 20 on this box.
+#   "Snow"                — PSOCK-based, separate R processes with predictable
+#                           per-worker RSS. Slower spawn, stable steady-state.
+#                           Worth trying if you need > 20 cores without OOM.
+# Override by setting BPPARAM_BACKEND before sourcing this file.
+if (!exists("BPPARAM_BACKEND")) {
+  BPPARAM_BACKEND <- "Multicore"
 }
 
 # Maximum cores for memory-heavy operations
 N_CORES_HEAVY <- min(6, N_CORES)
 
-# Setup BiocParallel backend
-setup_parallel <- function(n_cores = N_CORES, heavy = FALSE) {
+# Setup BiocParallel backend. Dispatches on BPPARAM_BACKEND.
+setup_parallel <- function(n_cores = N_CORES, heavy = FALSE,
+                           backend = if (exists("BPPARAM_BACKEND")) BPPARAM_BACKEND
+                                      else "Multicore") {
   if (!requireNamespace("BiocParallel", quietly = TRUE)) {
     stop("BiocParallel required. Install with: BiocManager::install('BiocParallel')")
   }
-  
+
   cores_to_use <- if (heavy) min(n_cores, N_CORES_HEAVY) else n_cores
-  
-  BiocParallel::MulticoreParam(
-    workers = cores_to_use,
-    progressbar = TRUE,
-    stop.on.error = FALSE
-  )
+
+  if (backend == "Snow") {
+    # PSOCK workers — separate R processes, predictable RSS, slower spawn.
+    # Try this if 20-core Multicore still OOMs on large grid points.
+    BiocParallel::SnowParam(
+      workers = cores_to_use,
+      type = "SOCK",
+      progressbar = TRUE,
+      stop.on.error = FALSE
+    )
+  } else {
+    # Fork workers — fast spawn but memory can inflate under GC on Linux
+    BiocParallel::MulticoreParam(
+      workers = cores_to_use,
+      progressbar = TRUE,
+      stop.on.error = FALSE
+    )
+  }
 }
 
 # Create default BPPARAM objects
