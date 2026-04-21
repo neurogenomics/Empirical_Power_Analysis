@@ -90,6 +90,14 @@ GT_SPLIT <- 0.5
  
 # Minimum gene count filter (genes with fewer total counts are excluded)
 MIN_GENE_COUNT <- 10
+# DESeq2 dispersion fitType.
+# - "parametric" (DESeq2 default): slower but is what the v8 paper used.
+# - "glmGamPoi":  5-10x faster; published & first-party DESeq2 option
+#                 (Ahlmann-Eltze & Huber 2020, Bioinformatics).
+#                 Requires BiocManager::install("glmGamPoi").
+# Change to "glmGamPoi" only after running the equivalence benchmark
+# (tests/test_fittype_equivalence.R) and updating paper Methods.
+DE_FIT_TYPE <- "parametric"
 
 # FDR threshold for significance
 FDR_THRESHOLD <- 0.05
