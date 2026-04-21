@@ -1,0 +1,50 @@
+# Exclude everything from the build context that isn't needed for env setup.
+# This keeps image builds fast and images small.
+
+# Analysis data — never in the image
+Datalink/raw_data/**
+Datalink/Shards/**
+Datalink/Cartesian_Downsampling/**
+Datalink/Depth_Equalization/**
+Datalink/Power_Curve_Fitting/**
+Datalink/Full_Ground_Truth/**
+Datalink/Exploratory_Analysis/**
+Datalink/Bulk_Analysis/**
+Datalink/DE_Diagnostics/**
+
+# Intermediate files
+**/*.qs
+**/*.rds
+**/*.h5ad
+**/*.h5Seurat
+
+# Version control
+.git
+.github
+.gitignore
+.gitattributes
+
+# Rendered outputs
+**/*.html
+**/*.pdf
+paper/_cache
+paper/_freeze
+
+# Local environments
+.Rproj.user
+.Renviron
+.RData
+.Rhistory
+
+# macOS / editor noise
+.DS_Store
+.vscode
+.idea
+
+# Nextflow work dirs
+work/
+.nextflow/
+.nextflow.log*
+
+# Test outputs
+test_output/

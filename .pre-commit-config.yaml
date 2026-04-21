@@ -1,0 +1,38 @@
+# Pre-commit hooks — run locally before each commit.
+# Install: pip install pre-commit && pre-commit install
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=10000']   # block >10 MB files (raw data should not be in git)
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: detect-private-key
+      - id: mixed-line-ending
+
+  - repo: https://github.com/lorenzwalthert/precommit
+    rev: v0.4.3
+    hooks:
+      - id: style-files           # styler for R
+      - id: parsable-R            # R parse check
+      - id: no-browser-statement  # prevent committed browser() calls
+      - id: no-debug-statement    # prevent committed debug() calls
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks              # block committed credentials
+
+  - repo: local
+    hooks:
+      - id: nextflow-stub-run
+        name: Nextflow stub run
+        entry: bash -c 'nextflow run main.nf -profile test -stub-run -ansi-log false >/dev/null'
+        language: system
+        files: '\.(nf|config)$'
+        pass_filenames: false

@@ -1,0 +1,140 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  # ----------------------------------------------------------------------------
+  #  Lint R code
+  # ----------------------------------------------------------------------------
+  lint-r:
+    name: Lint R code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.5.1'
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: lintr, styler
+
+      - name: Run lintr
+        run: |
+          Rscript -e 'lintr::lint_dir("R", linters = lintr::with_defaults(
+            object_name_linter = NULL,
+            line_length_linter = lintr::line_length_linter(120)
+          ))'
+
+  # ----------------------------------------------------------------------------
+  #  Lint Nextflow code
+  # ----------------------------------------------------------------------------
+  lint-nextflow:
+    name: Lint Nextflow
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nextflow
+        uses: nf-core/setup-nextflow@v2
+        with:
+          version: 'latest-stable'
+
+      - name: Check nextflow.config syntax
+        run: nextflow config -show-profiles
+
+      - name: Stub-run to validate workflow wiring
+        run: nextflow run main.nf -profile test -stub-run
+
+  # ----------------------------------------------------------------------------
+  #  Unit tests per pipeline
+  # ----------------------------------------------------------------------------
+  unit-tests:
+    name: R unit tests
+    runs-on: ubuntu-latest
+    container:
+      image: bioconductor/bioconductor_docker:RELEASE_3_21
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install renv + restore
+        run: |
+          R -e "install.packages('renv', repos='https://cloud.r-project.org')"
+          R -e "renv::restore(prompt = FALSE)"
+
+      - name: Run testthat per pipeline
+        run: |
+          R -e '
+            pipeline_dirs <- list.dirs("R", recursive = FALSE)
+            results <- list()
+            for (d in pipeline_dirs) {
+              test_dir <- file.path(d, "tests")
+              if (dir.exists(test_dir)) {
+                cat("=== Running tests in:", test_dir, "===\n")
+                results[[d]] <- testthat::test_dir(test_dir, reporter = "summary", stop_on_failure = TRUE)
+              }
+            }
+          '
+
+  # ----------------------------------------------------------------------------
+  #  End-to-end test: stub pipeline on toy data
+  # ----------------------------------------------------------------------------
+  integration-test:
+    name: Nextflow integration test (stub)
+    runs-on: ubuntu-latest
+    needs: [lint-nextflow]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: nf-core/setup-nextflow@v2
+        with:
+          version: 'latest-stable'
+
+      - name: Run pipeline in stub mode
+        run: nextflow run main.nf -profile test -stub-run
+
+      - name: Upload execution report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nextflow-execution-report
+          path: test_output/pipeline_info/
+
+  # ----------------------------------------------------------------------------
+  #  Determinism check — run toy pipeline twice, compare outputs
+  # ----------------------------------------------------------------------------
+  determinism-check:
+    name: Determinism check
+    runs-on: ubuntu-latest
+    needs: [integration-test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: nf-core/setup-nextflow@v2
+        with:
+          version: 'latest-stable'
+
+      - name: First run
+        run: nextflow run main.nf -profile test -stub-run --outdir out_a
+
+      - name: Second run
+        run: nextflow run main.nf -profile test -stub-run --outdir out_b
+
+      - name: Compare outputs
+        run: |
+          # Compare all file hashes between the two runs. Any difference on
+          # non-timestamped outputs is a determinism regression.
+          diff <(find out_a -type f ! -path '*/pipeline_info/*' -exec md5sum {} \; | awk '{print $1,$2}' | sed 's|out_a/||' | sort) \
+               <(find out_b -type f ! -path '*/pipeline_info/*' -exec md5sum {} \; | awk '{print $1,$2}' | sed 's|out_b/||' | sort) \
+            || (echo "::error::Determinism check failed — outputs differ between runs"; exit 1)
