@@ -1,5 +1,5 @@
 ---
-title: "Supplementary Information: Current Single-Cell Study Designs Are Systematically Underpowered for Small-Effect Genes"
+title: "Single-Cell Study Designs Are Systematically Underpowered for Small-Effect Genes"
 #author: "Chris Crampton, Salman Fawad, Hiru Dash, Nathan Skene"
 date: "`r Sys.Date()`"
 output:
