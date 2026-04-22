@@ -17,6 +17,10 @@ output:
     number_sections: false
 editor_options:
   chunk_output_type: inline
+language:
+  label:
+    fig: ""
+    tab: ""
 bibliography: references.bib
 csl: https://www.zotero.org/styles/nature
 ---
@@ -284,6 +288,30 @@ knitr::include_graphics("Datalink/Power_Curve_Fitting/Plots/with_shallow/full_pe
 knitr::include_graphics("Datalink/Power_Curve_Fitting/Plots/full_per_iteration/CellType_Sensitivity_Grid.png")
 ```
 
+## Supplementary Fig. 17. Cross-dataset reproducibility panel (astrocytes and microglia)
+
+Universe-controlled and raw IoU matrices summarising cross-dataset DEG overlap for astrocytes (top row) and microglia (bottom row). (A) Astrocytes, universe-controlled IoU. (B) Astrocytes, raw IoU (no universe control). (C) Microglia, universe-controlled IoU. (D) Microglia, raw IoU. Universe control restricts each pairwise comparison to genes tested in both datasets, removing the confound that differences in gene universe size otherwise inflate apparent discordance.
+
+```{r Figure1-Supp16-Astro-Micro-Repro, echo=FALSE, out.width="99%", fig.width=12, fig.height=8}
+library(patchwork)
+library(png)
+library(grid)
+
+read_png_grob <- function(path) {
+  rasterGrob(readPNG(path), interpolate = TRUE)
+}
+
+astro_root <- "~/data/Power_Analysis_Paper/Datalink/Full_Ground_Truth/Astro/Diagnostic_Results"
+micro_root <- "~/data/Power_Analysis_Paper/Datalink/Full_Ground_Truth/Micro/Diagnostic_Results"
+
+pA <- wrap_elements(full = read_png_grob(file.path(astro_root, "Expanded_IoU_Matrix_Universe_Controlled.png")))
+pB <- wrap_elements(full = read_png_grob(file.path(astro_root, "Expanded_IoU_Matrix.png")))
+pC <- wrap_elements(full = read_png_grob(file.path(micro_root, "Expanded_IoU_Matrix_Universe_Controlled.png")))
+pD <- wrap_elements(full = read_png_grob(file.path(micro_root, "Expanded_IoU_Matrix.png")))
+
+((pA | pB) / (pC | pD)) + plot_annotation(tag_levels = "A")
+```
+
 ------------------------------------------------------------------------
 
 # Supplementary Tables
@@ -407,11 +435,31 @@ source_data_1 <- source_data_1[, c(
 
 knitr::kable(
   source_data_1,
-  caption = "Preview: dataset characteristics. Full data provided as Supplementary Data 1.",
   col.names = c("Dataset", "Brain Region", "Cell Type", "N Donors", "N Cells",
                 "Mean Cells/Donor", "Median Cells/Donor", "Mean UMIs/Cell",
                 "Median UMIs/Cell", "Mean Genes/Cell", "Median Genes/Cell"),
   digits = c(0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0)
+)
+
+gene_audit <- read.csv(
+  here::here("Datalink", "Full_Ground_Truth",
+             "Gene_Audit_Full_Universe_Combined.csv"),
+  stringsAsFactors = FALSE, check.names = FALSE
+)
+
+# Pivot to (CellType, Dataset) rows, key biotype/chromosome columns
+gene_audit_display <- gene_audit[, c(
+  "CellType", "Dataset", "Total",
+  "protein_coding", "lncRNA", "pseudogene",
+  "X_chr", "Y_chr", "autosomal", "PAR"
+)]
+
+knitr::kable(
+  gene_audit_display,
+  col.names = c("Cell Type", "Dataset", "Total genes",
+                "Protein-coding", "lncRNA", "Pseudogene",
+                "X", "Y", "Autosomal", "PAR"),
+  digits = 0
 )
 ```
 

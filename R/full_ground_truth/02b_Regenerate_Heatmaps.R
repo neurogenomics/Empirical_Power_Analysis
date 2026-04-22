@@ -68,7 +68,8 @@ ann_colors <- list(
 # Helper: render a single IoU heatmap
 # ------------------------------------------------------------------------------
 render_iou_heatmap <- function(iou_csv, out_png, main_title,
-                               number_fontsize = 14) {
+                               number_fontsize = 14,
+                               show_labels = FALSE) {
   if (!file.exists(iou_csv)) {
     log_warn("  Missing: %s", iou_csv)
     return(invisible(FALSE))
@@ -120,7 +121,8 @@ render_iou_heatmap <- function(iou_csv, out_png, main_title,
            fontsize = 15,
            fontsize_row = 14, fontsize_col = 14,
            show_rownames = FALSE,
-           show_colnames = FALSE,
+           show_colnames = show_labels,
+           angle_col = if (show_labels) 315 else 270,
            annotation_names_col = FALSE,
            annotation_legend = FALSE,
            legend = TRUE)
@@ -146,12 +148,13 @@ for (cell_type in CELL_TYPES) {
     next
   }
 
-  # Raw IoU
+  # Raw IoU — show row/col labels (rotated down-right) for panel B of FigRepro
   render_iou_heatmap(
     iou_csv    = file.path(diag_dir, "Expanded_IoU_Matrix.csv"),
     out_png    = file.path(diag_dir, "Expanded_IoU_Matrix.png"),
     main_title = glue("IoU Without Universe Control ({REFERENCE_DATASET} Significant Genes): {prettify_label(cell_type)}"),
-    number_fontsize = 14
+    number_fontsize = 14,
+    show_labels = TRUE
   )
 
   # Universe-controlled IoU
