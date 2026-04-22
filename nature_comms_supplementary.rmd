@@ -46,21 +46,111 @@ under main-figure numbers).
 
 # Supplementary Figures
 
-## Supplementary Fig. 1. Cross-dataset IoU matrices
+## Supplementary Fig. 1. Astrocyte and microglial continuous recall surfaces
 
-```{r SuppFig1-IoU, out.width="32%", fig.show='hold', fig.cap="Universe-controlled Intersection over Union (IoU) matrices across five single-cell datasets for astrocytes (left), microglia (centre), and oligodendrocytes (right). IoU measures the proportion of shared significant genes relative to the union, computed only on genes present in both datasets' count matrices. Cross-dataset universe-controlled IoU values (0.60-0.92, green) approach the within-dataset split-half ceiling (0.65-0.87, blue), confirming highly reproducible gene set detection across independent cohorts. The null permutation floor (approximately 0, red) validates successful label permutation."}
+Continuous recall surfaces for astrocytes and microglia, complementing the oligodendrocyte surface shown in Fig. 4 of the main text. The same qualitative patterns are observed across all three cell types: large-effect genes are readily detected at modest sample sizes, while small-effect genes remain below 80% recall across the entire experimental space. The apparent power ordering (microglia > astrocytes > oligodendrocytes) is an artefact of ground-truth censorship, as explained in the main text.
+
+```{r SuppFig1a-AstroMicro-cells, out.width="99%", fig.show='hold', fig.cap="Continuous recall surfaces (semi-log scale, cells-based mode) for astrocytes (left) and microglia (right). Layout and colour scale identical to the oligodendrocyte surface in the main text."}
 knitr::include_graphics(c(
-  "Datalink/Full_Ground_Truth/Astro/Diagnostic_Results/Expanded_IoU_Matrix_Universe_Controlled.png",
-  "Datalink/Full_Ground_Truth/Micro/Diagnostic_Results/Expanded_IoU_Matrix_Universe_Controlled.png",
-  "Datalink/Full_Ground_Truth/Oligo/Diagnostic_Results/Expanded_IoU_Matrix_Universe_Controlled.png"
+  "Datalink/Cartesian_Downsampling/Astro/Roussos/cells/Continuous_Viz_Log/Mean_Recall_Total_Continuous_SemiLog.png",
+  "Datalink/Cartesian_Downsampling/Micro/Roussos/cells/Continuous_Viz_Log/Mean_Recall_Total_Continuous_SemiLog.png"
 ))
 ```
 
-## Supplementary Fig. 2. PCA gallery for unfiltered and filtered Roussos cohorts
+```{r SuppFig1b-AstroMicro-reads, out.width="99%", fig.show='hold', fig.cap="Continuous recall surfaces (semi-log scale, reads-based mode) for astrocytes (left) and microglia (right). Same layout as cells-based version above, with reads per cell on the x-axis."}
+knitr::include_graphics(c(
+  "Datalink/Cartesian_Downsampling/Astro/Roussos/reads/Continuous_Viz_Log/Mean_Recall_Total_Continuous_SemiLog.png",
+  "Datalink/Cartesian_Downsampling/Micro/Roussos/reads/Continuous_Viz_Log/Mean_Recall_Total_Continuous_SemiLog.png"
+))
+```
+
+## Supplementary Fig. 2. Discrete recall heatmaps for astrocytes and microglia
+
+Astrocyte and microglial discrete recall heatmaps. The oligodendrocyte discrete recall heatmap is promoted to Fig. \@ref(fig:FigRecall) panel B in the main text.
+
+```{r SuppFig2a-Discrete-cells, out.width="48%", fig.show='hold', fig.cap="Discrete recall heatmaps from Cartesian downsampling (cells-based mode) for astrocytes (left) and microglia (right). Heatmaps show mean recall across six robustness runs at each grid point. Red borders indicate configurations achieving at least 80% recall. The oligodendrocyte counterpart is in Fig. \\@ref(fig:FigRecall) panel B."}
+knitr::include_graphics(c(
+  "Datalink/Cartesian_Downsampling/Astro/Roussos/cells/Plots/Mean_Recall_Total.png",
+  "Datalink/Cartesian_Downsampling/Micro/Roussos/cells/Plots/Mean_Recall_Total.png"
+))
+```
+
+```{r SuppFig2b-Discrete-reads, out.width="48%", fig.show="hold", fig.cap="Discrete recall heatmaps from Cartesian downsampling (reads-based mode) for astrocytes (left) and microglia (right). Layout identical to cells-based version, but columns represent reads per cell rather than cells per donor."}
+knitr::include_graphics(c(
+  "Datalink/Cartesian_Downsampling/Astro/Roussos/reads/Plots/Mean_Recall_Total.png",
+  "Datalink/Cartesian_Downsampling/Micro/Roussos/reads/Plots/Mean_Recall_Total.png"
+))
+```
+
+## Supplementary Fig. 3. Chromosome-stratified recall heatmaps for astrocytes and microglia
+
+Recall heatmaps stratified by chromosome type and LFC magnitude bin. Autosomal genes show substantially lower recall than sex-chromosome genes at matched effect sizes, reflecting both their rarity and smaller effect sizes. See Supplementary Table 3 for the per-gene characteristics that underlie this difference. Oligodendrocyte chromosome-stratified heatmaps follow the same qualitative patterns and are omitted here because the total-recall oligodendrocyte heatmap is shown in Fig. \@ref(fig:FigRecall) panel B.
+
+```{r SuppFig3a-Autosomal, out.width="48%", fig.show="hold", fig.cap="Autosomal-only recall heatmaps (cells-based mode) for astrocytes (left) and microglia (right). Restricted to genes on chromosomes 1-22. Autosomal sex-biased genes are rare and exhibit small effect sizes, resulting in substantially lower recall than the total heatmaps."}
+knitr::include_graphics(c(
+  "Datalink/Cartesian_Downsampling/Astro/Roussos/cells/Plots/Mean_Recall_Autosomal.png",
+  "Datalink/Cartesian_Downsampling/Micro/Roussos/cells/Plots/Mean_Recall_Autosomal.png"
+))
+```
+
+```{r SuppFig3b-SexChr, out.width="48%", fig.show="hold", fig.cap="Sex-chromosome-only recall heatmaps (cells-based mode) for astrocytes (left) and microglia (right). Restricted to X and Y chromosome genes. Sex-chromosome genes dominate the large-LFC bin and are detected with high recall at moderate sample sizes, driving the overall pattern in the total heatmaps."}
+knitr::include_graphics(c(
+  "Datalink/Cartesian_Downsampling/Astro/Roussos/cells/Plots/Mean_Recall_SexChr.png",
+  "Datalink/Cartesian_Downsampling/Micro/Roussos/cells/Plots/Mean_Recall_SexChr.png"
+))
+```
+
+## Supplementary Fig. 4. Precision heatmaps for astrocytes and microglia (cells-based and reads-based modes)
+
+Astrocyte and microglial precision heatmaps. The oligodendrocyte precision heatmap is promoted to Fig. \@ref(fig:FigPrecision) panel B in the main text.
+
+```{r SuppFig4a-Precision-cells, out.width="48%", fig.show="hold", fig.cap="Precision heatmaps for cells-based downsampling, astrocytes (left) and microglia (right). Large-effect precision remains >0.90 across most configurations; small-effect precision degrades at higher cell counts, reflecting the precision-recall trade-off. The oligodendrocyte counterpart is in Fig. \\@ref(fig:FigPrecision) panel B."}
+knitr::include_graphics(c(
+  "Datalink/Cartesian_Downsampling/Astro/Roussos/cells/Plots/Mean_Precision_Total.png",
+  "Datalink/Cartesian_Downsampling/Micro/Roussos/cells/Plots/Mean_Precision_Total.png"
+))
+```
+
+```{r SuppFig4b-Precision-reads, out.width="48%", fig.show="hold", fig.cap="Precision heatmaps for reads-based downsampling, astrocytes (left) and microglia (right). Layout identical to cells-based mode, but columns represent reads per cell rather than cells per donor."}
+knitr::include_graphics(c(
+  "Datalink/Cartesian_Downsampling/Astro/Roussos/reads/Plots/Mean_Precision_Total.png",
+  "Datalink/Cartesian_Downsampling/Micro/Roussos/reads/Plots/Mean_Precision_Total.png"
+))
+```
+
+## Supplementary Fig. 5. GTEx bulk RNA-seq reference volcano plot
+
+```{r SuppFig5-Bulk-Volcano, out.width="99%", fig.cap="Volcano plot of the 79 tissue-consistent sex-biased DEGs from the GTEx v8 bulk RNA-seq analysis (voom-limma + MASH framework, 838 donors across 44 tissues). Each point represents a gene significant (LFSR < 0.05) in at least 90% of tissues; log~2~ fold change and significance values are averaged across significant tissues. XIST dominates the plot with a bulk LFC of -9.29. The top 10 most significant genes are labelled. Genes shared with the single-cell analysis are shown as translucent. Y-linked genes are absent from the bulk reference because the MASH framework cannot estimate fold change when one sex has no expression."}
+knitr::include_graphics("Datalink/Bulk_Analysis/Bulk_Results/Bulk_Volcano_Plot.png")
+```
+
+## Supplementary Fig. 6. Bulk-single-cell LFC concordance (astrocytes and microglia)
+
+Astrocyte and microglial counterparts to the oligodendrocyte concordance scatter shown in Fig. 3, panel B of the main text, retained here so the XIST-inclusive correlations for astrocytes and microglia remain available. The oligodendrocyte panel has been promoted to the main figure.
+
+```{r SuppFig6-Bulk-SC-Correlation, out.width="48%", fig.show="hold", fig.cap="Bulk-anchored LFC concordance between GTEx and Roussos single-cell pseudobulk for genes significant in both modalities. Pearson correlations (excluding XIST): R = 0.91 (astrocytes, left) and R = 0.93 (microglia, right). Autosomal genes shown in grey, X-chromosome in pink; translucent points indicate genes not significant in single-cell. The black dashed line follows y = x."}
+knitr::include_graphics(c(
+  "Datalink/Bulk_Analysis/Astro/Compare_Correlation_BulkAnchored.png",
+  "Datalink/Bulk_Analysis/Micro/Compare_Correlation_BulkAnchored.png"
+))
+```
+
+## Supplementary Fig. 7. Recovery of bulk reference genes (astrocytes and microglia)
+
+Of the 79 GTEx tissue-consistent reference genes, 72 were present in the Roussos single-cell gene universe. The same 7 reference genes were absent in every cell type for technical rather than biological reasons: retired Ensembl identifiers, CellRanger PAR1 masking, oligo-dT invisibility of a non-polyadenylated long non-coding RNA, and pseudogene exclusion. Of the 72 testable genes, astrocytes recovered 72% (52/72) and microglia 54% (39/72). Recovery rates were consistently higher for sex-chromosome genes than for autosomal genes (Astro 79% vs 65%; Micro 66% vs 41%). The oligodendrocyte panel has been promoted to Fig. 3 of the main text. This asymmetry is expected: the sex-chromosome subset is enriched for X-inactivation escapees (e.g. KDM6A, KDM5C, DDX3X, ZFX) whose cell-intrinsic dosage mechanism should produce consistent fold changes in every cell type, whereas autosomal sex-biased expression is typically mediated by downstream hormonal or transcription-factor pathways that vary across cell types and are diluted in whole-tissue homogenates.
+
+```{r SuppFig7-Recovery-Stats, out.width="48%", fig.show="hold", fig.cap="Recovery of the 79 tissue-consistent bulk DEGs by the Roussos single-cell pseudobulk analysis, stratified by chromosome type (Autosome vs Sex chromosome) and bulk log~2~ fold change magnitude. Genes are classified as Recovered (FDR < 0.05 with matching LFC direction; green), Insignificant (tested but not significant or discordant direction; yellow), NA-Filtered (removed by DESeq2 independent filtering; salmon), or Absent (not in single-cell gene set; grey). Results shown for astrocytes (left) and microglia (right). The oligodendrocyte panel is in Fig. 3 of the main text."}
+knitr::include_graphics(c(
+  "Datalink/Bulk_Analysis/Astro/Recovery_Stats_Stratified.png",
+  "Datalink/Bulk_Analysis/Micro/Recovery_Stats_Stratified.png"
+))
+```
+
+## Supplementary Fig. 8. PCA gallery for unfiltered and filtered Roussos cohorts
 
 Principal component analysis (PCA) of pseudobulked donors showing the effect of filtering. Rows (top to bottom): log~2~ cell count, sex, age, brain bank source, disease status, and self-reported ethnicity. Columns: astrocytes (left), microglia (centre), and oligodendrocytes (right).
 
-```{r SuppFig2a-PCA-Unfiltered, out.width="32%", fig.show='hold', fig.cap="Complete PCA gallery for the unfiltered Roussos dataset (N = 1,486/1,480/1,491 donors for Astro/Micro/Oligo). Each row shows one metadata covariate; columns show astrocytes (left), microglia (centre), and oligodendrocytes (right). Top to bottom: log~2~ cell count, sex, age, brain bank source, disease status, and self-reported ethnicity."}
+```{r SuppFig8a-PCA-Unfiltered, out.width="32%", fig.show='hold', fig.cap="Complete PCA gallery for the unfiltered Roussos dataset (N = 1,486/1,480/1,491 donors for Astro/Micro/Oligo). Each row shows one metadata covariate; columns show astrocytes (left), microglia (centre), and oligodendrocytes (right). Top to bottom: log~2~ cell count, sex, age, brain bank source, disease status, and self-reported ethnicity."}
 # Row 1: Log2 Cells
 knitr::include_graphics(c(
   "Datalink/Exploratory_Analysis/Astro/Roussos_Full/PCA/PCA_FullCohort_Log2_Cells_scaled.png",
@@ -99,7 +189,7 @@ knitr::include_graphics(c(
 ))
 ```
 
-```{r SuppFig2b-PCA-Filtered, out.width="32%", fig.show="hold", fig.cap="Complete PCA gallery for the filtered Roussos analysis cohort (age $\\geq$ 40, $\\geq$ 30 cells; N = 1,293/1,214/1,303 donors for Astro/Micro/Oligo). Layout identical to the unfiltered gallery above. Compared with the unfiltered gallery, the cell-count gradient is attenuated, the outlier cluster in oligodendrocytes is absent, and the overall point cloud is more compact."}
+```{r SuppFig8b-PCA-Filtered, out.width="32%", fig.show="hold", fig.cap="Complete PCA gallery for the filtered Roussos analysis cohort (age $\\geq$ 40, $\\geq$ 30 cells; N = 1,293/1,214/1,303 donors for Astro/Micro/Oligo). Layout identical to the unfiltered gallery above. Compared with the unfiltered gallery, the cell-count gradient is attenuated, the outlier cluster in oligodendrocytes is absent, and the overall point cloud is more compact."}
 # Row 1: Log2 Cells
 knitr::include_graphics(c(
   "Datalink/Exploratory_Analysis/Astro/Roussos/PCA/PCA_FilteredCohort_Log2_Cells_scaled.png",
@@ -138,9 +228,9 @@ knitr::include_graphics(c(
 ))
 ```
 
-## Supplementary Fig. 3. Sign agreement matrices
+## Supplementary Fig. 9. Sign agreement matrices
 
-```{r SuppFig3-Sign-Agreement, out.width="32%", fig.show="hold", fig.cap="Sign agreement matrices for astrocytes (left), microglia (centre), and oligodendrocytes (right). Values represent the proportion of Roussos significant genes ($p_{adj}$ < 0.05, |LFC| > 1) where the direction of the sex effect is identical in both datasets. High values (>0.95, green) indicate consistent effect direction; values near 0.5 (red) would indicate random disagreement. Grey cells indicate no shared significant genes."}
+```{r SuppFig9-Sign-Agreement, out.width="32%", fig.show="hold", fig.cap="Sign agreement matrices for astrocytes (left), microglia (centre), and oligodendrocytes (right). Values represent the proportion of Roussos significant genes ($p_{adj}$ < 0.05, |LFC| > 1) where the direction of the sex effect is identical in both datasets. High values (>0.95, green) indicate consistent effect direction; values near 0.5 (red) would indicate random disagreement. Grey cells indicate no shared significant genes."}
 knitr::include_graphics(c(
   "Datalink/Full_Ground_Truth/Astro/Diagnostic_Results/Sign_Agreement_Matrix_Roussos_Sig_Genes.png",
   "Datalink/Full_Ground_Truth/Micro/Diagnostic_Results/Sign_Agreement_Matrix_Roussos_Sig_Genes.png",
@@ -148,9 +238,9 @@ knitr::include_graphics(c(
 ))
 ```
 
-## Supplementary Fig. 4. LFC agreement matrices
+## Supplementary Fig. 10. LFC agreement matrices
 
-```{r SuppFig4-LFC-Agreement, out.width="32%", fig.show="hold", fig.cap="LFC agreement matrices for astrocytes (left), microglia (centre), and oligodendrocytes (right). Each cell shows Pearson correlation of LFC values between dataset pairs, restricted to Roussos significant genes ($p_{adj}$ < 0.05, |LFC| > 1). High correlations (>0.8, blue-green) confirm consistent effect sizes across datasets. Cross-dataset correlations (mean r = 0.82) approach the split-half ceiling (mean r = 0.92)."}
+```{r SuppFig10-LFC-Agreement, out.width="32%", fig.show="hold", fig.cap="LFC agreement matrices for astrocytes (left), microglia (centre), and oligodendrocytes (right). Each cell shows Pearson correlation of LFC values between dataset pairs, restricted to Roussos significant genes ($p_{adj}$ < 0.05, |LFC| > 1). High correlations (>0.8, blue-green) confirm consistent effect sizes across datasets. Cross-dataset correlations (mean r = 0.82) approach the split-half ceiling (mean r = 0.92)."}
 knitr::include_graphics(c(
   "Datalink/Full_Ground_Truth/Astro/Diagnostic_Results/LFC_Agreement_Matrix_Roussos_Sig_Genes.png",
   "Datalink/Full_Ground_Truth/Micro/Diagnostic_Results/LFC_Agreement_Matrix_Roussos_Sig_Genes.png",
@@ -158,158 +248,39 @@ knitr::include_graphics(c(
 ))
 ```
 
-## Supplementary Fig. 5. DEG chromosome distribution
+## Supplementary Fig. 11. DEG chromosome distribution
 
-```{r SuppFig5-Chr-Distribution, out.width="99%", fig.cap="Chromosomal origin of sex-biased DEGs from the Roussos full ground truth, stratified by |LFC| magnitude and chromosome type (autosomal, X, Y). Top row: counts by chromosome type and LFC bin (1.0-2.0, 2.0-3.0, >3.0) for astrocytes (left), microglia (centre), and oligodendrocytes (right). Bottom row: corresponding proportions. At |LFC| > 3.0, DEGs are predominantly Y-linked; at moderate LFC, autosomal contribution increases."}
+```{r SuppFig11-Chr-Distribution, out.width="99%", fig.cap="Chromosomal origin of sex-biased DEGs from the Roussos full ground truth, stratified by |LFC| magnitude and chromosome type (autosomal, X, Y). Top row: counts by chromosome type and LFC bin (1.0-2.0, 2.0-3.0, >3.0) for astrocytes (left), microglia (centre), and oligodendrocytes (right). Bottom row: corresponding proportions. At |LFC| > 3.0, DEGs are predominantly Y-linked; at moderate LFC, autosomal contribution increases."}
 knitr::include_graphics("Datalink/DE_Diagnostics/Chromosome_Grid/DEG_Chr_Grid_Combined.png")
 ```
 
-## Supplementary Fig. 6. Raw IoU matrices (not universe-controlled)
+## Supplementary Fig. 12. Depth decomposition visualisations
 
-```{r SuppFig6-Raw-IoU, out.width="32%", fig.show="hold", fig.cap="Raw IoU matrices (not universe-controlled) for astrocytes (left), microglia (centre), and oligodendrocytes (right). Standard IoU computed on all genes without restriction to shared count-matrix presence. Cross-dataset raw IoU values (0.31-0.52) are substantially lower than universe-controlled values (0.60-0.92), illustrating the mechanical penalty imposed by differential gene universe coverage. See Supplementary Table 2 for the pairwise comparison."}
-img1 <- "Datalink/Full_Ground_Truth/Astro/Diagnostic_Results/Expanded_IoU_Matrix.png"
-img2 <- "Datalink/Full_Ground_Truth/Micro/Diagnostic_Results/Expanded_IoU_Matrix.png"
-img3 <- "Datalink/Full_Ground_Truth/Oligo/Diagnostic_Results/Expanded_IoU_Matrix.png"
-knitr::include_graphics(c(img1, img2, img3))
-```
-
-## Supplementary Fig. 7. False discovery proportion (FDP) heatmap
-
-False discovery proportion (FDP) analysis complements the IoU analysis by quantifying the rate of unsupported discoveries. FDP measures, for each query source's significant genes that Roussos also tested, what proportion Roussos deemed insignificant.
-
-```{r SuppFig7-FDP-Heatmap, out.width="80%", fig.cap="False discovery proportion (FDP) heatmap across cell types and query sources. Each cell shows the proportion of the query source's significant genes ($p_{adj}$ < 0.05, |LFC| > 1) that Roussos tested but deemed insignificant. Columns grouped by source type: cross-dataset (green; Allen, DeJager, Johansen, Rexach), split-half (blue; Halves A and B from 3 independent Roussos 50/50 splits), and null label-flip (red; 3 MI-minimised permutation runs). Cross-dataset FDP values (mean 0.15) fall only modestly above the split-half baseline (mean 0.09), indicating that most cross-dataset disagreements reflect power limitations rather than biological discordance. Null runs produce FDP = 1.00 when any genes reach significance, confirming complete absence of true signal under permuted labels. Grey cells indicate NA (no significant genes detected by the query source)."}
-knitr::include_graphics("Datalink/Full_Ground_Truth/FDP_Heatmap.png")
-```
-
-## Supplementary Fig. 8. GTEx bulk RNA-seq reference volcano plot
-
-```{r SuppFig8-Bulk-Volcano, out.width="99%", fig.cap="Volcano plot of the 79 tissue-consistent sex-biased DEGs from the GTEx v8 bulk RNA-seq analysis (voom-limma + MASH framework, 838 donors across 44 tissues). Each point represents a gene significant (LFSR < 0.05) in at least 90% of tissues; log~2~ fold change and significance values are averaged across significant tissues. XIST dominates the plot with a bulk LFC of -9.29. The top 10 most significant genes are labelled. Genes shared with the single-cell analysis are shown as translucent. Y-linked genes are absent from the bulk reference because the MASH framework cannot estimate fold change when one sex has no expression."}
-knitr::include_graphics("Datalink/Bulk_Analysis/Bulk_Results/Bulk_Volcano_Plot.png")
-```
-
-## Supplementary Fig. 9. Bulk-single-cell LFC concordance
-
-```{r SuppFig9-Bulk-SC-Correlation, out.width="32%", fig.show="hold", fig.cap="Bulk-anchored LFC concordance between GTEx and Roussos single-cell pseudobulk for genes significant in both modalities. Pearson correlations (excluding XIST) validate single-cell pseudobulk accuracy: R = 0.91 (astrocytes, left), R = 0.93 (microglia, centre), and R = 0.88 (oligodendrocytes, right). Autosomal genes shown in grey, X-chromosome in pink; translucent points indicate genes not significant in single-cell. The black dashed line follows y = x."}
-knitr::include_graphics(c(
-  "Datalink/Bulk_Analysis/Astro/Compare_Correlation_BulkAnchored.png",
-  "Datalink/Bulk_Analysis/Micro/Compare_Correlation_BulkAnchored.png",
-  "Datalink/Bulk_Analysis/Oligo/Compare_Correlation_BulkAnchored.png"
-))
-```
-
-## Supplementary Fig. 10. Recovery of bulk reference genes by single-cell analysis
-
-Of the 79 GTEx tissue-consistent reference genes, 72 were present in the Roussos single-cell gene universe. The same 7 reference genes were absent in every cell type for technical rather than biological reasons: retired Ensembl identifiers, CellRanger PAR1 masking, oligo-dT invisibility of a non-polyadenylated long non-coding RNA, and pseudogene exclusion. Of the 72 testable genes, astrocytes recovered 72% (52/72), oligodendrocytes 68% (49/72), and microglia 54% (39/72). Recovery rates were consistently higher for sex-chromosome genes than for autosomal genes (Astro 79% vs 65%; Oligo 76% vs 59%; Micro 66% vs 41%). This asymmetry is expected: the sex-chromosome subset is enriched for X-inactivation escapees (e.g. KDM6A, KDM5C, DDX3X, ZFX) whose cell-intrinsic dosage mechanism should produce consistent fold changes in every cell type, whereas autosomal sex-biased expression is typically mediated by downstream hormonal or transcription-factor pathways that vary across cell types and are diluted in whole-tissue homogenates. Non-recovery therefore reflects either genuine cell-type-specific absence of sex-biased expression (bulk tissue averages all cell types) or technical filtering (low expression in shallowly sequenced cell types), not a failure of the single-cell reference.
-
-```{r SuppFig10-Recovery-Stats, out.width="32%", fig.show="hold", fig.cap="Recovery of the 79 tissue-consistent bulk DEGs by the Roussos single-cell pseudobulk analysis, stratified by chromosome type (Autosome vs Sex chromosome) and bulk log~2~ fold change magnitude. Genes are classified as Recovered (FDR < 0.05 with matching LFC direction; green), Insignificant (tested but not significant or discordant direction; yellow), NA-Filtered (removed by DESeq2 independent filtering; salmon), or Absent (not in single-cell gene set; grey). Results shown for astrocytes (left), microglia (centre), and oligodendrocytes (right). The vast majority of bulk DEGs fall in the |LFC| < 0.5 bin, reflecting the modest magnitude of ubiquitous sex-biased expression."}
-knitr::include_graphics(c(
-  "Datalink/Bulk_Analysis/Astro/Recovery_Stats_Stratified.png",
-  "Datalink/Bulk_Analysis/Micro/Recovery_Stats_Stratified.png",
-  "Datalink/Bulk_Analysis/Oligo/Recovery_Stats_Stratified.png"
-))
-```
-
-## Supplementary Fig. 11. Astrocyte and microglial continuous recall surfaces
-
-Continuous recall surfaces for astrocytes and microglia, complementing the oligodendrocyte surface shown in Fig. 2 of the main text. The same qualitative patterns are observed across all three cell types: large-effect genes are readily detected at modest sample sizes, while small-effect genes remain below 80% recall across the entire experimental space. The apparent power ordering (microglia > astrocytes > oligodendrocytes) is an artefact of ground-truth censorship, as explained in the main text.
-
-```{r SuppFig11a-AstroMicro-cells, out.width="99%", fig.show='hold', fig.cap="Continuous recall surfaces (semi-log scale, cells-based mode) for astrocytes (left) and microglia (right). Layout and colour scale identical to the oligodendrocyte surface in the main text."}
-knitr::include_graphics(c(
-  "Datalink/Cartesian_Downsampling/Astro/Roussos/cells/Continuous_Viz_Log/Mean_Recall_Total_Continuous_SemiLog.png",
-  "Datalink/Cartesian_Downsampling/Micro/Roussos/cells/Continuous_Viz_Log/Mean_Recall_Total_Continuous_SemiLog.png"
-))
-```
-
-```{r SuppFig11b-AstroMicro-reads, out.width="99%", fig.show='hold', fig.cap="Continuous recall surfaces (semi-log scale, reads-based mode) for astrocytes (left) and microglia (right). Same layout as cells-based version above, with reads per cell on the x-axis."}
-knitr::include_graphics(c(
-  "Datalink/Cartesian_Downsampling/Astro/Roussos/reads/Continuous_Viz_Log/Mean_Recall_Total_Continuous_SemiLog.png",
-  "Datalink/Cartesian_Downsampling/Micro/Roussos/reads/Continuous_Viz_Log/Mean_Recall_Total_Continuous_SemiLog.png"
-))
-```
-
-## Supplementary Fig. 12. Discrete recall heatmaps for all three cell types
-
-```{r SuppFig12a-Discrete-cells, out.width="99%", fig.show='hold', fig.cap="Discrete recall heatmaps from Cartesian downsampling (cells-based mode) for astrocytes (left), microglia (centre), and oligodendrocytes (right). Heatmaps show mean recall across six robustness runs at each grid point. Red borders indicate configurations achieving at least 80% recall."}
-knitr::include_graphics(c(
-  "Datalink/Cartesian_Downsampling/Astro/Roussos/cells/Plots/Mean_Recall_Total.png",
-  "Datalink/Cartesian_Downsampling/Micro/Roussos/cells/Plots/Mean_Recall_Total.png",
-  "Datalink/Cartesian_Downsampling/Oligo/Roussos/cells/Plots/Mean_Recall_Total.png"
-))
-```
-
-```{r SuppFig12b-Discrete-reads, out.width="99%", fig.show="hold", fig.cap="Discrete recall heatmaps from Cartesian downsampling (reads-based mode) for astrocytes (left), microglia (centre), and oligodendrocytes (right). Layout identical to cells-based version, but columns represent reads per cell rather than cells per donor."}
-knitr::include_graphics(c(
-  "Datalink/Cartesian_Downsampling/Astro/Roussos/reads/Plots/Mean_Recall_Total.png",
-  "Datalink/Cartesian_Downsampling/Micro/Roussos/reads/Plots/Mean_Recall_Total.png",
-  "Datalink/Cartesian_Downsampling/Oligo/Roussos/reads/Plots/Mean_Recall_Total.png"
-))
-```
-
-## Supplementary Fig. 13. Chromosome-stratified recall heatmaps
-
-Recall heatmaps stratified by chromosome type and LFC magnitude bin. Autosomal genes show substantially lower recall than sex-chromosome genes at matched effect sizes, reflecting both their rarity and smaller effect sizes. See Supplementary Table 3 for the per-gene characteristics that underlie this difference.
-
-```{r SuppFig13a-Autosomal, out.width="99%", fig.show="hold", fig.cap="Autosomal-only recall heatmaps (cells-based mode) for astrocytes (left), microglia (centre), and oligodendrocytes (right). Restricted to genes on chromosomes 1-22. Autosomal sex-biased genes are rare and exhibit small effect sizes, resulting in substantially lower recall than the total heatmaps."}
-knitr::include_graphics(c(
-  "Datalink/Cartesian_Downsampling/Astro/Roussos/cells/Plots/Mean_Recall_Autosomal.png",
-  "Datalink/Cartesian_Downsampling/Micro/Roussos/cells/Plots/Mean_Recall_Autosomal.png",
-  "Datalink/Cartesian_Downsampling/Oligo/Roussos/cells/Plots/Mean_Recall_Autosomal.png"
-))
-```
-
-```{r SuppFig13b-SexChr, out.width="99%", fig.show="hold", fig.cap="Sex-chromosome-only recall heatmaps (cells-based mode) for astrocytes (left), microglia (centre), and oligodendrocytes (right). Restricted to X and Y chromosome genes. Sex-chromosome genes dominate the large-LFC bin and are detected with high recall at moderate sample sizes, driving the overall pattern in the total heatmaps."}
-knitr::include_graphics(c(
-  "Datalink/Cartesian_Downsampling/Astro/Roussos/cells/Plots/Mean_Recall_SexChr.png",
-  "Datalink/Cartesian_Downsampling/Micro/Roussos/cells/Plots/Mean_Recall_SexChr.png",
-  "Datalink/Cartesian_Downsampling/Oligo/Roussos/cells/Plots/Mean_Recall_SexChr.png"
-))
-```
-
-## Supplementary Fig. 14. Precision heatmaps (cells-based and reads-based modes)
-
-```{r SuppFig14a-Precision-cells, out.width="99%", fig.show="hold", fig.cap="Precision heatmaps for cells-based downsampling. Astrocytes (left), microglia (centre), and oligodendrocytes (right). Large-effect precision remains >0.90 across most configurations; small-effect precision degrades at higher cell counts, reflecting the precision-recall trade-off."}
-knitr::include_graphics(c(
-  "Datalink/Cartesian_Downsampling/Astro/Roussos/cells/Plots/Mean_Precision_Total.png",
-  "Datalink/Cartesian_Downsampling/Micro/Roussos/cells/Plots/Mean_Precision_Total.png",
-  "Datalink/Cartesian_Downsampling/Oligo/Roussos/cells/Plots/Mean_Precision_Total.png"
-))
-```
-
-```{r SuppFig14b-Precision-reads, out.width="99%", fig.show="hold", fig.cap="Precision heatmaps for reads-based downsampling. Astrocytes (left), microglia (centre), and oligodendrocytes (right). Layout identical to cells-based mode, but columns represent reads per cell rather than cells per donor."}
-knitr::include_graphics(c(
-  "Datalink/Cartesian_Downsampling/Astro/Roussos/reads/Plots/Mean_Precision_Total.png",
-  "Datalink/Cartesian_Downsampling/Micro/Roussos/reads/Plots/Mean_Precision_Total.png",
-  "Datalink/Cartesian_Downsampling/Oligo/Roussos/reads/Plots/Mean_Precision_Total.png"
-))
-```
-
-## Supplementary Fig. 15. Depth decomposition visualisations
-
-```{r SuppFig15-Depth-Decomp, out.width="99%", fig.cap="Depth decomposition of detection power. Predicted detection rate as a function of cells per donor and reads per cell, with separate curves for different donor counts (25, 50, 100, 200, 400). The steeper response to cells per donor relative to reads per cell quantifies the diminishing returns of deeper sequencing versus broader cellular sampling."}
+```{r SuppFig12-Depth-Decomp, out.width="99%", fig.cap="Depth decomposition of detection power. Predicted detection rate as a function of cells per donor and reads per cell, with separate curves for different donor counts (25, 50, 100, 200, 400). The steeper response to cells per donor relative to reads per cell quantifies the diminishing returns of deeper sequencing versus broader cellular sampling."}
 knitr::include_graphics("Datalink/Power_Curve_Fitting/Plots/full_per_iteration/Depth_Decomposition.png")
 ```
 
-## Supplementary Fig. 16. Coefficient forest plots for all predictors
+## Supplementary Fig. 13. Coefficient forest plots for all predictors
 
-```{r SuppFig16-Forest, out.width="99%", fig.cap="Forest plots showing logistic regression coefficients for all six predictors across all five cell-type models (Astro = red circles, Micro = blue triangles, Oligo = green squares, Astro (Depth-Eq.) = orange open circles, Astro (Depth+Cell-Eq.) = purple open triangles). Non-overlapping 95% confidence intervals confirm significant differences between cell types and demonstrate that depth equalisation modifies coefficient magnitudes."}
+```{r SuppFig13-Forest, out.width="99%", fig.cap="Forest plots showing logistic regression coefficients for all six predictors across all five cell-type models (Astro = red circles, Micro = blue triangles, Oligo = green squares, Astro (Depth-Eq.) = orange open circles, Astro (Depth+Cell-Eq.) = purple open triangles). Non-overlapping 95% confidence intervals confirm significant differences between cell types and demonstrate that depth equalisation modifies coefficient magnitudes."}
 knitr::include_graphics("Datalink/Power_Curve_Fitting/Plots/with_shallow/full_per_iteration/Forest_All_Coefficients.png")
 ```
 
-## Supplementary Fig. 17. Cross-validation results
+## Supplementary Fig. 14. Cross-validation results
 
-```{r SuppFig17-CV, out.width="99%", fig.cap="Cross-validation of per-cell-type logistic regression models. Scatter plots showing predicted versus observed detection outcomes for each mode subset (cells-based and reads-based). Pearson correlations range from 0.81-0.87 across cell types, confirming model generalisation across experimental paradigms."}
+```{r SuppFig14-CV, out.width="99%", fig.cap="Cross-validation of per-cell-type logistic regression models. Scatter plots showing predicted versus observed detection outcomes for each mode subset (cells-based and reads-based). Pearson correlations range from 0.81-0.87 across cell types, confirming model generalisation across experimental paradigms."}
 knitr::include_graphics("Datalink/Power_Curve_Fitting/Plots/Cross_Validation/Combined_vs_PerCT.png")
 ```
 
-## Supplementary Fig. 18. Cell-type power comparison
+## Supplementary Fig. 15. Cell-type power comparison
 
-```{r SuppFig18-Simplified, out.width="99%", fig.cap="Power curve comparison for all five cell-type models (Astro = red, Micro = blue, Oligo = green, Astro (Depth-Eq.) = orange, Astro (Depth+Cell-Eq.) = purple) with horizontal reference lines at 50%, 80%, and 90% power. Predictions are computed at practical reference values: |LFC| = 1.5, baseMean = 50, dispersion = 0.5, 250 cells per donor, and median reads per cell (~6,000). The power hierarchy reversal from depth equalisation confirms that apparent cell-type differences in power reflect ground-truth censorship rather than intrinsic biological properties."}
+```{r SuppFig15-Simplified, out.width="99%", fig.cap="Power curve comparison for all five cell-type models (Astro = red, Micro = blue, Oligo = green, Astro (Depth-Eq.) = orange, Astro (Depth+Cell-Eq.) = purple) with horizontal reference lines at 50%, 80%, and 90% power. Predictions are computed at practical reference values: |LFC| = 1.5, baseMean = 50, dispersion = 0.5, 250 cells per donor, and median reads per cell (~6,000). The power hierarchy reversal from depth equalisation confirms that apparent cell-type differences in power reflect ground-truth censorship rather than intrinsic biological properties."}
 knitr::include_graphics("Datalink/Power_Curve_Fitting/Plots/with_shallow/full_per_iteration/CellType_Sensitivity_Simple.png")
 ```
 
-## Supplementary Fig. 19. Complete sensitivity grid across covariate range
+## Supplementary Fig. 16. Complete sensitivity grid across covariate range
 
-```{r SuppFig19-SensGrid, out.width="99%", fig.cap="Complete sensitivity grid across the observed covariate range. Five rows (one per covariate: cells per donor, reads per cell, |LFC|, baseMean, dispersion) $\\times$ four columns (Min, 25%, 75%, Max of observed range) showing power curves for all five cell-type models (Astro = red, Micro = blue, Oligo = green, Astro (Depth-Eq.) = orange, Astro (Depth+Cell-Eq.) = purple). The power-hierarchy ordering is preserved across nearly all covariate combinations, demonstrating that relative power differences are robust to gene-level characteristics."}
+```{r SuppFig16-SensGrid, out.width="99%", fig.cap="Complete sensitivity grid across the observed covariate range. Five rows (one per covariate: cells per donor, reads per cell, |LFC|, baseMean, dispersion) $\\times$ four columns (Min, 25%, 75%, Max of observed range) showing power curves for all five cell-type models (Astro = red, Micro = blue, Oligo = green, Astro (Depth-Eq.) = orange, Astro (Depth+Cell-Eq.) = purple). The power-hierarchy ordering is preserved across nearly all covariate combinations, demonstrating that relative power differences are robust to gene-level characteristics."}
 knitr::include_graphics("Datalink/Power_Curve_Fitting/Plots/full_per_iteration/CellType_Sensitivity_Grid.png")
 ```
 

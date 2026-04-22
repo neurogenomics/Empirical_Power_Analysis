@@ -1149,18 +1149,24 @@ if (LOG_MODE_ENABLED) {
           coord_cartesian(clip = "off") +
           scale_y_log10(labels = y_labels_fn) +
           scale_fill_viridis_c(option = "magma", limits = c(0, 1),
-                               na.value = "grey90", name = fill_label_log) +
+                               na.value = "white", name = fill_label_log) +
           labs(title = paste0(prettify_label(cell_type), ": ", m$desc),
                x = "Number of Donors",
                y = y_label) +
           theme_publication(base_size = 16) +
           theme(
             panel.grid = element_blank(),
-            strip.text = element_text(face = "bold", size = 12),
+            strip.text = element_text(face = "bold", size = 13),
             panel.spacing = unit(0.8, "lines"),
-            legend.position = "right"
+            # Harmonised with 04_Visualise_Power.R so grid + surface composites
+            # in R/figure_composition have matching legend widths.
+            legend.position = "right",
+            legend.key.width = unit(0.7, "cm"),
+            legend.key.height = unit(1.3, "cm"),
+            legend.text = element_text(size = 13),
+            legend.title = element_text(size = 14)
           )
-        
+
         # Save
         fname <- paste0(val_col, "_", cat, "_Continuous_SemiLog.png")
         fpath <- file.path(cont_viz_log_dir, fname)

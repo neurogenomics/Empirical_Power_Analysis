@@ -124,13 +124,19 @@ plot_metric_heatmap <- function(data, val_col, title_str, sub_str,
     theme(
       axis.text.x = element_text(angle = 45, hjust = 1),
       panel.grid = element_blank(),
-      strip.text = element_text(face = "bold", size = 11),
+      strip.text = element_text(face = "bold", size = 13),
       panel.spacing = unit(0.1, "lines"),
-      legend.position = "left",
+      # Harmonised with 07_Visualise_Continuous_Grid.R so the grid + surface
+      # composites in R/figure_composition have matching legend widths.
+      legend.position = "right",
+      legend.key.width = unit(0.7, "cm"),
+      legend.key.height = unit(1.3, "cm"),
+      legend.text = element_text(size = 13),
+      legend.title = element_text(size = 14),
       legend.margin = margin(0, 0, 0, 0),
       legend.box.margin = margin(0, 0, 0, 0)
     )
-  
+
   # Derive a clean legend title from the metric column name
   legend_title <- gsub("^Mean_", "Mean ", val_col)
   legend_title <- gsub("_Harm$", " (Harmonised)", legend_title)
@@ -308,11 +314,13 @@ for (cell_type in cell_types) {
         feas_data = feas_map
       )
       
-      ggsave(fpath, p, width = 12, height = 8)
+      # Dimensions harmonised with 07 semi-log output (14x10) so composite
+      # panels line up in R/figure_composition.
+      ggsave(fpath, p, width = 14, height = 10, dpi = 150)
       log_info("Saved: %s", fname)
     }
   }
-  
+
   # ==============================================================================
   # 5b. GENERATE INDIVIDUAL LFC BIN PLOTS (Total only, with 0.8 threshold line)
   # ==============================================================================

@@ -290,11 +290,25 @@ generate_corr_plot <- function(df, title_prefix, cell_type, dataset_name) {
     p <- p + scale_linetype_manual(name = "Trend Lines (Sig Only)", values = c("All Genes" = "dotted"), labels = c("All Genes" = label_all))
   }
   
+  short_ct <- switch(tolower(cell_type),
+                     "oligodendrocytes" = "Oligo",
+                     "astrocytes" = "Astro",
+                     "microglia" = "Micro",
+                     prettify_label(cell_type))
+
   p <- p + geom_text_repel(aes(label = label_gene), max.overlaps = 50, box.padding = 0.5, size=3.5) +
-    scale_color_manual(name = "Chromosome", values = c("Autosome" = "grey60", "X" = "#f8766d", "Y" = "#00bfc4")) + 
+    scale_color_manual(name = "Chromosome", values = c("Autosome" = "grey60", "X" = "#f8766d", "Y" = "#00bfc4")) +
     scale_alpha_manual(name = "SC Significance", values = c("Significant" = 1.0, "NS" = 0.4)) +
     theme_publication() +
-    labs(title = paste0(prettify_label(cell_type), ": Bulk vs Single-Cell Concordance"),
+    theme(plot.title    = element_text(size = 12, face = "bold"),
+          legend.title  = element_text(size = 9,  face = "bold"),
+          legend.text   = element_text(size = 8),
+          legend.key.size = unit(0.4, "cm"),
+          legend.spacing.y = unit(0.1, "cm"),
+          legend.box.spacing = unit(0.2, "cm"),
+          axis.title    = element_text(size = 11),
+          axis.text     = element_text(size = 10)) +
+    labs(title = paste0(short_ct, ": Bulk vs Single-Cell Concordance"),
          subtitle = NULL,
          x = expression(Bulk~Log[2]~Fold~Change),
          y = expression(Single-Cell~Log[2]~Fold~Change))

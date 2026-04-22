@@ -366,6 +366,60 @@ done
 
 ---
 
+## J. Regenerating composed figures
+
+Builds the four composite PNGs that the main paper draft reads from
+`Datalink/Composed_Figures/` (`figure_reproducibility_column.png`,
+`figure_bulk_validation.png`, `figure_cartesian_oligo_recall.png`,
+`figure_cartesian_oligo_precision.png`). Source PNGs are produced by
+sections C, D and H.
+
+- **Depends on:** C, D, H (the source heatmaps and bar charts must
+  already exist under `Datalink/`)
+- **Produces:** `R/figure_composition/output/{v1_tight,v2_spaced,v3_bordered}/`
+  and the four PNGs that should then be copied into
+  `Datalink/Composed_Figures/`
+- **Runtime:** seconds
+- **Prerequisites:** Python 3.10+, Pillow (`pip install Pillow`). Fonts
+  resolve from system DejaVu / Liberation / FreeSans (bold sans-serif),
+  with a fallback to PIL's default bitmap font.
+
+```bash
+cd R/figure_composition && python3 compose_figures.py
+```
+
+To promote a fresh render into the paper's data path:
+
+```bash
+cp R/figure_composition/output/v1_tight/figure_reproducibility_column.png \
+   R/figure_composition/output/v1_tight/figure_bulk_validation.png \
+   R/figure_composition/output/v1_tight/figure_cartesian_oligo_recall.png \
+   R/figure_composition/output/v1_tight/figure_cartesian_oligo_precision.png \
+   Datalink/Composed_Figures/
+```
+
+---
+
+## K. Regenerating the three cross-dataset heatmaps
+
+Lightweight viz-only rerun for the three pheatmaps in `FigRepro` (raw IoU,
+universe-controlled IoU, FDP). Reads the intermediate CSVs that section C
+already persists, redraws only the heatmaps, and skips any DE or set
+operations.
+
+- **Depends on:** C (`R/full_ground_truth/02_Cross_Dataset_Diagnostics.R`
+  must have been run at least once to produce the intermediate CSVs)
+- **Produces:** updated `Expanded_IoU_Matrix.png`,
+  `Expanded_IoU_Matrix_Universe_Controlled.png`, `FDP_Heatmap.png` under
+  `Datalink/Full_Ground_Truth/`
+- **Runtime:** under 2 minutes
+
+```bash
+Rscript R/full_ground_truth/02b_Regenerate_Heatmaps.R
+```
+
+---
+
 ## 4. Whole-repo output comparison
 
 After the full rerun:

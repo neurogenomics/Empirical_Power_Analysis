@@ -987,24 +987,24 @@ for (cell_type in CELL_TYPES) {
           n_null <- length(null_results)
           
           group_labels <- c(
-            rep("Upper Bound", n_upper),
+            rep("Split-Half", n_upper),
             rep("Cross-Dataset", n_datasets),
-            rep("Lower Bound", n_null)
+            rep("Null", n_null)
           )
-          
+
           col_annotation <- data.frame(
             Group = factor(group_labels,
-                           levels = c("Upper Bound",
+                           levels = c("Split-Half",
                                       "Cross-Dataset",
-                                      "Lower Bound")),
+                                      "Null")),
             row.names = colnames(iou_res$iou_matrix)
           )
-          
+
           ann_colors <- list(
             Group = c(
-              "Upper Bound" = "#2166AC",
+              "Split-Half"    = "#2166AC",
               "Cross-Dataset" = "#4DAF4A",
-              "Lower Bound" = "#E41A1C"
+              "Null"          = "#E41A1C"
             )
           )
           
@@ -1033,10 +1033,13 @@ for (cell_type in CELL_TYPES) {
                    cluster_cols = FALSE,
                    gaps_col = c(n_upper, n_upper + n_datasets),
                    gaps_row = c(n_upper, n_upper + n_datasets),
-                   fontsize = 14,
-                   fontsize_row = 12, fontsize_col = 12,
+                   fontsize = 15,
+                   fontsize_row = 14, fontsize_col = 14,
+                   show_rownames = FALSE,
+                   show_colnames = FALSE,
                    annotation_names_col = FALSE,
-                   annotation_legend_side = "right")
+                   annotation_legend = FALSE,
+                   legend = TRUE)
           dev.off()
           log_info("  Saved Expanded_IoU_Matrix.png")
           
@@ -1122,7 +1125,7 @@ for (cell_type in CELL_TYPES) {
             width = 2200, height = 1800, res = 120)
         pheatmap(iou_uc_mat_display,
                  display_numbers = TRUE, number_format = "%.2f",
-                 fontsize_number = 10,
+                 fontsize_number = 13,
                  number_color = "black",
                  main = glue("Universe-Controlled IoU ({REFERENCE_DATASET} Significant Genes): {prettify_label(cell_type)}"),
                  color = colorRampPalette(c("#2166AC", "#F7F7F7", "#B2182B"))(100),
@@ -1133,10 +1136,13 @@ for (cell_type in CELL_TYPES) {
                  cluster_cols = FALSE,
                  gaps_col = c(n_upper, n_upper + n_datasets),
                  gaps_row = c(n_upper, n_upper + n_datasets),
-                 fontsize = 14,
-                 fontsize_row = 12, fontsize_col = 12,
+                 fontsize = 15,
+                 fontsize_row = 14, fontsize_col = 14,
+                 show_rownames = FALSE,
+                 show_colnames = FALSE,
                  annotation_names_col = FALSE,
-                 annotation_legend_side = "right")
+                 annotation_legend = FALSE,
+                 legend = TRUE)
         dev.off()
         log_info("  Saved Expanded_IoU_Matrix_Universe_Controlled.png")
         
@@ -1221,28 +1227,40 @@ tryCatch({
     row_order <- intersect(CELL_TYPES, rownames(fdp_mat))
     fdp_mat <- fdp_mat[row_order, , drop = FALSE]
 
-    # Prettify row labels (cell types) and column labels (source names)
-    rownames(fdp_mat) <- prettify_label(rownames(fdp_mat))
+    # Compute column group assignments in original source order
+    col_groups <- group_order[match(available_cols, source_order)]
+
+    # Reorder columns so groups appear in the same order as the IoU panels:
+    # Split-Half, Cross-Dataset, Null. Within a group, preserve source order.
+    group_priority <- setNames(seq_along(c("Split-Half", "Cross-Dataset", "Null")),
+                               c("Split-Half", "Cross-Dataset", "Null"))
+    col_order_idx <- order(group_priority[col_groups], seq_along(col_groups))
+    fdp_mat <- fdp_mat[, col_order_idx, drop = FALSE]
+    available_cols <- available_cols[col_order_idx]
+    col_groups <- col_groups[col_order_idx]
+
+    # Abbreviate row labels to single letters (A, M, O) for compact display
+    pretty_rows <- prettify_label(rownames(fdp_mat))
+    rownames(fdp_mat) <- substr(pretty_rows, 1, 1)
     colnames(fdp_mat) <- prettify_label(colnames(fdp_mat))
 
-    # Column annotation for pheatmap
-    col_groups <- group_order[match(available_cols, source_order)]
+    # Column annotation for pheatmap (factor level order matches reordered columns)
     col_annotation <- data.frame(
       Group = factor(col_groups,
-                     levels = c("Cross-Dataset", "Split-Half", "Null")),
-      row.names = prettify_label(available_cols)
+                     levels = c("Split-Half", "Cross-Dataset", "Null")),
+      row.names = colnames(fdp_mat)
     )
 
     ann_colors <- list(
       Group = c(
-        "Cross-Dataset" = "#4DAF4A",
         "Split-Half"    = "#2166AC",
+        "Cross-Dataset" = "#4DAF4A",
         "Null"          = "#E41A1C"
       )
     )
 
-    # Compute gap positions between groups
-    group_runs <- rle(col_groups)
+    # Compute gap positions between groups (after reordering)
+    group_runs <- rle(as.character(col_groups))
     gap_positions <- cumsum(group_runs$lengths[-length(group_runs$lengths)])
 
     # Generate heatmap
@@ -1251,7 +1269,7 @@ tryCatch({
     pheatmap(fdp_mat,
              display_numbers = TRUE,
              number_format   = "%.2f",
-             fontsize_number = 12,
+             fontsize_number = 13,
              main = glue("False Discovery Proportion vs {REFERENCE_DATASET} Full Ground Truth"),
              color = colorRampPalette(c("#F7F7F7", "#FEE08B", "#FC8D59", "#D73027"))(100),
              breaks = seq(0, 1, length.out = 101),
@@ -1261,8 +1279,10 @@ tryCatch({
              cluster_cols = FALSE,
              gaps_col = gap_positions,
              angle_col = 45,
-             fontsize = 14,
-             fontsize_row = 13, fontsize_col = 13)
+             fontsize = 15,
+             fontsize_row = 15, fontsize_col = 14,
+             annotation_legend = TRUE,
+             annotation_names_col = FALSE)
     dev.off()
     log_info("Saved FDP_Heatmap.png")
 
