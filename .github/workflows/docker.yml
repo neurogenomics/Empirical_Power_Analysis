@@ -3,10 +3,6 @@ name: Build & publish Docker image
 on:
   push:
     branches: [main]
-    paths:
-      - 'Dockerfile'
-      - 'renv.lock'
-      - '.github/workflows/docker.yml'
   release:
     types: [published]
   workflow_dispatch:

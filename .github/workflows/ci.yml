@@ -68,23 +68,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install testthat + attempt renv restore
+      - name: Install minimal test deps (skip renv::restore)
         run: |
-          # Install testthat directly at the system level so it is always available
-          # regardless of whether renv.lock contains it. renv::restore is attempted
-          # but treated as best-effort.
-          R -e "install.packages(c('renv', 'testthat'), repos='https://cloud.r-project.org')"
-          if [ -f renv.lock ]; then
-            R -e "tryCatch(renv::restore(prompt = FALSE, clean = FALSE), error = function(e) message('renv::restore failed: ', conditionMessage(e)))" || true
-          fi
-          # Ensure testthat stays available even after renv activation
-          R -e "if (!requireNamespace('testthat', quietly = TRUE)) install.packages('testthat', repos='https://cloud.r-project.org', lib=.libPaths()[1])"
+          # Bioconductor base image already has SingleCellExperiment, Matrix, BiocParallel.
+          # Tests only additionally need testthat, dplyr, qs. Full renv::restore of the
+          # 179-package pipeline lockfile is unnecessary for unit tests and takes ~45 min.
+          R -e "install.packages(c('testthat', 'dplyr', 'qs'), repos='https://cloud.r-project.org')"
 
       - name: Run testthat per pipeline
         run: |
-          # Run outside the renv library so system-installed testthat is visible
+          # --no-init-file bypasses the repo's .Rprofile (renv activation) so
+          # the system library with testthat remains visible.
           R --no-init-file -e '
-            options(renv.config.auto.snapshot = FALSE)
             pipeline_dirs <- list.dirs("R", recursive = FALSE)
             results <- list()
             for (d in pipeline_dirs) {

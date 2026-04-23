@@ -33,6 +33,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
       texlive-xetex \
       texlive-fonts-recommended \
       texlive-plain-generic \
+      ccache \
       libglpk40 \
       jq
 
@@ -66,8 +67,7 @@ RUN --mount=type=cache,target=/root/.cache/R,sharing=locked \
 RUN --mount=type=cache,target=/root/.cache/R/renv,sharing=locked \
     --mount=type=cache,target=/root/.cache/R,sharing=locked \
     --mount=type=cache,target=/tmp/ccache,sharing=locked \
-    apt-get install -y --no-install-recommends ccache \
- && mkdir -p ~/.R \
+    mkdir -p ~/.R \
  && echo "CC=ccache gcc"   >> ~/.R/Makevars \
  && echo "CXX=ccache g++"  >> ~/.R/Makevars \
  && echo "CXX11=ccache g++" >> ~/.R/Makevars \
