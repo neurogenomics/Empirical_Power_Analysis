@@ -223,20 +223,24 @@ run_deseq_for_dds <- function(agg_result,
   log_info("Saved DDS checkpoint: %s", basename(save_path_dds))
 
   # Optionally save shrunk results
+  apeglm_available <- TRUE
   if (!is.null(save_path_results)) {
     coef_name <- paste0(SEX_COL, "_", MALE_VAL, "_vs_", FEMALE_VAL)
-    if (coef_name %in% DESeq2::resultsNames(dds)) {
+    apeglm_available <- coef_name %in% DESeq2::resultsNames(dds)
+    if (apeglm_available) {
       res <- suppressMessages(DESeq2::lfcShrink(dds, coef = coef_name,
                                                  type = "apeglm", quiet = TRUE))
     } else {
+      log_warning("Coefficient '%s' not found, using normal shrinkage", coef_name)
       res <- suppressMessages(DESeq2::lfcShrink(dds,
                                                  contrast = c(SEX_COL, MALE_VAL, FEMALE_VAL),
                                                  type = "normal", quiet = TRUE))
     }
+    attr(res, "shrinkage_type") <- if (apeglm_available) "apeglm" else "normal"
     qs::qsave(res, save_path_results)
   }
 
-  return("SUCCESS")
+  return(if (apeglm_available) "SUCCESS" else "SUCCESS_FALLBACK")
 }
 
 # ==============================================================================

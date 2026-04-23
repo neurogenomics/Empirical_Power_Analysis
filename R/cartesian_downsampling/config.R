@@ -97,7 +97,7 @@ MIN_GENE_COUNT <- 10
 #                 Requires BiocManager::install("glmGamPoi").
 # Change to "glmGamPoi" only after running the equivalence benchmark
 # (tests/test_fittype_equivalence.R) and updating paper Methods.
-DE_FIT_TYPE <- "parametric"
+DE_FIT_TYPE <- "glmGamPoi"
 
 # FDR threshold for significance
 FDR_THRESHOLD <- 0.05

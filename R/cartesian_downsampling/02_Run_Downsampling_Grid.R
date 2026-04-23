@@ -191,12 +191,15 @@ for (cell_type in cell_types) {
       
       results <- bplapply(plan, function(p) {
         
-        # Generate unique seed for this job
-        # Generate unique seed: use mode-appropriate Y value
+        # Generate unique seed for this job via hash of a composite key.
+        # Replaces the previous additive form (run_seed + n_donors*1000 + y_val + iter),
+        # which could alias different (donors, y, iter) tuples once target_reads
+        # exceeded 1000 in reads mode. Hashing is deterministic across sessions
+        # and collision-resistant in practice.
         y_val <- if (p$mode == "reads") p$target_reads else p$n_cells
-        job_seed <- run_seed + p$n_donors * 1000 + 
-                    ifelse(is.na(y_val), 9999, y_val) + 
-                    p$iter
+        job_key <- paste(run_seed, p$n_donors, p$mode,
+                         ifelse(is.na(y_val), "NA", y_val), p$iter, sep = "|")
+        job_seed <- digest::digest2int(job_key)
         
         result <- tryCatch({
           suppressMessages({
@@ -247,14 +250,20 @@ for (cell_type in cell_types) {
       # ==============================================================================
       
       res_vec <- unlist(results)
-      n_success <- sum(res_vec == "SUCCESS")
-      n_fail <- sum(res_vec != "SUCCESS")
-      
+      success_codes <- c("SUCCESS", "SUCCESS_FALLBACK")
+      n_fallback <- sum(res_vec == "SUCCESS_FALLBACK")
+      n_success  <- sum(res_vec %in% success_codes)
+      n_fail     <- sum(!res_vec %in% success_codes)
+
       log_info("Batch complete. Success: %d | Failed: %d", n_success, n_fail)
-      
+      if (n_success > 0) {
+        log_info("  apeglm->normal fallback: %d / %d successful jobs (%.3f%%)",
+                 n_fallback, n_success, 100 * n_fallback / n_success)
+      }
+
       if (n_fail > 0) {
-        # Log unique error types
-        error_table <- table(res_vec[res_vec != "SUCCESS"])
+        # Log unique error types (SUCCESS_FALLBACK is a success, not an error)
+        error_table <- table(res_vec[!res_vec %in% success_codes])
         log_warning("Error summary:")
         for (err in names(error_table)) {
           log_warning("  %s: %d occurrences", err, error_table[err])

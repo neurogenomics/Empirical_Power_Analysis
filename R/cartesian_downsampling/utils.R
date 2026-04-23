@@ -359,21 +359,28 @@ run_deseq_worker <- function(agg_result,
   
   # Get coefficient name for sex contrast
   coef_name <- paste0(sex_col, "_", MALE_VAL, "_vs_", FEMALE_VAL)
-  
-  # LFC shrinkage (lfcShrink is in DESeq2, apeglm is just the method)
-  if (coef_name %in% DESeq2::resultsNames(dds)) {
+
+  # LFC shrinkage — apeglm when the sex coefficient survives the rank check,
+  # normal shrinkage as a fallback when rank-deficient covariate matrices
+  # cause DESeq2 to drop the sex column from resultsNames(dds). We return the
+  # fallback status to the master process (bplapply workers cannot rely on
+  # message() to reach the log) and attach the shrinkage type to the result
+  # so downstream aggregation can audit it.
+  apeglm_available <- coef_name %in% DESeq2::resultsNames(dds)
+  if (apeglm_available) {
     res <- suppressMessages(DESeq2::lfcShrink(dds, coef = coef_name, type = "apeglm", quiet = TRUE))
   } else {
-    # Fallback to normal shrinkage if coefficient not found
     log_warning("Coefficient '%s' not found, using normal shrinkage", coef_name)
-    res <- suppressMessages(DESeq2::lfcShrink(dds, contrast = c(sex_col, MALE_VAL, FEMALE_VAL), 
+    res <- suppressMessages(DESeq2::lfcShrink(dds, contrast = c(sex_col, MALE_VAL, FEMALE_VAL),
                                                type = "normal", quiet = TRUE))
   }
-  
+
+  attr(res, "shrinkage_type") <- if (apeglm_available) "apeglm" else "normal"
+
   # Save results
   qs::qsave(res, save_path_results)
-  
-  return("SUCCESS")
+
+  return(if (apeglm_available) "SUCCESS" else "SUCCESS_FALLBACK")
 }
 
 # ==============================================================================
