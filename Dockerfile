@@ -38,9 +38,14 @@ COPY .Rprofile .Rprofile
 COPY renv/activate.R renv/activate.R
 COPY renv/settings.json renv/settings.json
 
-# Install renv itself, then restore the pinned environment
-RUN R -e "install.packages('renv', repos = 'https://cloud.r-project.org')" \
- && R -e "renv::restore(prompt = FALSE)"
+# Install renv itself (rarely changes; gets its own cacheable layer)
+RUN R -e "install.packages('renv', repos = 'https://cloud.r-project.org')"
+
+# Restore the pinned environment. Uses a BuildKit cache mount for renv's
+# package cache so failed/partial builds retain already-compiled packages —
+# turns a 15-min rebuild into 1-2 min when only a few packages change.
+RUN --mount=type=cache,target=/root/.cache/R/renv,sharing=locked \
+    R -e "renv::restore(prompt = FALSE)"
 
 # -----------------------------------------------------------------------------
 #  Verify critical packages loaded
