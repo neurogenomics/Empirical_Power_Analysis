@@ -78,8 +78,9 @@ RUN --mount=type=cache,target=/root/.cache/R/renv,sharing=locked \
           renv::restore(prompt = FALSE); \
           st <- renv::status(); \
           cat('--- renv::status() ---\n'); print(st); \
-          missing <- c(st\$missing\$Package, st\$synchronized\$Package[!st\$synchronized\$Package %in% rownames(installed.packages())]); \
-          missing <- unique(missing[!is.na(missing)]); \
+          lock_pkgs <- names(renv::lockfile_read()\$Packages); \
+          installed <- rownames(installed.packages()); \
+          missing <- setdiff(lock_pkgs, installed); \
           if (length(missing) > 0) { \
             cat('Force-installing missing packages:', paste(missing, collapse=', '), '\n'); \
             renv::install(missing, prompt = FALSE); \
