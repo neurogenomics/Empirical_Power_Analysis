@@ -86,21 +86,21 @@ knitr::include_graphics(c(
 ))
 ```
 
-## Supplementary Fig. 3. Chromosome-stratified recall heatmaps for astrocytes and microglia
+## Supplementary Fig. 3. Chromosome-stratified recall heatmaps
 
-Recall heatmaps stratified by chromosome type and LFC magnitude bin. Autosomal genes show substantially lower recall than sex-chromosome genes at matched effect sizes, reflecting both their rarity and smaller effect sizes. See Supplementary Table 3 for the per-gene characteristics that underlie this difference. Oligodendrocyte chromosome-stratified heatmaps follow the same qualitative patterns and are omitted here because the total-recall oligodendrocyte heatmap is shown in Fig. \@ref(fig:FigRecall) panel B.
+Recall heatmaps stratified by chromosome type and LFC magnitude bin. Rows are cell types (astrocytes, microglia, oligodendrocytes); columns are sex-chromosome genes (left) and autosomal genes (right). Autosomal genes show substantially lower recall than sex-chromosome genes at matched effect sizes, reflecting both their rarity and smaller effect sizes. See Supplementary Table 3 for the per-gene characteristics that underlie this difference.
 
-```{r SuppFig3a-Autosomal, out.width="48%", fig.show="hold", fig.cap="Autosomal-only recall heatmaps (cells-based mode) for astrocytes (left) and microglia (right). Restricted to genes on chromosomes 1-22. Autosomal sex-biased genes are rare and exhibit small effect sizes, resulting in substantially lower recall than the total heatmaps."}
+```{r SuppFig3-ChromStratified, out.width="48%", fig.show="hold", fig.cap="Chromosome-stratified recall heatmaps (cells-based mode). Rows are cell types (astrocytes, microglia, oligodendrocytes); columns are sex-chromosome genes (left) and autosomal genes (right). Sex-chromosome genes dominate the large-LFC bin and are detected with high recall at moderate sample sizes, driving the overall pattern in the total heatmaps. Autosomal sex-biased genes are rare and exhibit small effect sizes, resulting in substantially lower recall."}
 knitr::include_graphics(c(
-  "Datalink/Cartesian_Downsampling/Astro/Roussos/cells/Plots/Mean_Recall_Autosomal.png",
-  "Datalink/Cartesian_Downsampling/Micro/Roussos/cells/Plots/Mean_Recall_Autosomal.png"
-))
-```
-
-```{r SuppFig3b-SexChr, out.width="48%", fig.show="hold", fig.cap="Sex-chromosome-only recall heatmaps (cells-based mode) for astrocytes (left) and microglia (right). Restricted to X and Y chromosome genes. Sex-chromosome genes dominate the large-LFC bin and are detected with high recall at moderate sample sizes, driving the overall pattern in the total heatmaps."}
-knitr::include_graphics(c(
+  # Astrocytes: SexChr, Autosomal
   "Datalink/Cartesian_Downsampling/Astro/Roussos/cells/Plots/Mean_Recall_SexChr.png",
-  "Datalink/Cartesian_Downsampling/Micro/Roussos/cells/Plots/Mean_Recall_SexChr.png"
+  "Datalink/Cartesian_Downsampling/Astro/Roussos/cells/Plots/Mean_Recall_Autosomal.png",
+  # Microglia: SexChr, Autosomal
+  "Datalink/Cartesian_Downsampling/Micro/Roussos/cells/Plots/Mean_Recall_SexChr.png",
+  "Datalink/Cartesian_Downsampling/Micro/Roussos/cells/Plots/Mean_Recall_Autosomal.png",
+  # Oligodendrocytes: SexChr, Autosomal
+  "Datalink/Cartesian_Downsampling/Oligo/Roussos/cells/Plots/Mean_Recall_SexChr.png",
+  "Datalink/Cartesian_Downsampling/Oligo/Roussos/cells/Plots/Mean_Recall_Autosomal.png"
 ))
 ```
 
