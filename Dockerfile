@@ -17,9 +17,11 @@ LABEL org.opencontainers.image.authors="Skene Lab, UK DRI Imperial"
 # -----------------------------------------------------------------------------
 #  System dependencies beyond bioconductor_docker defaults
 # -----------------------------------------------------------------------------
+# pandoc-citeproc was merged into pandoc itself (pandoc >= 2.11) and removed
+# from Ubuntu 22.04+ repos. The Bioconductor 3.21 base is Ubuntu 24.04, so
+# we use `pandoc --citeproc` instead of the deprecated separate binary.
 RUN apt-get update && apt-get install -y --no-install-recommends \
       pandoc \
-      pandoc-citeproc \
       texlive-xetex \
       texlive-fonts-recommended \
       texlive-plain-generic \

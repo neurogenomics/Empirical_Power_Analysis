@@ -68,19 +68,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install renv + restore (if lockfile present)
+      - name: Install testthat + attempt renv restore
         run: |
-          R -e "install.packages('renv', repos='https://cloud.r-project.org')"
+          # Install testthat directly at the system level so it is always available
+          # regardless of whether renv.lock contains it. renv::restore is attempted
+          # but treated as best-effort.
+          R -e "install.packages(c('renv', 'testthat'), repos='https://cloud.r-project.org')"
           if [ -f renv.lock ]; then
-            R -e "renv::restore(prompt = FALSE)"
-          else
-            echo "No renv.lock — installing testthat directly as fallback"
-            R -e "install.packages('testthat', repos='https://cloud.r-project.org')"
+            R -e "tryCatch(renv::restore(prompt = FALSE, clean = FALSE), error = function(e) message('renv::restore failed: ', conditionMessage(e)))" || true
           fi
+          # Ensure testthat stays available even after renv activation
+          R -e "if (!requireNamespace('testthat', quietly = TRUE)) install.packages('testthat', repos='https://cloud.r-project.org', lib=.libPaths()[1])"
 
       - name: Run testthat per pipeline
         run: |
-          R -e '
+          # Run outside the renv library so system-installed testthat is visible
+          R --no-init-file -e '
+            options(renv.config.auto.snapshot = FALSE)
             pipeline_dirs <- list.dirs("R", recursive = FALSE)
             results <- list()
             for (d in pipeline_dirs) {
