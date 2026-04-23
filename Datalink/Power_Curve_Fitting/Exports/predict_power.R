@@ -102,8 +102,9 @@ predict_power <- function(n_donors,
   stopifnot(abs_lfc > 0)
   stopifnot(basemean > 0)
   stopifnot(dispersion > 0)
-  stopifnot(cell_type %in% c("Astro", "Micro", "Oligo", "combined"))
-
+  stopifnot(cell_type %in% c("Astro", "Micro", "Oligo",
+                             "Astro_Shallow", "Astro_Shallow_Fewer",
+                             "combined"))
   # Look up coefficients
   coefs <- .power_coefficients[[cell_type]]
   if (is.null(coefs)) {
@@ -137,5 +138,3 @@ predict_power_vec <- function(df) {
          cell_type = if ("cell_type" %in% names(df)) df$cell_type else "combined")
 }
 
-cat("predict_power.R loaded (pipeline v4.2.0, 2026-04-13)\n")
-cat("Available models: Astro, Micro, Oligo, Astro_Shallow, Astro_Shallow_Fewer, combined\n")
