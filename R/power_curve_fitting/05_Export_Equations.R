@@ -235,7 +235,9 @@ func_lines <- c(func_lines,
   '  stopifnot(abs_lfc > 0)',
   '  stopifnot(basemean > 0)',
   '  stopifnot(dispersion > 0)',
-  '  stopifnot(cell_type %in% c("Astro", "Micro", "Oligo", "combined"))',
+  '  stopifnot(cell_type %in% c("Astro", "Micro", "Oligo",
+                           "Astro_Shallow", "Astro_Shallow_Fewer",
+                           "combined"))',
   '',
   '  # Look up coefficients',
   '  coefs <- .power_coefficients[[cell_type]]',
@@ -269,10 +271,7 @@ func_lines <- c(func_lines,
   '         dispersion = df$dispersion,',
   '         cell_type = if ("cell_type" %in% names(df)) df$cell_type else "combined")',
   '}',
-  '',
-  sprintf('cat("predict_power.R loaded (pipeline v%s, %s)\\n")', PIPELINE_VERSION, Sys.Date()),
-  sprintf('cat("Available models: %s\\n")',
-          paste(names(all_equations), collapse = ", "))
+  ''
 )
 
 writeLines(func_lines, file.path(export_dir, "predict_power.R"))
