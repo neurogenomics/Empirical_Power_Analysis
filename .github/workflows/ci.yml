@@ -84,28 +84,38 @@ jobs:
         uses: actions/cache@v4
         with:
           # Cache the R site library so testthat/dplyr/qs don't reinstall every run.
-          # Key is stable across ci.yml edits — only busts when the dep list below is changed.
           path: /usr/local/lib/R/site-library
-          key: ${{ runner.os }}-R-unit-tests-v3-testthat-dplyr-qs
+          key: ${{ runner.os }}-R-unit-tests-v4-testthat-dplyr-qs
           restore-keys: |
-            ${{ runner.os }}-R-unit-tests-v3-
+            ${{ runner.os }}-R-unit-tests-v4-
 
-      - name: Install minimal test deps (skip renv::restore)
+      - name: Install minimal test deps (P3M binary, CRAN source fallback)
         run: |
           # Bioconductor base image already has SingleCellExperiment, Matrix, BiocParallel,
           # SummarizedExperiment, S4Vectors, DESeq2, apeglm, ggplot2.
           # Tests only additionally need testthat, dplyr, qs.
-          # P3M binary repo gives pre-compiled packages (avoids qs/Rcpp/stringfish C++ compile).
+          # Try P3M (pre-compiled binaries) first, then fall back to CRAN source compile
+          # (needed because P3M noble+R4.5 sometimes lacks newest qs builds).
           R -e "
             options(
-              repos = c(P3M = 'https://packagemanager.posit.co/cran/__linux__/noble/latest'),
+              repos = c(
+                P3M = 'https://packagemanager.posit.co/cran/__linux__/noble/latest',
+                CRAN = 'https://cloud.r-project.org'
+              ),
               HTTPUserAgent = sprintf('R/%s R (%s) %s %s',
                 getRversion(), paste(getRversion(), R.version\$status),
                 R.version\$platform, R.version\$arch)
             );
             needed <- c('testthat', 'dplyr', 'qs');
             missing <- needed[!needed %in% rownames(installed.packages())];
-            if (length(missing)) install.packages(missing, Ncpus = 2);
+            if (length(missing)) {
+              tryCatch(install.packages(missing, Ncpus = 2),
+                       error = function(e) {
+                         cat('P3M failed, retrying from CRAN source:', conditionMessage(e), '\n');
+                         install.packages(missing, repos = 'https://cloud.r-project.org',
+                                          type = 'source', Ncpus = 2)
+                       })
+            }
             invisible(lapply(needed, function(p) stopifnot(requireNamespace(p, quietly = TRUE))))
           "
 
