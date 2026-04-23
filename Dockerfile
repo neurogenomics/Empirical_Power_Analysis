@@ -44,8 +44,19 @@ RUN R -e "install.packages('renv', repos = 'https://cloud.r-project.org')"
 # Restore the pinned environment. Uses a BuildKit cache mount for renv's
 # package cache so failed/partial builds retain already-compiled packages —
 # turns a 15-min rebuild into 1-2 min when only a few packages change.
+# After restore, verify and force-install anything still missing (catches cases
+# where restore silently exits early due to partial cache state).
 RUN --mount=type=cache,target=/root/.cache/R/renv,sharing=locked \
-    R -e "renv::restore(prompt = FALSE)"
+    R -e "options(renv.config.pak.enabled = FALSE); \
+          renv::restore(prompt = FALSE); \
+          st <- renv::status(); \
+          cat('--- renv::status() ---\n'); print(st); \
+          missing <- c(st\$missing\$Package, st\$synchronized\$Package[!st\$synchronized\$Package %in% rownames(installed.packages())]); \
+          missing <- unique(missing[!is.na(missing)]); \
+          if (length(missing) > 0) { \
+            cat('Force-installing missing packages:', paste(missing, collapse=', '), '\n'); \
+            renv::install(missing, prompt = FALSE); \
+          }"
 
 # -----------------------------------------------------------------------------
 #  Verify critical packages loaded
