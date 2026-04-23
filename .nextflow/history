@@ -1,0 +1,9 @@
+2026-04-23 20:29:05	5s	mighty_nobel	ERR	0e0f01e9ff213f15082f4e7f9add791b	d44dc3fd-9c42-43ed-89ef-8f6c518b345b	nextflow run main.nf -profile test,docker -c iclneuro.config
+2026-04-23 20:36:51	6.5s	loving_hodgkin	ERR	0e0f01e9ff213f15082f4e7f9add791b	c9e8a33f-6f81-47a2-acb7-0cbccddefa36	nextflow run main.nf -profile test,docker -c iclneuro.config
+2026-04-23 20:49:18	6.6s	reverent_lattes	ERR	0e0f01e9ff213f15082f4e7f9add791b	524e4500-4bcb-4f98-8d4d-b9ce61155a6c	nextflow run main.nf -profile test,docker -c iclneuro.config
+2026-04-23 21:09:56	7.2s	prickly_pesquet	ERR	0e0f01e9ff213f15082f4e7f9add791b	bfb9d0d4-c1e1-46ea-853a-33688f69873e	nextflow run main.nf -profile test,docker -c iclneuro.config
+2026-04-23 21:13:17	6.4s	silly_boltzmann	ERR	0e0f01e9ff213f15082f4e7f9add791b	88d6dbc7-d4ae-4d0f-aea1-d1fdd0b4f60a	nextflow run main.nf -profile test,docker -c iclneuro.config
+2026-04-23 21:21:30	7.5s	compassionate_aryabhata	ERR	0e0f01e9ff213f15082f4e7f9add791b	88d6dbc7-d4ae-4d0f-aea1-d1fdd0b4f60a	nextflow run main.nf -profile test,docker -c iclneuro.config -resume
+2026-04-23 21:38:34	7s	high_pare	ERR	0e0f01e9ff213f15082f4e7f9add791b	88d6dbc7-d4ae-4d0f-aea1-d1fdd0b4f60a	nextflow run main.nf -profile test,docker -c iclneuro.config -resume
+2026-04-23 21:58:22	6.6s	jolly_dubinsky	ERR	0e0f01e9ff213f15082f4e7f9add791b	88d6dbc7-d4ae-4d0f-aea1-d1fdd0b4f60a	nextflow run main.nf -profile test,docker -c iclneuro.config -resume
+2026-04-23 22:02:39	7.3s	special_ptolemy	ERR	0e0f01e9ff213f15082f4e7f9add791b	88d6dbc7-d4ae-4d0f-aea1-d1fdd0b4f60a	nextflow run main.nf -profile test,docker -c iclneuro.config -resume

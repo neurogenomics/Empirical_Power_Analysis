@@ -1,0 +1,210 @@
+Apr-23 21:13:15.383 [main] DEBUG nextflow.cli.Launcher - $> nextflow run main.nf -profile test,docker -c iclneuro.config
+Apr-23 21:13:15.490 [main] DEBUG nextflow.cli.CmdRun - N E X T F L O W  ~  version 25.10.4
+Apr-23 21:13:15.517 [main] DEBUG nextflow.plugin.PluginsFacade - Setting up plugin manager > mode=prod; embedded=false; plugins-dir=/home/chrisc/.nextflow/plugins; core-plugins: nf-amazon@3.4.4,nf-azure@1.20.2,nf-cloudcache@0.5.0,nf-codecommit@0.5.0,nf-console@1.3.0,nf-google@1.23.5,nf-k8s@1.2.2,nf-tower@1.17.5,nf-wave@1.16.1
+Apr-23 21:13:15.546 [main] INFO  o.pf4j.DefaultPluginStatusProvider - Enabled plugins: []
+Apr-23 21:13:15.547 [main] INFO  o.pf4j.DefaultPluginStatusProvider - Disabled plugins: []
+Apr-23 21:13:15.551 [main] INFO  org.pf4j.DefaultPluginManager - PF4J version 3.12.0 in 'deployment' mode
+Apr-23 21:13:15.570 [main] DEBUG nextflow.util.RetryConfig - Missing nextflow session - using default retry config
+Apr-23 21:13:15.739 [main] INFO  org.pf4j.AbstractPluginManager - No plugins
+Apr-23 21:13:15.775 [main] DEBUG nextflow.config.ConfigBuilder - Found config local: /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/nextflow.config
+Apr-23 21:13:15.780 [main] DEBUG nextflow.config.ConfigBuilder - User config file: /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/iclneuro.config
+Apr-23 21:13:15.781 [main] DEBUG nextflow.config.ConfigBuilder - Parsing config file: /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/nextflow.config
+Apr-23 21:13:15.782 [main] DEBUG nextflow.config.ConfigBuilder - Parsing config file: /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/iclneuro.config
+Apr-23 21:13:15.815 [main] DEBUG nextflow.config.ConfigBuilder - Applying config profile: `test,docker`
+Apr-23 21:13:16.781 [main] DEBUG nextflow.config.ConfigBuilder - Applying config profile: `test,docker`
+Apr-23 21:13:16.854 [main] DEBUG nextflow.config.ConfigBuilder - Available config profiles: [standard, slurm, debug, test, apptainer, conda, docker]
+Apr-23 21:13:16.881 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins default=[]
+Apr-23 21:13:16.881 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins resolved requirement=[]
+Apr-23 21:13:16.900 [main] DEBUG n.secret.LocalSecretsProvider - Secrets store: /home/chrisc/.nextflow/secrets/store.json
+Apr-23 21:13:16.903 [main] DEBUG nextflow.secret.SecretsLoader - Discovered secrets providers: [nextflow.secret.LocalSecretsProvider@3ddb774f] - activable => nextflow.secret.LocalSecretsProvider@3ddb774f
+Apr-23 21:13:16.916 [main] DEBUG nextflow.cli.CmdRun - Applied DSL=2 from script declaration
+Apr-23 21:13:16.936 [main] DEBUG nextflow.cli.CmdRun - Launching `main.nf` [silly_boltzmann] DSL2 - revision: 0e0f01e9ff
+Apr-23 21:13:17.007 [main] DEBUG nextflow.Session - Session UUID: 88d6dbc7-d4ae-4d0f-aea1-d1fdd0b4f60a
+Apr-23 21:13:17.008 [main] DEBUG nextflow.Session - Run name: silly_boltzmann
+Apr-23 21:13:17.008 [main] DEBUG nextflow.Session - Executor pool size: 64
+Apr-23 21:13:17.018 [main] DEBUG nextflow.file.FilePorter - File porter settings maxRetries=3; maxTransfers=50; pollTimeout=null
+Apr-23 21:13:17.023 [main] DEBUG nextflow.util.ThreadPoolBuilder - Creating thread pool 'FileTransfer' minSize=10; maxSize=192; workQueue=LinkedBlockingQueue[-1]; allowCoreThreadTimeout=false
+Apr-23 21:13:17.050 [main] DEBUG nextflow.cli.CmdRun - 
+  Version: 25.10.4 build 11173
+  Created: 10-02-2026 15:17 UTC 
+  System: Linux 6.8.0-107-generic
+  Runtime: Groovy 4.0.28 on OpenJDK 64-Bit Server VM 21.0.10+7-Ubuntu-124.04
+  Encoding: UTF-8 (UTF-8)
+  Process: 1579644@server-03 [10.1.0.94]
+  CPUs: 64 - Mem: 251.7 GB (18.7 GB) - Swap: 0 (0)
+Apr-23 21:13:17.078 [main] DEBUG nextflow.Session - Work-dir: /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/work [ext2/ext3]
+Apr-23 21:13:17.078 [main] DEBUG nextflow.Session - Script base path does not exist or is not a directory: /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/bin
+Apr-23 21:13:17.088 [main] DEBUG nextflow.executor.ExecutorFactory - Extension executors providers=[]
+Apr-23 21:13:17.099 [main] DEBUG nextflow.Session - Observer factory (v2): LinObserverFactory
+Apr-23 21:13:17.102 [main] DEBUG nextflow.Session - Observer factory (v2): DefaultObserverFactory
+Apr-23 21:13:17.162 [main] DEBUG nextflow.cache.CacheFactory - Using Nextflow cache factory: nextflow.cache.DefaultCacheFactory
+Apr-23 21:13:17.173 [main] DEBUG nextflow.util.CustomThreadPool - Creating default thread pool > poolSize: 65; maxThreads: 1000
+Apr-23 21:13:17.379 [main] DEBUG nextflow.Session - Session start
+Apr-23 21:13:17.388 [main] DEBUG nextflow.trace.TraceFileObserver - Workflow started -- trace file: results/pipeline_info/execution_trace.txt
+Apr-23 21:13:17.638 [main] DEBUG nextflow.script.ScriptRunner - > Launching execution
+Apr-23 21:13:18.208 [main] INFO  nextflow.Nextflow - 
+================================================================================
+  Empirical Power Analysis v1.0.0-dev
+  Profile:      test,docker
+  Project dir:  /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis
+  Output dir:   /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/test_output
+  Workflow run: silly_boltzmann
+================================================================================
+
+Apr-23 21:13:18.263 [main] DEBUG n.script.dsl.ProcessConfigBuilder - Config settings `withLabel:process_memory_intensive` matches labels `process_memory_intensive` for process with name SHARDING
+Apr-23 21:13:18.267 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: local
+Apr-23 21:13:18.268 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Apr-23 21:13:18.279 [main] DEBUG nextflow.executor.Executor - [warm up] executor > local
+Apr-23 21:13:18.289 [main] DEBUG n.processor.LocalPollingMonitor - Creating local task monitor for executor 'local' > cpus=64; memory=251.7 GB; capacity=64; pollInterval=100ms; dumpInterval=5m
+Apr-23 21:13:18.307 [main] DEBUG n.processor.TaskPollingMonitor - >>> barrier register (monitor: local)
+Apr-23 21:13:18.337 [main] DEBUG nextflow.processor.TaskProcessor - Creating process 'SHARDING': maxForks=0; fair=false; array=0
+Apr-23 21:13:18.396 [main] DEBUG n.script.dsl.ProcessConfigBuilder - Config settings `withLabel:process_medium` matches labels `process_medium` for process with name EDA_ROUSSOS
+Apr-23 21:13:18.397 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: local
+Apr-23 21:13:18.398 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Apr-23 21:13:18.400 [main] DEBUG nextflow.processor.TaskProcessor - Creating process 'EDA_ROUSSOS': maxForks=0; fair=false; array=0
+Apr-23 21:13:18.403 [main] DEBUG n.script.dsl.ProcessConfigBuilder - Config settings `withLabel:process_high` matches labels `process_high` for process with name FULL_GROUND_TRUTH
+Apr-23 21:13:18.404 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: local
+Apr-23 21:13:18.404 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Apr-23 21:13:18.405 [main] DEBUG nextflow.processor.TaskProcessor - Creating process 'FULL_GROUND_TRUTH': maxForks=0; fair=false; array=0
+Apr-23 21:13:18.409 [main] DEBUG n.script.dsl.ProcessConfigBuilder - Config settings `withLabel:process_medium` matches labels `process_medium` for process with name BULK_DEG_PROCESSING
+Apr-23 21:13:18.410 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: local
+Apr-23 21:13:18.410 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Apr-23 21:13:18.411 [main] DEBUG nextflow.processor.TaskProcessor - Creating process 'BULK_DEG_PROCESSING': maxForks=0; fair=false; array=0
+Apr-23 21:13:18.414 [main] DEBUG n.script.dsl.ProcessConfigBuilder - Config settings `withLabel:process_heavy` matches labels `process_heavy` for process with name CARTESIAN_DOWNSAMPLING
+Apr-23 21:13:18.415 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: local
+Apr-23 21:13:18.415 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Apr-23 21:13:18.416 [main] DEBUG nextflow.processor.TaskProcessor - Creating process 'CARTESIAN_DOWNSAMPLING': maxForks=0; fair=false; array=0
+Apr-23 21:13:18.420 [main] DEBUG n.script.dsl.ProcessConfigBuilder - Config settings `withLabel:process_high` matches labels `process_high` for process with name DEPTH_EQUALIZATION
+Apr-23 21:13:18.421 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: local
+Apr-23 21:13:18.421 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Apr-23 21:13:18.422 [main] DEBUG nextflow.processor.TaskProcessor - Creating process 'DEPTH_EQUALIZATION': maxForks=0; fair=false; array=0
+Apr-23 21:13:18.428 [main] DEBUG n.script.dsl.ProcessConfigBuilder - Config settings `withLabel:process_high` matches labels `process_high` for process with name POWER_CURVE_FITTING
+Apr-23 21:13:18.429 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: local
+Apr-23 21:13:18.429 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Apr-23 21:13:18.430 [main] DEBUG nextflow.processor.TaskProcessor - Creating process 'POWER_CURVE_FITTING': maxForks=0; fair=false; array=0
+Apr-23 21:13:18.436 [main] DEBUG n.script.dsl.ProcessConfigBuilder - Config settings `withLabel:process_medium` matches labels `process_medium` for process with name DE_DIAGNOSTICS
+Apr-23 21:13:18.437 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: local
+Apr-23 21:13:18.437 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Apr-23 21:13:18.437 [main] DEBUG nextflow.processor.TaskProcessor - Creating process 'DE_DIAGNOSTICS': maxForks=0; fair=false; array=0
+Apr-23 21:13:18.442 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: local
+Apr-23 21:13:18.442 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Apr-23 21:13:18.443 [main] DEBUG nextflow.processor.TaskProcessor - Creating process 'FIGURE_DATA_GENERATION': maxForks=0; fair=false; array=0
+Apr-23 21:13:18.447 [main] DEBUG nextflow.Session - Workflow process names [dsl2]: DEPTH_EQUALIZATION, POWER_CURVE_FITTING, SHARDING, CARTESIAN_DOWNSAMPLING, DE_DIAGNOSTICS, EDA_ROUSSOS, FULL_GROUND_TRUTH, RENDER_PAPER, FIGURE_DATA_GENERATION, BULK_DEG_PROCESSING
+Apr-23 21:13:18.449 [main] DEBUG nextflow.Session - Igniting dataflow network (10)
+Apr-23 21:13:18.456 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > SHARDING
+Apr-23 21:13:18.457 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > EDA_ROUSSOS
+Apr-23 21:13:18.457 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > FULL_GROUND_TRUTH
+Apr-23 21:13:18.458 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > BULK_DEG_PROCESSING
+Apr-23 21:13:18.458 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > CARTESIAN_DOWNSAMPLING
+Apr-23 21:13:18.459 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > DEPTH_EQUALIZATION
+Apr-23 21:13:18.459 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > POWER_CURVE_FITTING
+Apr-23 21:13:18.460 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > DE_DIAGNOSTICS
+Apr-23 21:13:18.461 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > FIGURE_DATA_GENERATION
+Apr-23 21:13:18.462 [main] DEBUG nextflow.script.ScriptRunner - Parsed script files:
+  Script_8958eca803ad473e: /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/modules/local/de_diagnostics/main.nf
+  Script_453b84f8593ab69f: /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/modules/local/cartesian_downsampling/main.nf
+  Script_cab5ea19ad8d84cb: /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/modules/local/bulk_deg_processing/main.nf
+  Script_fb8d6262cdd49c51: /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/modules/local/eda_roussos/main.nf
+  Script_2f353d7ef1d5af14: /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/modules/local/figure_data_generation/main.nf
+  Script_ac8744c3617c3d9f: /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/modules/local/render_paper/main.nf
+  Script_d3e8ed1dcc14ee7b: /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/modules/local/sharding/main.nf
+  Script_05ea0f463bcae0ef: /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/modules/local/power_curve_fitting/main.nf
+  Script_3810477f01dbe431: /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/modules/local/depth_equalization/main.nf
+  Script_c933603c7f915ddb: /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/main.nf
+  Script_26cf349a1f1f69fd: /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/modules/local/full_ground_truth/main.nf
+Apr-23 21:13:18.462 [main] DEBUG nextflow.script.ScriptRunner - > Awaiting termination 
+Apr-23 21:13:18.462 [main] DEBUG nextflow.Session - Session await
+Apr-23 21:13:18.716 [Task submitter] DEBUG n.executor.local.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Apr-23 21:13:18.718 [Task submitter] INFO  nextflow.Session - [ab/a15a21] Submitted process > SHARDING (sharding)
+Apr-23 21:13:18.733 [Task submitter] DEBUG n.executor.local.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Apr-23 21:13:18.734 [Task submitter] INFO  nextflow.Session - [ca/afcc05] Submitted process > BULK_DEG_PROCESSING (bulk_deg_processing)
+Apr-23 21:13:21.829 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 1; name: SHARDING (sharding); status: COMPLETED; exit: 1; error: -; workDir: /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/work/ab/a15a210791299266ba8f47eb2bbe8b]
+Apr-23 21:13:21.831 [Task monitor] DEBUG nextflow.util.ThreadPoolBuilder - Creating thread pool 'TaskFinalizer' minSize=10; maxSize=192; workQueue=LinkedBlockingQueue[-1]; allowCoreThreadTimeout=false
+Apr-23 21:13:21.847 [TaskFinalizer-1] DEBUG nextflow.processor.TaskProcessor - Handling unexpected condition for
+  task: name=SHARDING (sharding); work-dir=/mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/work/ab/a15a210791299266ba8f47eb2bbe8b
+  error [nextflow.exception.ProcessFailedException]: Process `SHARDING (sharding)` terminated with an error exit status (1)
+Apr-23 21:13:21.863 [TaskFinalizer-1] ERROR nextflow.processor.TaskProcessor - Error executing process > 'SHARDING (sharding)'
+
+Caused by:
+  Process `SHARDING (sharding)` terminated with an error exit status (1)
+
+
+Command executed:
+
+  export POWER_ANALYSIS_ROOT=$(pwd)
+  mkdir -p Datalink/Shards
+  
+  # Run each dataset's sharding script in sequence
+  Rscript /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/R/sharding/Run_Shard_Roussos.R
+  Rscript /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/R/sharding/Run_Shard_Allen.R
+  Rscript /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/R/sharding/Run_Shard_DeJager.R
+  Rscript /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/R/sharding/Run_Shard_Johansen.R
+  Rscript /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/R/sharding/Run_Shard_Rexach.R
+  
+  cat <<-END_VERSIONS > versions.yml
+  "SHARDING":
+      R: $(R --version | head -1 | sed 's/R version //')
+      DESeq2: $(Rscript -e 'cat(as.character(packageVersion("DESeq2")))')
+      zellkonverter: $(Rscript -e 'cat(as.character(packageVersion("zellkonverter")))')
+  END_VERSIONS
+
+Command exit status:
+  1
+
+Command output:
+  (empty)
+
+Command error:
+  Error in file(filename, "r", encoding = encoding) : 
+    cannot open the connection
+  Calls: source -> file
+  In addition: Warning message:
+  In file(filename, "r", encoding = encoding) :
+    cannot open file 'renv/activate.R': No such file or directory
+  Execution halted
+
+Work dir:
+  /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/work/ab/a15a210791299266ba8f47eb2bbe8b
+
+Container:
+  empa:local
+
+Tip: you can try to figure out what's wrong by changing to the process work dir and showing the script file named `.command.sh`
+Apr-23 21:13:21.883 [TaskFinalizer-1] DEBUG nextflow.Session - Session aborted -- Cause: Process `SHARDING (sharding)` terminated with an error exit status (1)
+Apr-23 21:13:21.894 [Task monitor] DEBUG n.processor.TaskPollingMonitor - <<< barrier arrives (monitor: local) - terminating tasks monitor poll loop
+Apr-23 21:13:21.903 [TaskFinalizer-1] INFO  nextflow.Nextflow - 
+================================================================================
+  Pipeline complete: ✗ failed
+  Duration:  4.8s
+  Work dir:  /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/work
+  Results:   /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/test_output
+  Report:    /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/test_output/pipeline_info/execution_report.html
+  DAG:       /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/test_output/pipeline_info/dag.svg
+================================================================================
+
+Apr-23 21:13:21.903 [TaskFinalizer-1] INFO  nextflow.Nextflow -   To resume from last checkpoint: nextflow run main.nf -profile test,docker -resume
+Apr-23 21:13:21.908 [TaskFinalizer-1] WARN  n.processor.TaskPollingMonitor - Killing running tasks (1)
+Apr-23 21:13:21.918 [TaskFinalizer-1] DEBUG n.executor.local.LocalTaskHandler - Unable to kill BULK_DEG_PROCESSING (bulk_deg_processing) -- command: kill -TERM 1579820; exit: 1 
+ bash: line 1: kill: (1579820) - No such process
+
+Apr-23 21:13:21.927 [TaskFinalizer-1] DEBUG n.trace.WorkflowStatsObserver - Workflow completed > WorkflowStats[succeededCount=0; failedCount=1; ignoredCount=0; cachedCount=0; pendingCount=0; submittedCount=0; runningCount=0; retriesCount=0; abortedCount=1; succeedDuration=0ms; failedDuration=6s; cachedDuration=0ms;loadCpus=0; loadMemory=0; peakRunning=2; peakCpus=4; peakMemory=204 GB; ]
+Apr-23 21:13:22.112 [TaskFinalizer-1] WARN  nextflow.dag.GraphvizRenderer - Graphviz is required to render the execution DAG in the given format -- See http://www.graphviz.org for more info.
+Apr-23 21:13:22.113 [TaskFinalizer-1] DEBUG nextflow.trace.ReportObserver - Workflow completed -- rendering execution report
+Apr-23 21:13:22.735 [TaskFinalizer-1] DEBUG nextflow.trace.TimelineObserver - Workflow completed -- rendering execution timeline
+Apr-23 21:13:22.798 [TaskFinalizer-1] DEBUG nextflow.trace.TraceFileObserver - Workflow completed -- saving trace file
+Apr-23 21:13:22.805 [TaskFinalizer-1] ERROR nextflow.Nextflow - Pipeline execution failed: Error in file(filename, "r", encoding = encoding) : 
+  cannot open the connection
+Calls: source -> file
+In addition: Warning message:
+In file(filename, "r", encoding = encoding) :
+  cannot open file 'renv/activate.R': No such file or directory
+Execution halted
+Apr-23 21:13:22.806 [main] DEBUG nextflow.Session - Session await > all processes finished
+Apr-23 21:13:22.806 [main] DEBUG nextflow.Session - Session await > all barriers passed
+Apr-23 21:13:22.810 [main] DEBUG n.trace.WorkflowStatsObserver - Workflow completed > WorkflowStats[succeededCount=0; failedCount=1; ignoredCount=0; cachedCount=0; pendingCount=0; submittedCount=0; runningCount=0; retriesCount=0; abortedCount=1; succeedDuration=0ms; failedDuration=6s; cachedDuration=0ms;loadCpus=0; loadMemory=0; peakRunning=2; peakCpus=4; peakMemory=204 GB; ]
+Apr-23 21:13:22.826 [main] WARN  nextflow.dag.GraphvizRenderer - Graphviz is required to render the execution DAG in the given format -- See http://www.graphviz.org for more info.
+Apr-23 21:13:22.835 [main] DEBUG nextflow.trace.ReportObserver - Workflow completed -- rendering execution report
+Apr-23 21:13:23.376 [main] DEBUG nextflow.trace.TimelineObserver - Workflow completed -- rendering execution timeline
+Apr-23 21:13:23.430 [main] DEBUG nextflow.trace.TraceFileObserver - Workflow completed -- saving trace file
+Apr-23 21:13:23.437 [main] DEBUG nextflow.cache.CacheDB - Closing CacheDB done
+Apr-23 21:13:23.449 [main] DEBUG nextflow.script.ScriptRunner - > Execution complete -- Goodbye

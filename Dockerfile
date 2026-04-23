@@ -64,6 +64,12 @@ RUN --mount=type=cache,target=/root/.cache/R,sharing=locked \
 #                                   of the same source version, and massively
 #                                   speeds up near-identical package recompiles
 # CCACHE_DIR + CC/CXX wrappers teach R's compiler invocations to use ccache.
+# RENV_CONFIG_CACHE_SYMLINKS=FALSE: the renv cache lives on a BuildKit cache
+# mount which is NOT persisted into the image layer. By default renv creates
+# symlinks from the project library into the cache — those symlinks survive
+# into the image but point at a cache directory that no longer exists at
+# runtime, breaking every package. With symlinks disabled, renv copies
+# packages directly into the project library so they persist in the image.
 RUN --mount=type=cache,target=/root/.cache/R/renv,sharing=locked \
     --mount=type=cache,target=/root/.cache/R,sharing=locked \
     --mount=type=cache,target=/tmp/ccache,sharing=locked \
@@ -74,6 +80,7 @@ RUN --mount=type=cache,target=/root/.cache/R/renv,sharing=locked \
  && echo "CXX14=ccache g++" >> ~/.R/Makevars \
  && echo "CXX17=ccache g++" >> ~/.R/Makevars \
  && export CCACHE_DIR=/tmp/ccache \
+ && export RENV_CONFIG_CACHE_SYMLINKS=FALSE \
  && R -e "options(renv.config.pak.enabled = FALSE); \
           renv::restore(prompt = FALSE); \
           st <- renv::status(); \

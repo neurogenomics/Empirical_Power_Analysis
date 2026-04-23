@@ -1,0 +1,3 @@
+task_id	hash	native_id	name	status	exit	realtime	%cpu	rss	vmem
+1	af/edbd2f	1587968	BULK_DEG_PROCESSING (bulk_deg_processing)	FAILED	1	3.4s	-	-	-
+2	01/ce5a2e	1587980	SHARDING (sharding)	ABORTED	-	-	-	-	-
