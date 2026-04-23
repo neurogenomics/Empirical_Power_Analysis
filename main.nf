@@ -20,33 +20,9 @@
 nextflow.enable.dsl = 2
 
 // ======================================================================================
-//  Parameters
+//  Parameters — declared in nextflow.config (Nextflow 25.10+ requires it there;
+//  script-level params{} blocks are no longer recognised by the strict parser)
 // ======================================================================================
-params {
-    // Paths
-    raw_data       = "${projectDir}/Datalink/raw_data"
-    outdir         = "${projectDir}/Datalink"
-    // Note: cannot reference params.outdir inside this block (Nextflow resolves
-    // that as params.params.outdir). Hardcode relative path; consumers can
-    // derive from params.outdir themselves.
-    shards_dir     = "${projectDir}/Datalink/Shards"
-
-    // Compute
-    cores_default  = 16
-    cores_heavy    = 64
-
-    // Analysis parameters (override via config or CLI)
-    downsample_mode = "cells"   // "cells" or "reads"
-    n_robustness    = 6
-    n_subsamples    = 20
-
-    // Rendering
-    render_paper   = true
-
-    // Reporting (also defaulted in nextflow.config so module include-time
-    // evaluation of publishDir directives does not warn)
-    publish_mode   = "copy"      // "copy" for final runs, "symlink" during development
-}
 
 // ======================================================================================
 //  Module imports
