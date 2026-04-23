@@ -70,9 +70,9 @@ knitr::include_graphics(c(
 
 ## Supplementary Fig. 2. Discrete recall heatmaps for astrocytes and microglia
 
-Astrocyte and microglial discrete recall heatmaps. The oligodendrocyte discrete recall heatmap is promoted to Fig. \@ref(fig:FigRecall) panel B in the main text.
+Astrocyte and microglial discrete recall heatmaps. The oligodendrocyte discrete recall heatmap is promoted to Figure 3 in the main text.
 
-```{r SuppFig2a-Discrete-cells, out.width="48%", fig.show='hold', fig.cap="Discrete recall heatmaps from Cartesian downsampling (cells-based mode) for astrocytes (left) and microglia (right). Heatmaps show mean recall across six robustness runs at each grid point. Red borders indicate configurations achieving at least 80% recall. The oligodendrocyte counterpart is in Fig. \\@ref(fig:FigRecall) panel B."}
+```{r SuppFig2a-Discrete-cells, out.width="48%", fig.show='hold', fig.cap="Discrete recall heatmaps from Cartesian downsampling (cells-based mode) for astrocytes (left) and microglia (right). Heatmaps show mean recall across six robustness runs at each grid point. Red borders indicate configurations achieving at least 80% recall. The oligodendrocyte counterpart is in Figure 3 in the main text."}
 knitr::include_graphics(c(
   "Datalink/Cartesian_Downsampling/Astro/Roussos/cells/Plots/Mean_Recall_Total.png",
   "Datalink/Cartesian_Downsampling/Micro/Roussos/cells/Plots/Mean_Recall_Total.png"
@@ -106,9 +106,9 @@ knitr::include_graphics(c(
 
 ## Supplementary Fig. 4. Precision heatmaps for astrocytes and microglia (cells-based and reads-based modes)
 
-Astrocyte and microglial precision heatmaps. The oligodendrocyte precision heatmap is promoted to Fig. \@ref(fig:FigPrecision) panel B in the main text.
+Astrocyte and microglial precision heatmaps. The oligodendrocyte precision heatmap is promoted to Figure 4 in the main text.
 
-```{r SuppFig4a-Precision-cells, out.width="48%", fig.show="hold", fig.cap="Precision heatmaps for cells-based downsampling, astrocytes (left) and microglia (right). Large-effect precision remains >0.90 across most configurations; small-effect precision degrades at higher cell counts, reflecting the precision-recall trade-off. The oligodendrocyte counterpart is in Fig. \\@ref(fig:FigPrecision) panel B."}
+```{r SuppFig4a-Precision-cells, out.width="48%", fig.show="hold", fig.cap="Precision heatmaps for cells-based downsampling, astrocytes (left) and microglia (right). Large-effect precision remains >0.90 across most configurations; small-effect precision degrades at higher cell counts, reflecting the precision-recall trade-off. The oligodendrocyte counterpart is in Figure 4 in the main text."}
 knitr::include_graphics(c(
   "Datalink/Cartesian_Downsampling/Astro/Roussos/cells/Plots/Mean_Precision_Total.png",
   "Datalink/Cartesian_Downsampling/Micro/Roussos/cells/Plots/Mean_Precision_Total.png"
