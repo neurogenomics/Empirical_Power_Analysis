@@ -26,9 +26,10 @@
 #
 # USAGE:
 #   module load R/4.5.1-gfbf-2025a
-#   Rscript R/cartesian_downsampling/tests/test_fittype_equivalence.R \
+#   Rscript R/cartesian_downsampling/tests/test_fittype_equivalence.R /mnt/data/chrisc/Power_Analysis_Paper/Datalink/Cartesian_Downsampling/Oligo/Roussos/cells/Run_1/Ground_Truth.qs
 #     /path/to/agg_result.qs       # optional; defaults to synthetic
 #
+#Rscript /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/R/cartesian_downsampling/tests/test_fittype_equivalence.R /mnt/data/chrisc/Power_Analysis_Paper/Datalink/Full_Ground_Truth/Oligo/Roussos_pb_checkpoint.qs /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/fittype_benchmark_report.md
 #   Or from within testthat:
 #     testthat::test_file("R/cartesian_downsampling/tests/test_fittype_equivalence.R")
 # ==============================================================================
@@ -40,6 +41,9 @@ suppressPackageStartupMessages({
   library(SummarizedExperiment)
   library(qs)
 })
+
+# Null-coalescing helper (avoids rlang dep)
+`%||%` <- function(a, b) if (is.null(a)) b else a
 
 # ------------------------------------------------------------------------------
 # 0. Helper: build a realistic pseudobulk test input
@@ -55,8 +59,12 @@ suppressPackageStartupMessages({
 build_realistic_pseudobulk <- function(n_donors = 100, n_genes = 10000,
                                         n_biased = 200, seed = 42) {
   set.seed(seed)
-  sex <- factor(rep(c("M", "F"), length.out = n_donors))
-  age_years <- runif(n_donors, 40, 95)
+  sex <- factor(rep(c("male", "female"), length.out = n_donors))
+  Source <- factor(sample(c("MSSM", "RUSH", "HBCC"), n_donors, replace = TRUE))
+  self_reported_ethnicity <- factor(sample(c("EUR", "AFR", "AMR"),
+                                            n_donors, replace = TRUE,
+                                            prob = c(0.7, 0.2, 0.1)))
+  disease <- factor(sample(c("control", "AD"), n_donors, replace = TRUE))
 
   # Baseline negative-binomial counts — wide dispersion range so both fitTypes
   # have non-trivial work to do
@@ -75,7 +83,7 @@ build_realistic_pseudobulk <- function(n_donors = 100, n_genes = 10000,
     rnorm(n_biased %/% 4, mean = 3, sd = 0.5),    # large LFC (sex-chr-like)
     rnorm(n_biased - n_biased %/% 4, mean = 1, sd = 0.5)  # small-moderate
   )
-  male_mask <- sex == "M"
+  male_mask <- sex == "male"
   for (k in seq_along(biased_idx)) {
     g <- biased_idx[k]
     fc_male <- 2^lfc_biased[k]
@@ -89,7 +97,10 @@ build_realistic_pseudobulk <- function(n_donors = 100, n_genes = 10000,
 
   sce <- SingleCellExperiment(
     assays = list(counts = counts),
-    colData = DataFrame(sex = sex, age_scaled = scale(age_years)[, 1],
+    colData = DataFrame(sex = sex,
+                        Source = Source,
+                        self_reported_ethnicity = self_reported_ethnicity,
+                        disease = disease,
                         row.names = colnames(counts))
   )
   list(sce = sce, truth_genes = rownames(counts)[biased_idx])
@@ -102,13 +113,13 @@ run_de_timed <- function(sce, fit_type) {
   dds <- DESeq2::DESeqDataSetFromMatrix(
     countData = assay(sce, "counts"),
     colData   = colData(sce),
-    design    = ~ sex + age_scaled
+    design = ~ Source + self_reported_ethnicity + disease + sex
   )
   dds <- dds[rowSums(DESeq2::counts(dds)) >= 10, ]
 
   t0 <- Sys.time()
   dds <- DESeq2::DESeq(dds, fitType = fit_type, parallel = FALSE, quiet = TRUE)
-  res <- DESeq2::lfcShrink(dds, coef = "sex_M_vs_F", type = "apeglm",
+  res <- DESeq2::lfcShrink(dds, coef = "sex_male_vs_female", type = "apeglm",
                            quiet = TRUE)
   elapsed <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
 
@@ -183,15 +194,21 @@ compute_equivalence_metrics <- function(ref, alt) {
 # ------------------------------------------------------------------------------
 #' @param sce optional SingleCellExperiment pseudobulk; synthetic if NULL
 #' @param report_file optional path to write a markdown report to
-benchmark_fittype_equivalence <- function(sce = NULL, report_file = NULL) {
-  if (is.null(sce)) {
-    cat("[info] no input provided — using synthetic pseudobulk (100 donors, 10k genes)\n")
-    built <- build_realistic_pseudobulk()
-    sce <- built$sce
-  }
+  benchmark_fittype_equivalence <- function(sce = NULL, report_file = NULL,
+                                            input_source = NULL) {
+    if (is.null(sce)) {
+      cat("[info] INPUT SOURCE: synthetic pseudobulk (100 donors, 10k genes)\n")
+      if (!is.null(input_source)) cat(sprintf("[info] REASON: %s\n", input_source))
+    } else {
+      cat(sprintf("[info] INPUT SOURCE: %s\n",
+                  input_source %||% "caller-provided sce (input_source not specified)"))
+    }
+    
 
   cat(sprintf("[info] pseudobulk shape: %d genes x %d donors\n",
               nrow(sce), ncol(sce)))
+  cat(sprintf("[info] colData columns: %s\n",
+              paste(colnames(SummarizedExperiment::colData(sce)), collapse = ", ")))
 
   # Warm up R so first-call overhead doesn't pollute baseline timing
   invisible(run_de_timed(sce[1:100, ], "parametric"))
@@ -262,40 +279,135 @@ tick <- function(x) if (isTRUE(x)) "PASS" else "FAIL"
 
 # ------------------------------------------------------------------------------
 # 4. testthat — enforces equivalence as CI gate
+#
+# Only runs under interactive sessions or when explicitly invoked via
+# testthat::test_file() / RUN_TESTTHAT_INLINE=1 env var. This prevents the
+# testthat block firing at file-scope during Rscript invocations, which
+# previously made Rscript runs appear to use synthetic data (because
+# testthat ran a synthetic benchmark BEFORE the Rscript argv block).
 # ------------------------------------------------------------------------------
-context("DESeq2 fitType equivalence")
+if (interactive() ||
+    identical(Sys.getenv("RUN_TESTTHAT_INLINE"), "1") ||
+    any(grepl("testthat", sys.calls(), fixed = TRUE))) {
+  context("DESeq2 fitType equivalence")
 
-test_that("glmGamPoi fitType is equivalent to parametric on realistic pseudobulk", {
-  skip_if_not_installed("glmGamPoi")
+  test_that("glmGamPoi fitType is equivalent to parametric on realistic pseudobulk", {
+    skip_if_not_installed("glmGamPoi")
 
-  built <- build_realistic_pseudobulk(n_donors = 50, n_genes = 3000,
-                                       n_biased = 80, seed = 42)
-  out <- benchmark_fittype_equivalence(built$sce)
-  m <- out$metrics
+    built <- build_realistic_pseudobulk(n_donors = 50, n_genes = 3000,
+                                         n_biased = 80, seed = 42)
+    out <- benchmark_fittype_equivalence(
+      built$sce,
+      input_source = "synthetic fixture from build_realistic_pseudobulk (testthat)"
+    )
+    m <- out$metrics
 
-  expect_gte(m$pearson_lfc,       0.99)
-  expect_gte(m$spearman_log_padj, 0.99)
-  expect_gte(m$jaccard_sig,       0.95)
-  expect_gte(m$sign_agreement_sig, 0.99)
-  expect_gte(m$kendall_top100,    0.95)
-  expect_false(m$any_sig_flip)
+    expect_gte(m$pearson_lfc,       0.99)
+    expect_gte(m$spearman_log_padj, 0.99)
+    expect_gte(m$jaccard_sig,       0.95)
+    expect_gte(m$sign_agreement_sig, 0.99)
+    expect_gte(m$kendall_top100,    0.95)
+    expect_false(m$any_sig_flip)
 
-  # Informational — not a gating assertion
-  message(sprintf("[info] glmGamPoi speedup: %.2fx", out$speedup))
-})
+    # Informational — not a gating assertion
+    message(sprintf("[info] glmGamPoi speedup: %.2fx", out$speedup))
+  })
+}
 
 # ------------------------------------------------------------------------------
 # 5. Standalone invocation (Rscript)
 # ------------------------------------------------------------------------------
 if (!interactive() && sys.nframe() == 0) {
   args <- commandArgs(trailingOnly = TRUE)
-  input <- if (length(args) >= 1 && file.exists(args[1])) args[1] else NULL
   report <- if (length(args) >= 2) args[2] else "fittype_benchmark_report.md"
 
-  sce_in <- if (!is.null(input)) {
-    obj <- qs::qread(input)
-    if (inherits(obj, "list") && "sce" %in% names(obj)) obj$sce else obj
-  } else NULL
+  # Load real-data input explicitly, and LOUDLY report any reason we fall back
+  # to synthetic. Previously file-not-found, qread errors, and wrong object
+  # shapes all silently produced synthetic data — this made debugging
+  # a missing/renamed .qs file effectively impossible.
+  sce_in <- NULL
+  fallback_reason <- NULL
 
-  benchmark_fittype_equivalence(sce = sce_in, report_file = report)
+  if (length(args) < 1 || !nzchar(args[1])) {
+    fallback_reason <- "no input path supplied as argv[1]"
+    cat("[warn] ===========================================================\n")
+    cat("[warn] FALLING BACK TO SYNTHETIC DATA\n")
+    cat(sprintf("[warn] reason: %s\n", fallback_reason))
+    cat("[warn] usage: Rscript test_fittype_equivalence.R <input.qs> [<report.md>]\n")
+    cat("[warn] ===========================================================\n")
+    input_source <- sprintf("synthetic (%s)", fallback_reason)
+  } else {
+    input_path <- args[1]
+    cat(sprintf("[info] argv[1] = %s\n", input_path))
+    cat(sprintf("[info] normalizePath: %s\n",
+                tryCatch(normalizePath(input_path, mustWork = FALSE),
+                         error = function(e) "<normalizePath failed>")))
+
+    if (!file.exists(input_path)) {
+      fallback_reason <- sprintf("file does not exist: %s", input_path)
+      cat("[warn] ===========================================================\n")
+      cat("[warn] FALLING BACK TO SYNTHETIC DATA\n")
+      cat(sprintf("[warn] reason: %s\n", fallback_reason))
+      cat("[warn] check that the path is correct and accessible from the\n")
+      cat("[warn] current working directory / host.\n")
+      cat("[warn] ===========================================================\n")
+      input_source <- sprintf("synthetic (%s)", fallback_reason)
+    } else {
+      cat(sprintf("[info] file exists; size = %s bytes\n",
+                  format(file.info(input_path)$size, big.mark = ",")))
+      cat("[info] attempting qs::qread()...\n")
+
+      obj <- tryCatch(
+        qs::qread(input_path),
+        error = function(e) {
+          cat("[warn] ===========================================================\n")
+          cat("[warn] qs::qread() FAILED — cannot use real data\n")
+          cat(sprintf("[warn] error: %s\n", conditionMessage(e)))
+          cat("[warn] ===========================================================\n")
+          structure(NULL, qread_error = conditionMessage(e))
+        }
+      )
+
+      if (is.null(obj) && !is.null(attr(obj, "qread_error"))) {
+        fallback_reason <- sprintf("qs::qread failed: %s",
+                                    attr(obj, "qread_error"))
+        input_source <- sprintf("synthetic (%s)", fallback_reason)
+      } else {
+        cat(sprintf("[info] qread succeeded; object class = %s\n",
+                    paste(class(obj), collapse = "/")))
+        if (inherits(obj, "list")) {
+          cat(sprintf("[info] list names: %s\n",
+                      paste(names(obj), collapse = ", ")))
+        }
+
+        candidate <- if (inherits(obj, "list") && "sce" %in% names(obj)) {
+          cat("[info] extracting obj$sce from list\n")
+          obj$sce
+        } else {
+          obj
+        }
+
+        if (inherits(candidate, c("SingleCellExperiment",
+                                   "SummarizedExperiment"))) {
+          cat(sprintf(
+            "[info] real-data object accepted (%s: %d genes x %d samples)\n",
+            class(candidate)[1], nrow(candidate), ncol(candidate)))
+          sce_in <- candidate
+          input_source <- sprintf("real data from %s", input_path)
+        } else {
+          fallback_reason <- sprintf(
+            "loaded object class '%s' is not a (Single)SummarizedExperiment; cannot use",
+            paste(class(candidate), collapse = "/"))
+          cat("[warn] ===========================================================\n")
+          cat("[warn] FALLING BACK TO SYNTHETIC DATA\n")
+          cat(sprintf("[warn] reason: %s\n", fallback_reason))
+          cat("[warn] ===========================================================\n")
+          input_source <- sprintf("synthetic (%s)", fallback_reason)
+        }
+      }
+    }
+  }
+
+  benchmark_fittype_equivalence(sce = sce_in, report_file = report,
+                                 input_source = input_source)
 }
