@@ -8,7 +8,7 @@
 
 # Environment
 .Renviron
-.Rprofile
+# .Rprofile intentionally tracked: renv activates via this file, needed for Docker build
 
 # Editors
 .vscode/
