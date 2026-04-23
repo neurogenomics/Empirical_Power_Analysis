@@ -32,9 +32,9 @@ jobs:
 
       - name: Run lintr
         run: |
-          Rscript -e 'lintr::lint_dir("R", linters = lintr::with_defaults(
+          Rscript -e 'lintr::lint_dir("R", linters = lintr::linters_with_defaults(
             object_name_linter = NULL,
-            line_length_linter = lintr::line_length_linter(120)
+            line_length_linter = lintr::line_length_linter(120L)
           ))'
 
   # ----------------------------------------------------------------------------
@@ -68,10 +68,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install renv + restore
+      - name: Install renv + restore (if lockfile present)
         run: |
           R -e "install.packages('renv', repos='https://cloud.r-project.org')"
-          R -e "renv::restore(prompt = FALSE)"
+          if [ -f renv.lock ]; then
+            R -e "renv::restore(prompt = FALSE)"
+          else
+            echo "No renv.lock — installing testthat directly as fallback"
+            R -e "install.packages('testthat', repos='https://cloud.r-project.org')"
+          fi
 
       - name: Run testthat per pipeline
         run: |
