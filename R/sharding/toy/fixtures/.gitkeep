@@ -1,0 +1,3 @@
+# Placeholder so Nextflow's `Channel.fromPath(..., checkIfExists: true)` resolves
+# during -stub-run CI. Real sharding input data is never committed; in production
+# runs, params.raw_data points to Datalink/raw_data instead.
