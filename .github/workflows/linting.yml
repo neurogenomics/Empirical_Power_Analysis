@@ -6,10 +6,15 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: read
+
 jobs:
   pre-commit:
     name: pre-commit
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -26,6 +31,8 @@ jobs:
   nf-core:
     name: nf-core lint
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
