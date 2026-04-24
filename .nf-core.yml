@@ -1,0 +1,33 @@
+repository_type: pipeline
+nf_core_version: "3.5.2"
+
+lint:
+  # These checks relate to nf-core-specific branding assets and nf-core test
+  # infrastructure that are not applicable to this research pipeline, which is
+  # maintained by the Skene lab (neurogenomics org) rather than the nf-core
+  # community.  Keeping them here avoids spurious failures and makes it clear
+  # that the omission is intentional.
+
+  files_exist:
+    # nf-core logos — this is not an official nf-core pipeline
+    - assets/nf-core-Empirical_Power_Analysis_logo_light.png
+    - docs/images/nf-core-Empirical_Power_Analysis_logo_light.png
+    - docs/images/nf-core-Empirical_Power_Analysis_logo_dark.png
+    # Email notification templates — pipeline does not send completion emails
+    - assets/email_template.html
+    - assets/email_template.txt
+    - assets/sendmail_template.txt
+    # nf-test infrastructure — pipeline uses Nextflow stub-run + testthat instead
+    - .github/workflows/nf-test.yml
+    - .github/actions/get-shards/action.yml
+    - .github/actions/nf-test/action.yml
+    - nf-test.config
+    - tests/default.nf.test
+
+  nextflow_config:
+    # params.input — pipeline takes a directory of raw h5ad/qs files, not a
+    # sample-sheet; the entry point is params.raw_data.  An explicit params.input
+    # is therefore not applicable.
+    - params.input
+    # nf-core institutional config system — not required for a lab-internal pipeline
+    - custom_config

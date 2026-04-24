@@ -1,0 +1,7 @@
+contact_links:
+  - name: Neurogenomics lab (Skene group)
+    url: https://github.com/neurogenomics
+    about: Visit the neurogenomics GitHub organisation for related pipelines and tools.
+  - name: Report a bug or request a feature
+    url: https://github.com/neurogenomics/Empirical_Power_Analysis/issues/new/choose
+    about: Open an issue using the appropriate template.

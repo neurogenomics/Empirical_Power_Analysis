@@ -1,0 +1,30 @@
+# Prettier ignore file — https://prettier.io/docs/en/ignore.html
+# Files / directories that should not be reformatted by Prettier.
+
+# Nextflow execution artefacts
+.nextflow*
+work/
+results/
+test_output/
+
+# R artefacts
+*.Rhistory
+*.RData
+
+# Data files — too large and binary-safe to format
+*.qs
+*.rds
+*.rda
+*.h5ad
+*.h5Seurat
+*.csv
+
+# Lock file — managed by renv, not manually formatted
+renv.lock
+
+# Docs / generated outputs
+Datalink/
+Reproducibility/
+
+# Git
+.git/

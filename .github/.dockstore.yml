@@ -1,0 +1,7 @@
+# Dockstore config — https://dockstore.org
+# This file allows Dockstore to index the pipeline for discovery.
+version: 1.2
+workflows:
+  - subclass: nfl
+    primaryDescriptorPath: /nextflow.config
+    publish: true
