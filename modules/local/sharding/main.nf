@@ -11,7 +11,7 @@ process SHARDING {
 
     script:
     """
-    export POWER_ANALYSIS_ROOT=\$(pwd)
+    export POWER_ANALYSIS_ROOT=${projectDir}
     mkdir -p Datalink/Shards
 
     # Run each dataset's sharding script in sequence

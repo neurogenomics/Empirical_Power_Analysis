@@ -11,7 +11,7 @@ process EDA_ROUSSOS {
 
     script:
     """
-    export POWER_ANALYSIS_ROOT=\$(pwd)
+    export POWER_ANALYSIS_ROOT=${projectDir}
     Rscript ${projectDir}/R/eda_roussos/run_pipeline.R all ${task.cpus}
 
     cat <<-END_VERSIONS > versions.yml

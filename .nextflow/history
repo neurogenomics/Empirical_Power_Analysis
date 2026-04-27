@@ -7,3 +7,7 @@
 2026-04-23 21:38:34	7s	high_pare	ERR	0e0f01e9ff213f15082f4e7f9add791b	88d6dbc7-d4ae-4d0f-aea1-d1fdd0b4f60a	nextflow run main.nf -profile test,docker -c iclneuro.config -resume
 2026-04-23 21:58:22	6.6s	jolly_dubinsky	ERR	0e0f01e9ff213f15082f4e7f9add791b	88d6dbc7-d4ae-4d0f-aea1-d1fdd0b4f60a	nextflow run main.nf -profile test,docker -c iclneuro.config -resume
 2026-04-23 22:02:39	7.3s	special_ptolemy	ERR	0e0f01e9ff213f15082f4e7f9add791b	88d6dbc7-d4ae-4d0f-aea1-d1fdd0b4f60a	nextflow run main.nf -profile test,docker -c iclneuro.config -resume
+2026-04-24 08:17:37	4.6s	cranky_swanson	OK	9d6e8f66870bf6b9e0f3b5873959f8fa	30020383-a1e9-4481-bbe5-e41804119b97	nextflow run main.nf -profile test -stub-run
+2026-04-24 08:17:57	3.2s	desperate_goldwasser	OK	9d6e8f66870bf6b9e0f3b5873959f8fa	66ea038f-e158-4d2e-8cb0-03301ef8916b	nextflow run main.nf -profile laptop,docker -preview
+2026-04-24 08:18:19	7.2s	desperate_watson	ERR	9d6e8f66870bf6b9e0f3b5873959f8fa	1c7820d0-8446-4df5-a151-b20610015b69	nextflow run main.nf -profile iclneuro
+2026-04-24 14:16:03	6.5s	condescending_swirles	ERR	9d6e8f66870bf6b9e0f3b5873959f8fa	39b10ae9-9f5a-4b05-87a3-5ce2dcd52b91	nextflow run main.nf -profile docker

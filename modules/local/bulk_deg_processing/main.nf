@@ -8,7 +8,7 @@ process BULK_DEG_PROCESSING {
 
     script:
     """
-    export POWER_ANALYSIS_ROOT=\$(pwd)
+    export POWER_ANALYSIS_ROOT=${projectDir}
     Rscript ${projectDir}/R/bulk_deg_processing/run_pipeline.R all ${task.cpus}
 
     cat <<-END_VERSIONS > versions.yml

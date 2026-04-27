@@ -1,0 +1,119 @@
+digraph "dag" {
+rankdir=TB;
+v0 [shape=point,label="",fixedsize=true,width=0.1,xlabel="Channel.fromPath"];
+v1 [label="SHARDING"];
+v0 -> v1 [label="raw_data_ch"];
+
+v1 [label="SHARDING"];
+v3 [label="EDA_ROUSSOS"];
+v1 -> v3;
+
+v1 [label="SHARDING"];
+v2 [shape=point];
+v1 -> v2;
+
+v3 [label="EDA_ROUSSOS"];
+v5 [shape=point];
+v3 -> v5;
+
+v3 [label="EDA_ROUSSOS"];
+v4 [shape=point];
+v3 -> v4;
+
+v1 [label="SHARDING"];
+v6 [label="FULL_GROUND_TRUTH"];
+v1 -> v6 [label="shards"];
+
+v6 [label="FULL_GROUND_TRUTH"];
+v10 [label="CARTESIAN_DOWNSAMPLING"];
+v6 -> v10;
+
+v6 [label="FULL_GROUND_TRUTH"];
+v7 [shape=point];
+v6 -> v7;
+
+v8 [label="BULK_DEG_PROCESSING"];
+v22 [label="FIGURE_DATA_GENERATION"];
+v8 -> v22;
+
+v8 [label="BULK_DEG_PROCESSING"];
+v9 [shape=point];
+v8 -> v9;
+
+v1 [label="SHARDING"];
+v10 [label="CARTESIAN_DOWNSAMPLING"];
+v1 -> v10 [label="shards"];
+
+v10 [label="CARTESIAN_DOWNSAMPLING"];
+v14 [label="POWER_CURVE_FITTING"];
+v10 -> v14;
+
+v10 [label="CARTESIAN_DOWNSAMPLING"];
+v11 [shape=point];
+v10 -> v11;
+
+v1 [label="SHARDING"];
+v12 [label="DEPTH_EQUALIZATION"];
+v1 -> v12 [label="shards"];
+
+v6 [label="FULL_GROUND_TRUTH"];
+v12 [label="DEPTH_EQUALIZATION"];
+v6 -> v12 [label="ground_truth"];
+
+v12 [label="DEPTH_EQUALIZATION"];
+v14 [label="POWER_CURVE_FITTING"];
+v12 -> v14;
+
+v12 [label="DEPTH_EQUALIZATION"];
+v13 [shape=point];
+v12 -> v13;
+
+v14 [label="POWER_CURVE_FITTING"];
+v18 [shape=point];
+v14 -> v18;
+
+v14 [label="POWER_CURVE_FITTING"];
+v17 [shape=point];
+v14 -> v17;
+
+v14 [label="POWER_CURVE_FITTING"];
+v22 [label="FIGURE_DATA_GENERATION"];
+v14 -> v22;
+
+v14 [label="POWER_CURVE_FITTING"];
+v16 [shape=point];
+v14 -> v16;
+
+v14 [label="POWER_CURVE_FITTING"];
+v15 [shape=point];
+v14 -> v15;
+
+v6 [label="FULL_GROUND_TRUTH"];
+v19 [label="DE_DIAGNOSTICS"];
+v6 -> v19 [label="ground_truth"];
+
+v19 [label="DE_DIAGNOSTICS"];
+v21 [shape=point];
+v19 -> v21;
+
+v19 [label="DE_DIAGNOSTICS"];
+v20 [shape=point];
+v19 -> v20;
+
+v6 [label="FULL_GROUND_TRUTH"];
+v22 [label="FIGURE_DATA_GENERATION"];
+v6 -> v22 [label="ground_truth"];
+
+v10 [label="CARTESIAN_DOWNSAMPLING"];
+v22 [label="FIGURE_DATA_GENERATION"];
+v10 -> v22 [label="cartesian_results"];
+
+v22 [label="FIGURE_DATA_GENERATION"];
+v24 [shape=point];
+v22 -> v24;
+
+v22 [label="FIGURE_DATA_GENERATION"];
+v23 [shape=point];
+v22 -> v23;
+
+}

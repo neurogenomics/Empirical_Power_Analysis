@@ -55,7 +55,13 @@ FEASIBILITY_DIR <- project_path("Datalink", "Cross-Dataset-Analysis", "Dataset_S
 # - "cells": Downsample by cells per donor (original behavior)
 # - "reads": Downsample by total reads (UMI counts) per donor
 # >>> DEPTH EQUALIZATION: Run cells first, then change to "reads" and rerun <<<
-DOWNSAMPLE_MODE <- "cells"
+# Can be overridden by environment variable DOWNSAMPLE_MODE (used by run_all.sh).
+DOWNSAMPLE_MODE <- if (nzchar(Sys.getenv("DOWNSAMPLE_MODE"))) {
+  Sys.getenv("DOWNSAMPLE_MODE")
+} else {
+  "cells"
+}
+stopifnot(DOWNSAMPLE_MODE %in% c("cells", "reads"))
 
 # Donor steps (number of donors to sample)
 DONOR_STEPS <- c(5, 10, 15, 25, 50, 75, 100, 150, 200, 300, 500, 600)
@@ -210,8 +216,14 @@ SEED_BASE <- 1234
 # 9. CONTROL FLAGS
 # ==============================================================================
 
-# Force recalculation even if output files exist
-FORCE_RECALC <- TRUE
+# Force recalculation even if output files exist.
+# Can be overridden by environment variable POWER_ANALYSIS_FORCE_RECALC
+# (used by run_all.sh wrapper). Accepts: true/false/1/0/yes/no (case-insensitive).
+FORCE_RECALC <- if (nzchar(Sys.getenv("POWER_ANALYSIS_FORCE_RECALC"))) {
+  tolower(Sys.getenv("POWER_ANALYSIS_FORCE_RECALC")) %in% c("true", "1", "yes")
+} else {
+  TRUE
+}
 
 # ==============================================================================
 # 10. CELL TYPE CONFIGURATION

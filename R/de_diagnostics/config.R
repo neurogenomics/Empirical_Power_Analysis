@@ -341,7 +341,13 @@ if (!exists("N_CORES")) {
 # 12. CONTROL FLAGS
 # ==============================================================================
 
-FORCE_RECALC <- TRUE
+# Force recalculation (ignore cached outputs).
+# Override via environment variable POWER_ANALYSIS_FORCE_RECALC (used by run_all.sh).
+FORCE_RECALC <- if (nzchar(Sys.getenv("POWER_ANALYSIS_FORCE_RECALC"))) {
+  tolower(Sys.getenv("POWER_ANALYSIS_FORCE_RECALC")) %in% c("true", "1", "yes")
+} else {
+  TRUE
+}
 
 # ==============================================================================
 # 13. HELPER FUNCTIONS: Paths

@@ -14,7 +14,7 @@ process FIGURE_DATA_GENERATION {
 
     script:
     """
-    export POWER_ANALYSIS_ROOT=\$(pwd)
+    export POWER_ANALYSIS_ROOT=${projectDir}
     Rscript ${projectDir}/R/figure_data_generation/run_pipeline.R all ${task.cpus}
 
     cat <<-END_VERSIONS > versions.yml

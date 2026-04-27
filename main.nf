@@ -25,6 +25,47 @@ nextflow.enable.dsl = 2
 // ======================================================================================
 
 // ======================================================================================
+//  Pre-flight validation — fail fast with a useful error before any work starts
+// ======================================================================================
+def preflight() {
+    def raw = file(params.raw_data)
+    if (!raw.exists()) {
+        exit 1, """
+        ERROR: raw_data path does not exist:
+          ${params.raw_data}
+
+        Expected a directory containing the raw h5ad / qs / tar inputs.
+        See REPRODUCE.md for download instructions, or run with
+          -profile test   (skips real inputs via stub blocks)
+        """.stripIndent()
+    }
+    // For a real run, the directory must be non-empty (not just .gitkeep)
+    if (raw.isDirectory() && workflow.profile?.tokenize(',')?.every { it != 'test' }) {
+        def files = raw.list().findAll { !it.startsWith('.') }
+        if (files.isEmpty()) {
+            exit 1, """
+            ERROR: raw_data directory is empty:
+              ${params.raw_data}
+
+            Populate it with the dataset tarballs listed in REPRODUCE.md,
+            or use -profile test for a stub-only dry run.
+            """.stripIndent()
+        }
+    }
+}
+
+// True only if the user asked to render AND the source file actually exists.
+def shouldRender() {
+    if (!params.render_paper) return false
+    def rmd = file("${projectDir}/paper_final_draft.rmd")
+    if (!rmd.exists()) {
+        log.warn "render_paper=true but ${rmd} is missing — skipping rendering"
+        return false
+    }
+    return true
+}
+
+// ======================================================================================
 //  Module imports
 // ======================================================================================
 include { SHARDING }                from './modules/local/sharding'
@@ -54,8 +95,14 @@ workflow {
     ================================================================================
     """.stripIndent()
 
-    // Stage 1 — donor-level shards from raw h5ad/qs inputs
-    raw_data_ch = Channel.fromPath(params.raw_data, checkIfExists: true)
+    // Validate inputs before any process runs
+    preflight()
+
+    // Stage 1 — donor-level shards from raw h5ad/qs inputs.
+    // Channel emits the raw_data directory itself; the sharding R scripts glob
+    // inside it. type:'dir' + checkIfExists gives a clean error instead of a
+    // cryptic "no files match" if the directory is missing.
+    raw_data_ch = Channel.fromPath(params.raw_data, type: 'dir', checkIfExists: true)
     SHARDING(raw_data_ch)
 
     // Stage 2 — exploratory analyses (PCA, read-depth, filter rationale)
@@ -97,8 +144,8 @@ workflow {
         BULK_DEG_PROCESSING.out.bulk_results
     )
 
-    // Stage 10 — render the paper (optional)
-    if (params.render_paper) {
+    // Stage 10 — render the paper (optional; gated on file existence)
+    if (shouldRender()) {
         RENDER_PAPER(FIGURE_DATA_GENERATION.out.source_data)
     }
 }

@@ -58,3 +58,6 @@ __pycache__/
 
 # File-sync conflict markers (guard against accidental re-introduction)
 *.sync-conflict-*
+
+# One-off diagnostics not part of the public release
+_diagnostics/

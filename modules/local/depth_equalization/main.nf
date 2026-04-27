@@ -12,7 +12,7 @@ process DEPTH_EQUALIZATION {
 
     script:
     """
-    export POWER_ANALYSIS_ROOT=\$(pwd)
+    export POWER_ANALYSIS_ROOT=${projectDir}
     Rscript ${projectDir}/R/depth_equalization/run_pipeline.R all ${task.cpus}
 
     cat <<-END_VERSIONS > versions.yml

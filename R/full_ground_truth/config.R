@@ -291,8 +291,13 @@ SEED_BASE <- 42
 # 10. CONTROL FLAGS
 # ==============================================================================
 
-# Force recalculation even if output files exist
-FORCE_RECALC <- TRUE
+# Force recalculation even if output files exist.
+# Override via environment variable POWER_ANALYSIS_FORCE_RECALC (used by run_all.sh).
+FORCE_RECALC <- if (nzchar(Sys.getenv("POWER_ANALYSIS_FORCE_RECALC"))) {
+  tolower(Sys.getenv("POWER_ANALYSIS_FORCE_RECALC")) %in% c("true", "1", "yes")
+} else {
+  TRUE
+}
 
 # ==============================================================================
 # 11. HELPER FUNCTION: Get Paths for Cell Type

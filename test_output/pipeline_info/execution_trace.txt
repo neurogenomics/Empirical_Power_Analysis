@@ -1,0 +1,10 @@
+task_id	hash	native_id	name	status	exit	realtime	%cpu	rss	vmem
+2	3e/fa5da7	1606195	BULK_DEG_PROCESSING (bulk_deg_processing)	COMPLETED	0	20ms	114.6%	0	0
+1	bf/ddfd47	1606192	SHARDING (sharding)	COMPLETED	0	29ms	119.1%	0	0
+4	23/2a1a09	1606379	EDA_ROUSSOS (eda_roussos)	COMPLETED	0	19ms	124.3%	0	0
+3	fa/0b467c	1606376	FULL_GROUND_TRUTH (full_ground_truth)	COMPLETED	0	28ms	103.5%	0	0
+7	92/fbaa6e	1606571	DE_DIAGNOSTICS (de_diagnostics)	COMPLETED	0	21ms	117.1%	0	0
+6	c8/3598db	1606576	DEPTH_EQUALIZATION (depth_equalization)	COMPLETED	0	20ms	123.1%	0	0
+5	cc/830a27	1606580	CARTESIAN_DOWNSAMPLING (cartesian:cells)	COMPLETED	0	28ms	127.3%	0	0
+8	41/848d3a	1606857	POWER_CURVE_FITTING (power_curve_fitting)	COMPLETED	0	28ms	122.4%	0	0
+9	bf/3c9aba	1606947	FIGURE_DATA_GENERATION (figure_data_generation)	COMPLETED	0	21ms	97.6%	0	0

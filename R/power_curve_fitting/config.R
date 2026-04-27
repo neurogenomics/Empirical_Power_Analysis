@@ -419,7 +419,13 @@ get_y_steps <- function(mode) {
 # 14. CONTROL FLAGS
 # ==============================================================================
 
-FORCE_RECALC <- TRUE
+# Force recalculation (ignore cached fits and outputs).
+# Override via environment variable POWER_ANALYSIS_FORCE_RECALC (used by run_all.sh).
+FORCE_RECALC <- if (nzchar(Sys.getenv("POWER_ANALYSIS_FORCE_RECALC"))) {
+  tolower(Sys.getenv("POWER_ANALYSIS_FORCE_RECALC")) %in% c("true", "1", "yes")
+} else {
+  TRUE
+}
 
 # ==============================================================================
 # 15. LOGGING HELPERS (fallback if shared library not loaded)

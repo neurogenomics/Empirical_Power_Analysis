@@ -108,7 +108,19 @@ CELL_TYPES <- c("Astro", "Micro", "Oligo")
 N_CORES <- 12
 
 # ==============================================================================
-# 6. PIPELINE VERSION
+# 6. CONTROL FLAGS
+# ==============================================================================
+
+# Force recalculation (ignore cached outputs).
+# Override via environment variable POWER_ANALYSIS_FORCE_RECALC (used by run_all.sh).
+FORCE_RECALC <- if (nzchar(Sys.getenv("POWER_ANALYSIS_FORCE_RECALC"))) {
+  tolower(Sys.getenv("POWER_ANALYSIS_FORCE_RECALC")) %in% c("true", "1", "yes")
+} else {
+  TRUE
+}
+
+# ==============================================================================
+# 7. PIPELINE VERSION
 # ==============================================================================
 
 CONFIG_VERSION <- "1.0.0"

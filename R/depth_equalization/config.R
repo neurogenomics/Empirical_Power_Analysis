@@ -137,6 +137,14 @@ if (!exists("log_section")) {
 # 7. VERSION INFO
 # ==============================================================================
 
+# Force recalculation (ignore cached outputs).
+# Override via environment variable POWER_ANALYSIS_FORCE_RECALC (used by run_all.sh).
+FORCE_RECALC <- if (nzchar(Sys.getenv("POWER_ANALYSIS_FORCE_RECALC"))) {
+  tolower(Sys.getenv("POWER_ANALYSIS_FORCE_RECALC")) %in% c("true", "1", "yes")
+} else {
+  TRUE
+}
+
 PIPELINE_VERSION <- "1.0.0"
 PIPELINE_DATE <- "2026-02-25"
 

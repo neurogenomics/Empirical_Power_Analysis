@@ -52,24 +52,42 @@ COPY renv/settings.json renv/settings.json
 RUN --mount=type=cache,target=/root/.cache/R,sharing=locked \
     R -e "install.packages('renv', repos = 'https://cloud.r-project.org')"
 
-# Restore the pinned environment. Uses a BuildKit cache mount for renv's
-# package cache so failed/partial builds retain already-compiled packages —
-# turns a 15-min rebuild into 1-2 min when only a few packages change.
-# After restore, verify and force-install anything still missing (catches cases
-# where restore silently exits early due to partial cache state).
-# Three cache mounts stack here:
+# -----------------------------------------------------------------------------
+#  Copy the hardened restore script. Keeping this in its own file means we
+#  can iterate on restore logic without busting the APT/renv-install layers
+#  above, and avoids shell-quoting nightmares inside a RUN.
+# -----------------------------------------------------------------------------
+COPY docker/install_packages.R /tmp/install_packages.R
+
+# Restore the pinned environment with a hardened, retry-heavy policy.
+#
+# Why this layer is complicated: R package installation over the public
+# internet is flaky — transient 4xx/5xx from CRAN mirrors, half-truncated
+# downloads, DNS blips — and a single failure cascades (Rcpp fails →
+# 18 dependent packages also fail). We mitigate with:
+#
+#   1. Posit Public Package Manager (P3M) binary repo for Ubuntu 24.04
+#      ("noble"), which serves precompiled binaries. Drops total build time
+#      from ~15 min of source compilation to ~2 min, AND each download is
+#      one binary tarball instead of source + configure + make.
+#   2. Explicit multi-mirror CRAN fallback (cloud + uk + bioc-mirror)
+#      in case P3M is down or doesn't carry a package.
+#   3. renv connection options: 60s timeout, 5 retries per download.
+#   4. Outer retry loop around renv::restore() (3 attempts) — between
+#      attempts, rebuild the "missing" list and try again.
+#   5. Final pass: force-install anything still missing via renv::install
+#      with the full mirror list; error hard if the set is non-empty.
+#   6. Dev-tools (Rcpp, RcppArmadillo, RcppEigen, RcppTOML) installed FIRST
+#      so their failure can't cascade into 18 dependents in the same attempt.
+#
+# Cache mounts (unchanged):
 #   - /root/.cache/R/renv         : renv's own package cache (compiled binaries)
 #   - /root/.cache/R              : CRAN download cache (tarballs)
-#   - /tmp/ccache                 : C/C++ compilation cache — speeds up recompiles
-#                                   of the same source version, and massively
-#                                   speeds up near-identical package recompiles
-# CCACHE_DIR + CC/CXX wrappers teach R's compiler invocations to use ccache.
+#   - /tmp/ccache                 : C/C++ compilation cache
+#
 # RENV_CONFIG_CACHE_SYMLINKS=FALSE: the renv cache lives on a BuildKit cache
-# mount which is NOT persisted into the image layer. By default renv creates
-# symlinks from the project library into the cache — those symlinks survive
-# into the image but point at a cache directory that no longer exists at
-# runtime, breaking every package. With symlinks disabled, renv copies
-# packages directly into the project library so they persist in the image.
+# mount which is NOT persisted into the image layer. With symlinks disabled,
+# renv copies packages directly into the project library so they persist.
 RUN --mount=type=cache,target=/root/.cache/R/renv,sharing=locked \
     --mount=type=cache,target=/root/.cache/R,sharing=locked \
     --mount=type=cache,target=/tmp/ccache,sharing=locked \
@@ -81,28 +99,33 @@ RUN --mount=type=cache,target=/root/.cache/R/renv,sharing=locked \
  && echo "CXX17=ccache g++" >> ~/.R/Makevars \
  && export CCACHE_DIR=/tmp/ccache \
  && export RENV_CONFIG_CACHE_SYMLINKS=FALSE \
- && R -e "options(renv.config.pak.enabled = FALSE); \
-          renv::restore(prompt = FALSE); \
-          st <- renv::status(); \
-          cat('--- renv::status() ---\n'); print(st); \
-          lock_pkgs <- names(renv::lockfile_read()\$Packages); \
-          installed <- rownames(installed.packages()); \
-          missing <- setdiff(lock_pkgs, installed); \
-          if (length(missing) > 0) { \
-            cat('Force-installing missing packages:', paste(missing, collapse=', '), '\n'); \
-            renv::install(missing, prompt = FALSE); \
-          }"
+ && Rscript /tmp/install_packages.R
+
+# -----------------------------------------------------------------------------
+#  Make renv library + rstudio home world-readable so non-root runtime users
+#  (Nextflow invokes `docker run -u $(id -u):$(id -g)`) can actually load the
+#  packages. Without this the image works only when executed as root.
+# -----------------------------------------------------------------------------
+RUN chmod -R a+rX /home/rstudio /usr/local/lib/R 2>/dev/null || true
 
 # -----------------------------------------------------------------------------
 #  Verify critical packages loaded
 # -----------------------------------------------------------------------------
 RUN R -e " \
     critical <- c('DESeq2', 'apeglm', 'SingleCellExperiment', 'biomaRt', \
-                  'zellkonverter', 'qs', 'future.apply', 'rmarkdown'); \
+                  'zellkonverter', 'reticulate', 'basilisk', 'qs', \
+                  'Rcpp', 'RcppArmadillo', 'RcppEigen', \
+                  'future.apply', 'rmarkdown', 'ggplot2', 'dplyr'); \
+    missing <- character(); \
     for (p in critical) { \
-        stopifnot('package missing' = requireNamespace(p, quietly = TRUE)); \
-        cat(sprintf('✓ %s %s\n', p, packageVersion(p))); \
-    }"
+        if (requireNamespace(p, quietly = TRUE)) { \
+            cat(sprintf('OK %s %s\n', p, packageVersion(p))); \
+        } else { \
+            missing <- c(missing, p); \
+            cat(sprintf('FAIL %s\n', p)); \
+        } \
+    }; \
+    if (length(missing) > 0) stop('critical packages missing: ', paste(missing, collapse=', '))"
 
 # -----------------------------------------------------------------------------
 #  Default working directory matches POWER_ANALYSIS_ROOT convention

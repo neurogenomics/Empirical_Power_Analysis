@@ -13,7 +13,7 @@ process RENDER_PAPER {
 
     script:
     """
-    export POWER_ANALYSIS_ROOT=\$(pwd)
+    export POWER_ANALYSIS_ROOT=${projectDir}
     # Render the manuscript from Datalink/ — figures and tables are read by relative path
     Rscript -e "rmarkdown::render('${projectDir}/paper_final_draft.rmd', output_dir=getwd())"
 

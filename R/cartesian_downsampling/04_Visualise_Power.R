@@ -167,6 +167,11 @@ plot_metric_heatmap <- function(data, val_col, title_str, sub_str,
       )
     )
 
+  # If no cells cross the 80% threshold, skip the threshold legend entirely
+  # (no need to differentiate when there is nothing to highlight). Keep the
+  # outline geom_tile so visual appearance is consistent.
+  any_threshold_met <- any(!is.na(data[[val_col]]) & data[[val_col]] >= 0.8)
+
   # Overlay tiles with colour mapped to threshold status for legend
   p <- p +
     new_scale_color() +
@@ -179,8 +184,14 @@ plot_metric_heatmap <- function(data, val_col, title_str, sub_str,
         c(paste0("\u2265 80% ", threshold_metric_label),
           paste0("< 80% ", threshold_metric_label))
       ),
+      limits = c(paste0("\u2265 80% ", threshold_metric_label),
+                 paste0("< 80% ", threshold_metric_label)),
       drop = FALSE,
-      guide = guide_legend(order = 2, override.aes = list(fill = c(NA, "grey85"), linewidth = 1.2))
+      guide = if (any_threshold_met) {
+        guide_legend(order = 2, override.aes = list(fill = c(NA, "grey85"), color = c("red", "grey70"), linewidth = 1.2))
+      } else {
+        "none"
+      }
     )
 
   # Add feasibility overlay for recall plots (cells mode only)

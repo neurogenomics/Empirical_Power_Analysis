@@ -169,7 +169,12 @@ STEPS_TO_RUN <- c(1, 3, 6)
 
 # If FALSE, skip steps whose output files already exist for a given dataset.
 # Set to TRUE to regenerate all outputs unconditionally.
-FORCE_RECALC <- TRUE
+# Override via environment variable POWER_ANALYSIS_FORCE_RECALC (used by run_all.sh).
+FORCE_RECALC <- if (nzchar(Sys.getenv("POWER_ANALYSIS_FORCE_RECALC"))) {
+  tolower(Sys.getenv("POWER_ANALYSIS_FORCE_RECALC")) %in% c("true", "1", "yes")
+} else {
+  TRUE
+}
 
 # ==============================================================================
 # 12. DE FILTERING SUMMARY PARAMETERS (Step 06)

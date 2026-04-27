@@ -78,6 +78,79 @@ Check for anything missing before the long runs:
 Rscript -e 'pkgs <- c("DESeq2","apeglm","SingleCellExperiment","SummarizedExperiment","BiocParallel","biomaRt","AnnotationDbi","org.Hs.eg.db","rhdf5","zellkonverter","here","qs","Matrix","dplyr","tidyr","stringr","ggplot2","patchwork","scales","RColorBrewer","viridis","UpSetR","ggnewscale","ggrepel","pheatmap","cowplot","shadowtext","akima","data.table","future","future.apply","reticulate","testthat","knitr"); miss <- pkgs[!pkgs %in% rownames(installed.packages())]; cat("Missing:", length(miss), "\n"); print(miss)'
 ```
 
+## 2.5 One-shot driver: `run_all.sh`
+
+If you just want to regenerate everything end-to-end and walk away for a few
+days, use the bundled bash driver instead of running each pipeline by hand or
+spinning up Nextflow:
+
+```bash
+# From the repo root, after sections 0–2 are done:
+./run_all.sh --max-cores 24 --no-overwrite
+
+# Recommended for unattended multi-day runs:
+nohup ./run_all.sh --max-cores 24 --no-overwrite > nohup.run_all.out 2>&1 &
+disown
+```
+
+Defaults live in `run_all.config` (edit for permanent changes); CLI flags
+override them per-invocation. Useful flags:
+
+| Flag | Meaning |
+| --- | --- |
+| `--max-cores N` | cap every Rscript step at N cores (default 24; memory is the usual bottleneck) |
+| `--no-overwrite` | skip work whose outputs already exist (per-pipeline `FORCE_RECALC=FALSE`) |
+| `--force` | regenerate everything (per-pipeline `FORCE_RECALC=TRUE`) |
+| `--mode cells\|reads\|both` | which cartesian sweep(s) to run (default `both`; required by power-curve fitting) |
+| `--only A,B,C` | run only these stages |
+| `--skip A,B` | skip these stages |
+| `--from STAGE` | resume from this stage (skips earlier ones) |
+| `--stop-on-fail` | abort on first stage failure (default: log and continue) |
+| `--dry-run` | print what would run without executing |
+
+Stages run **strictly serially** in DAG order:
+
+1. `sharding` (5 dataset shard scripts in sequence)
+2. `eda_roussos`
+3. `full_ground_truth`
+4. `bulk_deg_processing`
+5. `cartesian_downsampling` (`cells` then `reads` if `--mode both`)
+6. `depth_equalization`
+7. `power_curve_fitting`
+8. `de_diagnostics`
+9. `figure_data_generation`
+
+Each invocation creates a timestamped log directory under
+`Datalink/Run_Output_Logs/run_all/<UTC-timestamp>/` containing:
+
+- `00_run.log` — master log
+- `<stage>.log` — per-stage stdout/stderr
+- `<stage>.status` — `SUCCESS`, `FAILED`, or `SKIPPED`
+- `manifest.json` — invocation context (host, git SHA, args)
+
+A `latest` symlink points to the most recent run for convenience.
+A lock file (`.run_all.lock`) prevents concurrent runs from clobbering each
+other.
+
+### How `--no-overwrite` actually works
+
+Each pipeline's `config.R` exposes a `FORCE_RECALC` flag controlling whether
+that pipeline regenerates outputs that already exist. `run_all.sh` exports
+`POWER_ANALYSIS_FORCE_RECALC` as an environment variable, which every config
+respects:
+
+```r
+FORCE_RECALC <- if (nzchar(Sys.getenv("POWER_ANALYSIS_FORCE_RECALC"))) {
+  tolower(Sys.getenv("POWER_ANALYSIS_FORCE_RECALC")) %in% c("true", "1", "yes")
+} else {
+  TRUE
+}
+```
+
+So `--no-overwrite` is equivalent to setting `POWER_ANALYSIS_FORCE_RECALC=false`
+before launching `Rscript`. The per-pipeline skip-if-exists logic is
+unchanged — `run_all.sh` is just a thin wrapper that flips the flag.
+
 ## 3. Pipeline dependency graph
 
 ```

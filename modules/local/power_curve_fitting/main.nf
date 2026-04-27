@@ -15,7 +15,7 @@ process POWER_CURVE_FITTING {
 
     script:
     """
-    export POWER_ANALYSIS_ROOT=\$(pwd)
+    export POWER_ANALYSIS_ROOT=${projectDir}
     Rscript ${projectDir}/R/power_curve_fitting/run_pipeline.R all ${task.cpus}
 
     cat <<-END_VERSIONS > versions.yml

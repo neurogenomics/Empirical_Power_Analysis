@@ -12,7 +12,7 @@ process CARTESIAN_DOWNSAMPLING {
 
     script:
     """
-    export POWER_ANALYSIS_ROOT=\$(pwd)
+    export POWER_ANALYSIS_ROOT=${projectDir}
     export DOWNSAMPLE_MODE=${params.downsample_mode}
 
     # The master runner internally parallelises 120k DESeq2 runs via future.apply.

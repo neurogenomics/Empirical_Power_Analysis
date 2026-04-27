@@ -1,0 +1,3 @@
+"gene_set","agg_level","variant","n_models","r2_combined","r2_additive","r2_interaction","lrt1_chisq","lrt1_df","lrt1_pval","lrt1_significant","lrt2_chisq","lrt2_df","lrt2_pval","lrt2_significant","ci_overlap_all","max_coef_diff"
+"full","per_iteration","full_per_iteration",0,NA,NA,NA,NA,NA,NA,FALSE,NA,NA,NA,FALSE,NA,NA
+"shared","per_iteration","shared_per_iteration",0,NA,NA,NA,NA,NA,NA,FALSE,NA,NA,NA,FALSE,NA,NA

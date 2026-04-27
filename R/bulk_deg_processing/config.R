@@ -103,8 +103,13 @@ BIOMART_ATTRIBUTES <- c("ensembl_gene_id", "external_gene_name", "description")
 # Number of cores for parallel operations (currently not used, but reserved)
 N_CORES <- 2
 
-# Force recalculation (ignore cached files)
-FORCE_RECALC <- TRUE
+# Force recalculation (ignore cached files).
+# Override via environment variable POWER_ANALYSIS_FORCE_RECALC (used by run_all.sh).
+FORCE_RECALC <- if (nzchar(Sys.getenv("POWER_ANALYSIS_FORCE_RECALC"))) {
+  tolower(Sys.getenv("POWER_ANALYSIS_FORCE_RECALC")) %in% c("true", "1", "yes")
+} else {
+  TRUE
+}
 
 # ==============================================================================
 # VALIDATION FUNCTIONS
