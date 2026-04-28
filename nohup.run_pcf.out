@@ -1,34 +1,34 @@
 nohup: ignoring input
 ==> run_power_curve_fitting.sh dispatching to run_all.sh
-    skip stages:       full_ground_truth,eda_roussos,bulk_deg_processing,de_diagnostics,figure_data_generation
+    skip stages:       full_ground_truth,eda_roussos,bulk_deg_processing,de_diagnostics,figure_data_generation,full_ground_truth
     sharding datasets: roussos  (PCF only consumes Roussos shards)
     extra args:        --max-cores 24 --no-overwrite
 
 ================================================================================
   EMPIRICAL POWER ANALYSIS — run_all.sh
 ================================================================================
-[2026-04-27T17:05:25Z] Project root:    /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis
-[2026-04-27T17:05:25Z] Log dir:         Datalink/Run_Output_Logs/run_all/20260427T170525Z
-[2026-04-27T17:05:25Z] Git SHA:         9f21921 (73 dirty file(s))
-[2026-04-27T17:05:25Z] Max cores:       24
-[2026-04-27T17:05:25Z] Force recalc:    false
-[2026-04-27T17:05:25Z] Cartesian mode:  both
-[2026-04-27T17:05:25Z] Stop on fail:    false
-[2026-04-27T17:05:25Z] Only stages:     <all>
-[2026-04-27T17:05:25Z] Skip stages:     full_ground_truth,eda_roussos,bulk_deg_processing,de_diagnostics,figure_data_generation
-[2026-04-27T17:05:25Z] From stage:      <start>
-[2026-04-27T17:05:25Z] Dry run:         false
+[2026-04-28T15:30:25Z] Project root:    /mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis
+[2026-04-28T15:30:25Z] Log dir:         Datalink/Run_Output_Logs/run_all/20260428T153025Z
+[2026-04-28T15:30:25Z] Git SHA:         af1dc84 (3 dirty file(s))
+[2026-04-28T15:30:25Z] Max cores:       24
+[2026-04-28T15:30:25Z] Force recalc:    false
+[2026-04-28T15:30:25Z] Cartesian mode:  both
+[2026-04-28T15:30:25Z] Stop on fail:    false
+[2026-04-28T15:30:25Z] Only stages:     <all>
+[2026-04-28T15:30:25Z] Skip stages:     full_ground_truth,eda_roussos,bulk_deg_processing,de_diagnostics,figure_data_generation,full_ground_truth
+[2026-04-28T15:30:25Z] From stage:      <start>
+[2026-04-28T15:30:25Z] Dry run:         false
 
 ================================================================================
   STAGE: sharding
 ================================================================================
-[2026-04-27T17:05:25Z]     [sharding] datasets: roussos
-[2026-04-27T17:05:25Z]     -> Rscript R/sharding/Run_Shard_Roussos.R (cores=24, FORCE_RECALC=false)
-[2026-04-27T17:13:30Z]     [sharding:roussos] OK
-[2026-04-27T17:13:30Z]     [sharding] skip allen (not in SHARDING_DATASETS)
-[2026-04-27T17:13:30Z]     [sharding] skip dejager (not in SHARDING_DATASETS)
-[2026-04-27T17:13:30Z]     [sharding] skip johansen (not in SHARDING_DATASETS)
-[2026-04-27T17:13:30Z]     [sharding] skip rexach (not in SHARDING_DATASETS)
+[2026-04-28T15:30:25Z]     [sharding] datasets: roussos
+[2026-04-28T15:30:25Z]     -> Rscript R/sharding/Run_Shard_Roussos.R (cores=24, FORCE_RECALC=false)
+[2026-04-28T15:47:23Z]     [sharding:roussos] OK
+[2026-04-28T15:47:23Z]     [sharding] skip allen (not in SHARDING_DATASETS)
+[2026-04-28T15:47:23Z]     [sharding] skip dejager (not in SHARDING_DATASETS)
+[2026-04-28T15:47:23Z]     [sharding] skip johansen (not in SHARDING_DATASETS)
+[2026-04-28T15:47:23Z]     [sharding] skip rexach (not in SHARDING_DATASETS)
 
 ================================================================================
   STAGE: eda_roussos  (SKIPPED)
@@ -45,5 +45,5 @@ nohup: ignoring input
 ================================================================================
   STAGE: cartesian_downsampling
 ================================================================================
-[2026-04-27T17:13:30Z]   cartesian_downsampling mode=cells
-[2026-04-27T17:13:30Z]     -> Rscript R/cartesian_downsampling/run_pipeline.R all 24 (cores=24, FORCE_RECALC=false)
+[2026-04-28T15:47:23Z]   cartesian_downsampling mode=cells
+[2026-04-28T15:47:23Z]     -> Rscript R/cartesian_downsampling/run_pipeline.R all 24 (cores=24, FORCE_RECALC=false)

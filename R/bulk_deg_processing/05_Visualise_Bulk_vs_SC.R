@@ -267,13 +267,16 @@ generate_corr_plot <- function(df, title_prefix, cell_type, dataset_name) {
   r_all <- round(cor(df_calc$log2FoldChange_SC, df_calc$log2FoldChange_Bulk, method = "pearson", use = "complete.obs"), 2)
   label_all <- glue("All Sig Genes (R = {r_all})")
   
+  # Line emphasis: y = x identity is a thin dotted reference; the correlation
+  # (regression) line is thick and dashed so the trend stands out. Colours
+  # preserved (black for identity, blue / grey50 / purple for trend lines).
   p <- ggplot(df, aes(x = log2FoldChange_Bulk, y = log2FoldChange_SC)) +
     geom_hline(yintercept = 0, linetype = "solid", color = "grey80") +
     geom_vline(xintercept = 0, linetype = "solid", color = "grey80") +
-    geom_abline(slope = 1, intercept = 0, color = "black", linetype = "dashed", linewidth = 0.8) +
-    geom_point(aes(color = chr_type, alpha = sc_sig_status), size = 2) + 
-    geom_smooth(data = df_calc, method = "lm", se = FALSE, aes(linetype = "All Genes"), color = "blue", linewidth = 0.8)
-  
+    geom_abline(slope = 1, intercept = 0, color = "black", linetype = "dotted", linewidth = 0.4) +
+    geom_point(aes(color = chr_type, alpha = sc_sig_status), size = 2) +
+    geom_smooth(data = df_calc, method = "lm", se = FALSE, aes(linetype = "All Genes"), color = "blue", linewidth = 1.4)
+
   if (VIS_CALC_SUBGROUP_LINES) {
     df_auto <- df_calc %>% filter(chr_type == "Autosome")
     r_auto  <- round(cor(df_auto$log2FoldChange_SC, df_auto$log2FoldChange_Bulk, method = "pearson", use = "complete.obs"), 2)
@@ -283,11 +286,11 @@ generate_corr_plot <- function(df, title_prefix, cell_type, dataset_name) {
     if(is.na(r_sex)) r_sex <- "NA"
     label_auto <- glue("Sig Autosomes (R = {r_auto})")
     label_sex  <- glue("Sig Sex Chr (R = {r_sex})")
-    p <- p + geom_smooth(data = df_auto, method = "lm", se = FALSE, aes(linetype = "Autosomes"), color = "grey50", linewidth = 0.8) +
-      geom_smooth(data = df_sex, method = "lm", se = FALSE, aes(linetype = "Sex Chr"), color = "purple", linewidth = 0.8) +
-      scale_linetype_manual(name = "Trend Lines (Sig Only)", values = c("All Genes" = "dotted", "Autosomes" = "solid", "Sex Chr" = "solid"), labels = c("All Genes" = label_all, "Autosomes" = label_auto, "Sex Chr" = label_sex))
+    p <- p + geom_smooth(data = df_auto, method = "lm", se = FALSE, aes(linetype = "Autosomes"), color = "grey50", linewidth = 1.4) +
+      geom_smooth(data = df_sex, method = "lm", se = FALSE, aes(linetype = "Sex Chr"), color = "purple", linewidth = 1.4) +
+      scale_linetype_manual(name = "Trend Lines (Sig Only)", values = c("All Genes" = "dashed", "Autosomes" = "dashed", "Sex Chr" = "dashed"), labels = c("All Genes" = label_all, "Autosomes" = label_auto, "Sex Chr" = label_sex))
   } else {
-    p <- p + scale_linetype_manual(name = "Trend Lines (Sig Only)", values = c("All Genes" = "dotted"), labels = c("All Genes" = label_all))
+    p <- p + scale_linetype_manual(name = "Trend Lines (Sig Only)", values = c("All Genes" = "dashed"), labels = c("All Genes" = label_all))
   }
   
   short_ct <- switch(tolower(cell_type),
@@ -307,7 +310,11 @@ generate_corr_plot <- function(df, title_prefix, cell_type, dataset_name) {
           legend.spacing.y = unit(0.1, "cm"),
           legend.box.spacing = unit(0.2, "cm"),
           axis.title    = element_text(size = 11),
-          axis.text     = element_text(size = 10)) +
+          axis.text     = element_text(size = 10),
+          # Drop gridlines so the line emphasis (thin dotted identity vs
+          # thick dashed regression) reads cleanly without panel grid noise.
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank()) +
     labs(title = paste0(short_ct, ": Bulk vs Single-Cell Concordance"),
          subtitle = NULL,
          x = expression(Bulk~Log[2]~Fold~Change),
@@ -569,23 +576,27 @@ for (Cell_Type in CELL_TYPES) {
       p5 <- ggplot(recovery_summary, aes(x=robust_chr_type, y=Count, fill=Recovery)) +
         geom_bar(stat="identity", position="stack") +
         geom_text(aes(label=Count), position=position_stack(vjust=0.5), color="black", size=4.5) +
-        facet_grid(~Chr_Cat, scales="free_x", space="free") + 
-        scale_fill_manual(values=RECOVERY_COLORS) + 
-        theme_publication() + 
-        theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+        facet_grid(~Chr_Cat, scales="free_x", space="free") +
+        scale_fill_manual(values=RECOVERY_COLORS) +
+        theme_publication() +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1),
+              panel.grid.major = element_blank(),
+              panel.grid.minor = element_blank()) +
         labs(title = paste0("Recovery of Bulk DEGs: ", prettify_label(Cell_Type)),
              x = "Chromosome", y = "Count")
-      
-      recovery_lfc_summary <- bulk_recovery_base %>% 
-        group_by(robust_chr_type, lfc_group, Recovery) %>% 
+
+      recovery_lfc_summary <- bulk_recovery_base %>%
+        group_by(robust_chr_type, lfc_group, Recovery) %>%
         summarise(Count=n(), .groups="drop")
-      
-      p6 <- ggplot(recovery_lfc_summary, aes(x=lfc_group, y=Count, fill=Recovery)) + 
-        geom_bar(stat="identity", position="stack") + 
-        facet_wrap(~robust_chr_type, scales="fixed") + 
-        geom_text(aes(label=Count), position=position_stack(vjust=0.5), color="black", size=3.5) + 
-        scale_fill_manual(values=RECOVERY_COLORS) + 
+
+      p6 <- ggplot(recovery_lfc_summary, aes(x=lfc_group, y=Count, fill=Recovery)) +
+        geom_bar(stat="identity", position="stack") +
+        facet_wrap(~robust_chr_type, scales="fixed") +
+        geom_text(aes(label=Count), position=position_stack(vjust=0.5), color="black", size=3.5) +
+        scale_fill_manual(values=RECOVERY_COLORS) +
         theme_publication() +
+        theme(panel.grid.major = element_blank(),
+              panel.grid.minor = element_blank()) +
         labs(title = paste0("Recovery of Bulk DEGs: ", prettify_label(Cell_Type)),
              subtitle = "By LFC magnitude",
              x = "|LFC| Bin", y = "Count")

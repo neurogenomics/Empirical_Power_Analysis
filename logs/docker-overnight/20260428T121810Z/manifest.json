@@ -1,0 +1,24 @@
+{
+  "timestamp_utc":   "20260428T121810Z",
+  "host":            "server-03",
+  "git_sha":         "929ed3f",
+  "pipeline":        "pcf",
+  "image_tag":       "empirical-power-analysis:overnight",
+  "image_digest":    "unknown",
+  "datalink_path":   "/mnt/data/chrisc/Power_Analysis_Paper/Empirical_Power_Analysis/Datalink",
+  "max_cores":       24,
+  "overwrite_flag":  "--no-overwrite",
+  "mode":            "both",
+  "extra_args":      [
+  ""
+],
+  "container_id":    "pending",
+  "phase":           "building",
+  "build_started":   "2026-04-28T12:18:10Z",
+  "build_finished":  "",
+  "smoke_started":   "",
+  "smoke_finished":  "",
+  "run_started":     "",
+  "run_finished":    "",
+  "exit_status":     "pending"
+}

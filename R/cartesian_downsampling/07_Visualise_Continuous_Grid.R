@@ -26,6 +26,87 @@ suppressPackageStartupMessages({
 })
 
 # ==============================================================================
+# Helper: fill NaN cells inside an interpolated surface from nearest non-NaN
+# neighbour. akima::interp's Delaunay triangulation occasionally leaves NaN
+# triangles inside the data hull when grid points are irregularly spaced
+# (e.g., the log-cells axis 5,10,20,...,3000). This produces empty triangles
+# in the rendered heatmap. We detect NaN cells whose row/column has measured
+# data on both sides and fill them from the nearest non-NaN interpolated cell.
+fill_interp_holes <- function(z) {
+  if (is.null(z)) return(z)
+  if (!any(is.na(z))) return(z)
+  nx <- nrow(z); ny <- ncol(z)
+  na_mask <- is.na(z)
+  ok_idx  <- which(!na_mask, arr.ind = TRUE)
+  if (nrow(ok_idx) == 0) return(z)
+
+  # Bounding box of non-NA cells defines the data envelope. Any NaN inside this
+  # rectangle is an akima Delaunay artefact (a triangular hole inside the hull
+  # left when grid points are irregularly spaced) and gets filled from its
+  # nearest non-NaN neighbour in (row, col) space. The downstream frontier
+  # concave-hull mask still carves out anything genuinely outside the measured
+  # data region, so over-filling here is safe — extras get masked out later.
+  ix_range <- range(ok_idx[, 1])
+  iy_range <- range(ok_idx[, 2])
+  z_filled <- z
+  for (i in ix_range[1]:ix_range[2]) {
+    for (j in iy_range[1]:iy_range[2]) {
+      if (!na_mask[i, j]) next
+      d <- (ok_idx[, 1] - i) ^ 2 + (ok_idx[, 2] - j) ^ 2
+      k <- which.min(d)
+      z_filled[i, j] <- z[ok_idx[k, 1], ok_idx[k, 2]]
+    }
+  }
+  z_filled
+}
+
+# ==============================================================================
+# Helper: bilinear interpolation on a complete rectangular grid.
+# Replaces akima::interp (Delaunay) which produces triangular holes when grid
+# points are irregularly spaced. Inputs:
+#   x_grid, y_grid : sorted unique grid coords (length nx, ny)
+#   z_mat          : nx*ny matrix of values; MUST be fully populated
+#   xo, yo         : output sample coords (any length)
+# Returns a list with x=xo, y=yo, z = length(xo)-by-length(yo) matrix.
+# Because z_mat is fully populated, output z has no NA cells - by construction
+# bilinear interpolation between any 4 valid corners produces a valid result.
+bilinear_interp_grid <- function(x_grid, y_grid, z_mat, xo, yo) {
+  stopifnot(length(x_grid) == nrow(z_mat),
+            length(y_grid) == ncol(z_mat))
+  # NA propagation: if any of the 4 surrounding discrete grid corners is NA,
+  # the interpolated cell is also NA (renders as grey via na.value in the
+  # downstream geom_raster/scale_fill). This makes the continuous surface
+  # show exactly the discrete grid's data envelope: regions where there were
+  # no measured values stay grey instead of being NN-extrapolated.
+  nx <- length(x_grid); ny <- length(y_grid)
+  out <- matrix(NA_real_, nrow = length(xo), ncol = length(yo))
+  for (i in seq_along(xo)) {
+    x <- xo[i]
+    if (x < x_grid[1] || x > x_grid[nx]) next
+    ix <- findInterval(x, x_grid, all.inside = TRUE)
+    x_lo <- x_grid[ix]; x_hi <- x_grid[ix + 1]
+    tx <- if (x_hi == x_lo) 0 else (x - x_lo) / (x_hi - x_lo)
+    for (j in seq_along(yo)) {
+      y <- yo[j]
+      if (y < y_grid[1] || y > y_grid[ny]) next
+      iy <- findInterval(y, y_grid, all.inside = TRUE)
+      y_lo <- y_grid[iy]; y_hi <- y_grid[iy + 1]
+      ty <- if (y_hi == y_lo) 0 else (y - y_lo) / (y_hi - y_lo)
+      v00 <- z_mat[ix,     iy    ]
+      v10 <- z_mat[ix + 1, iy    ]
+      v01 <- z_mat[ix,     iy + 1]
+      v11 <- z_mat[ix + 1, iy + 1]
+      if (is.na(v00) || is.na(v10) || is.na(v01) || is.na(v11)) next
+      out[i, j] <- (1 - tx) * (1 - ty) * v00 +
+                   tx       * (1 - ty) * v10 +
+                   (1 - tx) * ty       * v01 +
+                   tx       * ty       * v11
+    }
+  }
+  list(x = xo, y = yo, z = out)
+}
+
+# ==============================================================================
 # 1. SETUP
 # ==============================================================================
 
@@ -311,26 +392,68 @@ points_in_frontier_hull <- function(x_query, y_query, x_measured, y_measured) {
 #' @param n_interp Number of interpolation points per dimension (default 200)
 #' @return Data frame with interpolated dense grid (NA outside local neighborhoods)
 interpolate_grid <- function(data, val_col, n_interp = 200) {
-  
-  # Get finite data only (exclude Max/NA)
-  finite_data <- data %>%
-    filter(!is.na(!!sym(y_col)), 
+
+  # Step 1: Pull out the discrete grid actually present in `data` (ignoring the
+  # "Max" row, which is annotated separately).
+  grid_present <- data %>%
+    filter(!is.na(!!sym(y_col)),
            !is.na(Donors),
-           as.character(!!sym(y_col)) != "Max",
-           !is.na(!!sym(val_col)))
-  
-  if (nrow(finite_data) == 0) {
+           as.character(!!sym(y_col)) != "Max")
+
+  if (nrow(grid_present) == 0) {
     return(NULL)
   }
-  
-  # Convert to numeric
-  finite_data$donors_num <- as.numeric(as.character(finite_data$Donors))
-  finite_data$y_num <- as.numeric(as.character(finite_data[[y_col]]))
-  finite_data$val_num <- as.numeric(finite_data[[val_col]])
-  
-  # Remove any remaining NAs from conversion
-  finite_data <- finite_data %>%
-    filter(!is.na(donors_num), !is.na(y_num), !is.na(val_num))
+
+  grid_present$donors_num <- as.numeric(as.character(grid_present$Donors))
+  grid_present$y_num      <- as.numeric(as.character(grid_present[[y_col]]))
+  grid_present$val_num    <- as.numeric(grid_present[[val_col]])
+  grid_present <- grid_present %>%
+    filter(!is.na(donors_num), !is.na(y_num))
+
+  measured <- grid_present %>% filter(!is.na(val_num))
+  if (nrow(measured) == 0) {
+    return(NULL)
+  }
+
+  # Step 2: Construct the FULL Cartesian grid from the unique donor and cell
+  # levels actually observed in the data. This catches cases where a (donors,
+  # cells) cell is missing entirely from `data` (e.g. because no iteration
+  # produced an output there) — without this expansion, our NA back-fill has
+  # nothing to operate on, and akima::interp leaves a triangular hole inside
+  # the data hull that renders as a white triangle in the heatmap.
+  full_grid <- expand.grid(
+    donors_num = sort(unique(grid_present$donors_num)),
+    y_num      = sort(unique(grid_present$y_num)),
+    KEEP.OUT.ATTRS = FALSE,
+    stringsAsFactors = FALSE
+  )
+
+  # Left-join the measured values onto the full grid.
+  full_grid <- merge(
+    full_grid,
+    measured[, c("donors_num", "y_num", "val_num")],
+    by = c("donors_num", "y_num"),
+    all.x = TRUE,
+    sort  = FALSE
+  )
+
+  # Step 3: Leave NA cells as NA. The bilinear interpolator propagates NA
+  # whenever any of the 4 surrounding discrete grid corners is NA, so the
+  # continuous surface shows exactly the discrete grid's data envelope. Cells
+  # outside the measured region (e.g. infeasible high-donor x high-cell
+  # corners, or low-power low-donor x low-cell corners with no predicted
+  # genes) stay NA and render grey via the downstream scale_fill na.value.
+  n_missing <- sum(is.na(full_grid$val_num))
+  if (n_missing > 0) {
+    log_info("  %d cell(s) missing for %s — kept as NA so they render grey",
+             n_missing, val_col)
+  }
+
+  grid_full <- full_grid
+
+  # The downstream code (range, akima, frontier) used the variable name
+  # `finite_data` — keep that name to minimise diff.
+  finite_data <- grid_full
   
   if (nrow(finite_data) < 4) {
     return(NULL)  # Need at least 4 points for interpolation
@@ -344,18 +467,21 @@ interpolate_grid <- function(data, val_col, n_interp = 200) {
   donors_grid <- seq(donors_range[1], donors_range[2], length.out = n_interp)
   y_grid <- seq(y_range[1], y_range[2], length.out = n_interp)
   
-  # Perform bilinear interpolation
+  # Bilinear interpolation on the rectangular grid. Inputs are guaranteed to
+  # cover every (donor, cell) cell after the NN back-fill above, so no holes
+  # are possible.
   tryCatch({
-    interp_result <- akima::interp(
-      x = finite_data$donors_num,
-      y = finite_data$y_num,
-      z = finite_data$val_num,
-      xo = donors_grid,
-      yo = y_grid,
-      linear = TRUE,
-      extrap = FALSE  # Don't extrapolate beyond measured points
-    )
-    
+    x_unique <- sort(unique(finite_data$donors_num))
+    y_unique <- sort(unique(finite_data$y_num))
+    z_mat <- matrix(NA_real_, nrow = length(x_unique), ncol = length(y_unique))
+    ix <- match(finite_data$donors_num, x_unique)
+    iy <- match(finite_data$y_num, y_unique)
+    for (k in seq_len(nrow(finite_data))) {
+      z_mat[ix[k], iy[k]] <- finite_data$val_num[k]
+    }
+    interp_result <- bilinear_interp_grid(x_unique, y_unique, z_mat,
+                                          donors_grid, y_grid)
+
     # Convert to long format data frame
     interp_df <- expand.grid(
       Donors = interp_result$x,
@@ -1016,52 +1142,86 @@ if (LOG_MODE_ENABLED) {
         interp_results <- list()
         
         for (bin_name in unique(df_cat$LFC_Bin)) {
-          
+
           df_bin <- df_cat %>% filter(LFC_Bin == bin_name)
-          
-          # Get finite data and convert to log space for interpolation
-          finite_data <- df_bin %>%
-            filter(!is.na(!!sym(y_col)), 
+
+          # Build the FULL discrete grid (keep cells with NA val_col so we can
+          # back-fill them from neighbouring measured cells — same rule as the
+          # discrete grid plot uses).
+          all_grid <- df_bin %>%
+            filter(!is.na(!!sym(y_col)),
                    !is.na(Donors),
-                   as.character(!!sym(y_col)) != "Max",
-                   !is.na(!!sym(val_col))) %>%
+                   as.character(!!sym(y_col)) != "Max") %>%
             mutate(
               donors_num = as.numeric(as.character(Donors)),
               y_num = as.numeric(as.character(!!sym(y_col)))
             ) %>%
             filter(!is.na(donors_num), !is.na(y_num),
                    donors_num > 0, y_num > 0)  # Must be positive for log
-          
+
+          measured <- all_grid %>% filter(!is.na(!!sym(val_col)))
+          if (nrow(measured) == 0) next
+
+          # Build the FULL Cartesian grid from observed donor and cell levels
+          # so any (donors, cells) combo missing from `df_bin` gets a row to
+          # back-fill. Without this expansion akima leaves triangular holes
+          # inside the data hull when the input has missing rows (not just
+          # rows with NA values).
+          full_grid <- expand.grid(
+            donors_num = sort(unique(all_grid$donors_num)),
+            y_num      = sort(unique(all_grid$y_num)),
+            KEEP.OUT.ATTRS = FALSE,
+            stringsAsFactors = FALSE
+          )
+          full_grid <- merge(
+            full_grid,
+            measured[, c("donors_num", "y_num", val_col)],
+            by = c("donors_num", "y_num"),
+            all.x = TRUE,
+            sort  = FALSE
+          )
+
+          # Leave NA cells as NA: bilinear_interp_grid will propagate NA so the
+          # continuous surface mirrors the discrete grid's data envelope.
+          n_missing <- sum(is.na(full_grid[[val_col]]))
+          if (n_missing > 0) {
+            log_info("  [SemiLog %s/%s] %d cell(s) missing — kept as NA",
+                     val_col, bin_name, n_missing)
+          }
+
+          finite_data <- full_grid
+
           if (nrow(finite_data) < 4) next
-          
+
           # Transform Y to log space, keep X linear (semi-log interpolation)
           log_finite <- finite_data %>%
             mutate(
               # Keep donors linear (no log transform)
               y_log = log10(y_num)
             )
-          
+
           # Interpolate in SEMI-LOG space (X linear, Y log)
           donors_range <- range(log_finite$donors_num)  # X: linear
           y_range <- range(log_finite$y_log)            # Y: log
-          
+
           donors_grid <- seq(donors_range[1], donors_range[2], length.out = 200)
           y_grid <- seq(y_range[1], y_range[2], length.out = 200)
-          
+
+          # Bilinear on rectangular grid (no Delaunay, no internal holes).
           interp_result <- tryCatch({
-            akima::interp(
-              x = log_finite$donors_num,    # X: linear
-              y = log_finite$y_log,         # Y: log
-              z = log_finite[[val_col]],
-              xo = donors_grid,
-              yo = y_grid,
-              linear = TRUE,
-              extrap = FALSE
-            )
+            x_unique <- sort(unique(log_finite$donors_num))
+            y_unique <- sort(unique(log_finite$y_log))
+            z_mat <- matrix(NA_real_, nrow = length(x_unique), ncol = length(y_unique))
+            ix <- match(log_finite$donors_num, x_unique)
+            iy <- match(log_finite$y_log, y_unique)
+            for (k in seq_len(nrow(log_finite))) {
+              z_mat[ix[k], iy[k]] <- log_finite[[val_col]][k]
+            }
+            bilinear_interp_grid(x_unique, y_unique, z_mat, donors_grid, y_grid)
           }, error = function(e) NULL)
-          
+
           if (is.null(interp_result)) next
-          
+
           # Convert Y back to original scale, keep X linear
           interp_df <- expand.grid(
             Donors = interp_result$x,       # X: linear (no conversion)
@@ -1069,12 +1229,12 @@ if (LOG_MODE_ENABLED) {
           )
           names(interp_df)[names(interp_df) == "Y_Value"] <- y_col
           interp_df[[val_col]] <- as.vector(interp_result$z)
-          
+
           # Apply frontier masking in semi-log space (X linear, Y log)
           hull <- frontier_concave_hull(log_finite$donors_num, log_finite$y_log)
           inside <- tryCatch({
             if (requireNamespace("sp", quietly = TRUE)) {
-              sp::point.in.polygon(interp_df$Donors, log10(interp_df[[y_col]]), 
+              sp::point.in.polygon(interp_df$Donors, log10(interp_df[[y_col]]),
                                   hull$hull_x, hull$hull_y) > 0
             } else {
               # Simple bounding box fallback (Y in original scale, so compare to log bounds)
@@ -1084,7 +1244,7 @@ if (LOG_MODE_ENABLED) {
               interp_df[[y_col]] <= max(finite_data$y_num)
             }
           }, error = function(e) rep(TRUE, nrow(interp_df)))
-          
+
           interp_df[[val_col]][!inside] <- NA
           
           interp_df$LFC_Bin <- bin_name
@@ -1149,7 +1309,7 @@ if (LOG_MODE_ENABLED) {
           coord_cartesian(clip = "off") +
           scale_y_log10(labels = y_labels_fn) +
           scale_fill_viridis_c(option = "magma", limits = c(0, 1),
-                               na.value = "white", name = fill_label_log) +
+                               na.value = "grey90", name = fill_label_log) +
           labs(title = paste0(prettify_label(cell_type), ": ", m$desc),
                x = "Number of Donors",
                y = y_label) +
@@ -1210,53 +1370,82 @@ if (LOG_MODE_ENABLED) {
         
         # Generate separate plot for each LFC bin
         for (bin_name in unique(df_cat$LFC_Bin)) {
-          
+
           df_bin <- df_cat %>% filter(LFC_Bin == bin_name)
           if (nrow(df_bin) == 0) next
-          
-          # Get finite data and convert to log space
-          finite_data <- df_bin %>%
-            filter(!is.na(!!sym(y_col)), 
+
+          # Build the FULL discrete grid (NA val_col cells included for back-fill).
+          all_grid <- df_bin %>%
+            filter(!is.na(!!sym(y_col)),
                    as.character(!!sym(y_col)) != "Max",
-                   !is.na(Donors),
-                   !is.na(!!sym(val_col))) %>%
+                   !is.na(Donors)) %>%
             mutate(
               donors_num = as.numeric(as.character(Donors)),
               y_num = as.numeric(as.character(!!sym(y_col)))
             ) %>%
             filter(!is.na(donors_num), !is.na(y_num),
                    donors_num > 0, y_num > 0)
-          
+
+          measured <- all_grid %>% filter(!is.na(!!sym(val_col)))
+          if (nrow(measured) == 0) next
+
+          # Build the FULL Cartesian grid so any (donors, cells) combo absent
+          # from `df_bin` gets a row to back-fill.
+          full_grid <- expand.grid(
+            donors_num = sort(unique(all_grid$donors_num)),
+            y_num      = sort(unique(all_grid$y_num)),
+            KEEP.OUT.ATTRS = FALSE,
+            stringsAsFactors = FALSE
+          )
+          full_grid <- merge(
+            full_grid,
+            measured[, c("donors_num", "y_num", val_col)],
+            by = c("donors_num", "y_num"),
+            all.x = TRUE,
+            sort  = FALSE
+          )
+
+          # Leave NA cells as NA — bilinear_interp_grid propagates NA, so the
+          # continuous surface mirrors the discrete grid's data envelope.
+          n_missing <- sum(is.na(full_grid[[val_col]]))
+          if (n_missing > 0) {
+            log_info("  [SemiLog-Indiv %s/%s] %d cell(s) missing — kept as NA",
+                     val_col, bin_name, n_missing)
+          }
+
+          finite_data <- full_grid
+
           if (nrow(finite_data) < 4) next
-          
+
           # Transform Y to log space, keep X linear (semi-log interpolation)
           log_finite <- finite_data %>%
             mutate(
               # Keep donors linear (no log transform)
               y_log = log10(y_num)
             )
-          
+
           # Interpolate in SEMI-LOG space (X linear, Y log)
           donors_range <- range(log_finite$donors_num)  # X: linear
           y_range <- range(log_finite$y_log)            # Y: log
-          
+
           donors_grid <- seq(donors_range[1], donors_range[2], length.out = 300)
           y_grid <- seq(y_range[1], y_range[2], length.out = 300)
-          
+
+          # Bilinear on rectangular grid (no Delaunay, no internal holes).
           interp_result <- tryCatch({
-            akima::interp(
-              x = log_finite$donors_num,    # X: linear
-              y = log_finite$y_log,         # Y: log
-              z = log_finite[[val_col]],
-              xo = donors_grid,
-              yo = y_grid,
-              linear = TRUE,
-              extrap = FALSE
-            )
+            x_unique <- sort(unique(log_finite$donors_num))
+            y_unique <- sort(unique(log_finite$y_log))
+            z_mat <- matrix(NA_real_, nrow = length(x_unique), ncol = length(y_unique))
+            ix <- match(log_finite$donors_num, x_unique)
+            iy <- match(log_finite$y_log, y_unique)
+            for (k in seq_len(nrow(log_finite))) {
+              z_mat[ix[k], iy[k]] <- log_finite[[val_col]][k]
+            }
+            bilinear_interp_grid(x_unique, y_unique, z_mat, donors_grid, y_grid)
           }, error = function(e) NULL)
-          
+
           if (is.null(interp_result)) next
-          
+
           # Convert Y back to original scale, keep X linear
           interp_df <- expand.grid(
             Donors = interp_result$x,       # X: linear (no conversion)

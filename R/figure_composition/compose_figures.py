@@ -59,12 +59,21 @@ FIG1_SOURCES = {
 FIG2_SOURCE_BAR = DATALINK / "Bulk_Analysis/Oligo/Recovery_Stats_Stratified.png"
 FIG2_SOURCE_CORR = DATALINK / "Bulk_Analysis/Oligo/Compare_Correlation_BulkAnchored_NoXIST.png"
 
-# Figure 3: cross-dataset reproducibility column (Oligo) — three stacked panels
-# showing raw IoU overlap, universe-controlled IoU, and false-discovery proportion.
+# Figure 3 (main text): cross-dataset reproducibility — TWO stacked panels.
+# The raw IoU panel has been retired to supplementary at Chris's request, so
+# the main composite is now: A = universe-controlled IoU, B = FDP heatmap.
+# Both panels share the same x-axis labels (the universe-controlled IoU now
+# renders rotated column labels via the heatmap script change in 02b).
 FIG3_SOURCES = {
     "A_iou_controlled": DATALINK / "Full_Ground_Truth/Oligo/Diagnostic_Results/Expanded_IoU_Matrix_Universe_Controlled.png",
-    "B_iou_raw": DATALINK / "Full_Ground_Truth/Oligo/Diagnostic_Results/Expanded_IoU_Matrix.png",
-    "C_fdp": DATALINK / "Full_Ground_Truth/FDP_Heatmap.png",
+    "B_fdp": DATALINK / "Full_Ground_Truth/FDP_Heatmap.png",
+}
+
+# Figure 6 (FigPower) sources: A = power curve overlay (no legend), B = simple
+# sensitivity curves (carries the shared legend at the bottom).
+FIG6_SOURCES = {
+    "A_overlay": DATALINK / "Power_Curve_Fitting_With_Shallow/Plots/full_per_iteration/Power_Curve_Overlay_NoLegend.png",
+    "B_sensitivity": DATALINK / "Power_Curve_Fitting_With_Shallow/Plots/full_per_iteration/CellType_Sensitivity_Simple.png",
 }
 
 # ---------------------------------------------------------------------------
@@ -114,7 +123,7 @@ STYLES = [
         label_offset=(8, 6),
         label_outside=False,
         label_strip=0,
-        panel_border=2,
+        panel_border=0,
     ),
 ]
 
@@ -373,11 +382,13 @@ def build_fig2(style: Style) -> Image.Image:
 # ---------------------------------------------------------------------------
 
 def build_fig3(style: Style) -> Image.Image:
-    """Single column: A = controlled IoU, B = raw IoU, C = FDP heatmap.
+    """Single column: A = universe-controlled IoU, B = FDP heatmap.
 
     Each panel is rendered at a shared width so the matrices line up visually.
-    IoU matrices share a common aspect ratio; the FDP heatmap is usually wider,
-    so it is letterboxed into the same column width.
+    The raw (without-universe-control) IoU panel has been moved to the
+    supplementary at Chris's request — there it sits stacked with the
+    universe-controlled version, both rendered with x-axis labels (see
+    02b_Regenerate_Heatmaps.R) so the two matrices align column-for-column.
     """
     font = load_font(style.label_size)
 
@@ -388,15 +399,13 @@ def build_fig3(style: Style) -> Image.Image:
     inner_w = target_total_w - 2 * pad
 
     img_A = load_rgb(FIG3_SOURCES["A_iou_controlled"])
-    img_B = load_rgb(FIG3_SOURCES["B_iou_raw"])
-    img_C = load_rgb(FIG3_SOURCES["C_fdp"])
+    img_B = load_rgb(FIG3_SOURCES["B_fdp"])
 
     # Preserve each panel's own aspect ratio at the shared inner width.
     h_A = max(1, int(round(inner_w / (img_A.width / img_A.height))))
     h_B = max(1, int(round(inner_w / (img_B.width / img_B.height))))
-    h_C = max(1, int(round(inner_w / (img_C.width / img_C.height))))
 
-    # Small header above each panel so A/B/C labels sit above the matrix top
+    # Small header above each panel so A/B labels sit above the matrix top
     # rather than overlapping it. Only used for inside-label styles.
     header = 0 if style.label_outside else int(round(style.label_size * 0.9))
 
@@ -405,8 +414,6 @@ def build_fig3(style: Style) -> Image.Image:
         + (strip + header + h_A)
         + gap
         + (strip + header + h_B)
-        + gap
-        + (strip + header + h_C)
         + pad
     )
     canvas = Image.new("RGB", (target_total_w, total_h), style.bg)
@@ -427,8 +434,63 @@ def build_fig3(style: Style) -> Image.Image:
     place("A", img_A, y, h_A)
     y += h_A + gap + strip + header
     place("B", img_B, y, h_B)
-    y += h_B + gap + strip + header
-    place("C", img_C, y, h_C)
+
+    return canvas
+
+
+# ---------------------------------------------------------------------------
+# Figure 6 (FigPower): power curve overlay + practical sensitivity
+# ---------------------------------------------------------------------------
+
+def build_fig6(style: Style) -> Image.Image:
+    """A/B composite for the power curve fitting figure.
+
+    A (top): Power_Curve_Overlay (no legend) — predicted detection probability
+             at median gene covariates across all five cell-type models.
+    B (bottom): CellType_Sensitivity_Simple — same five models at a practical
+             reference point. Carries the shared legend at the bottom, which
+             also serves panel A.
+    """
+    font = load_font(style.label_size)
+
+    target_total_w = 3200
+    pad = style.outer_pad
+    gap = style.gap
+    strip = style.label_strip if style.label_outside else 0
+    inner_w = target_total_w - 2 * pad
+
+    img_A = load_rgb(FIG6_SOURCES["A_overlay"])
+    img_B = load_rgb(FIG6_SOURCES["B_sensitivity"])
+
+    h_A = max(1, int(round(inner_w / (img_A.width / img_A.height))))
+    h_B = max(1, int(round(inner_w / (img_B.width / img_B.height))))
+
+    header = 0 if style.label_outside else int(round(style.label_size * 0.9))
+
+    total_h = (
+        pad
+        + (strip + header + h_A)
+        + gap
+        + (strip + header + h_B)
+        + pad
+    )
+    canvas = Image.new("RGB", (target_total_w, total_h), style.bg)
+    draw = ImageDraw.Draw(canvas)
+
+    def place(label: str, img: Image.Image, y_top: int, h: int) -> None:
+        if style.label_outside:
+            draw_panel(canvas, img, (pad, y_top, inner_w, h), label, style, font)
+        else:
+            draw_panel(canvas, img, (pad, y_top, inner_w, h), "", style, font)
+            draw.text(
+                (pad + style.label_offset[0], y_top - header + 2),
+                label, fill=style.fg, font=font,
+            )
+
+    y = pad + strip + header
+    place("A", img_A, y, h_A)
+    y += h_A + gap + strip + header
+    place("B", img_B, y, h_B)
 
     return canvas
 
@@ -443,6 +505,7 @@ FIGURES: list[tuple[str, Callable[[Style], Image.Image]]] = [
     ("figure_cartesian_oligo_precision", build_fig1_precision),
     ("figure_bulk_validation", build_fig2),
     ("figure_reproducibility_column", build_fig3),
+    ("figure_powercurve", build_fig6),
 ]
 
 
@@ -452,6 +515,7 @@ def verify_sources() -> None:
         list(FIG1_SOURCES.values())
         + [FIG2_SOURCE_BAR, FIG2_SOURCE_CORR]
         + list(FIG3_SOURCES.values())
+        + list(FIG6_SOURCES.values())
     ):
         if not p.exists():
             missing.append(p)

@@ -66,7 +66,20 @@ for (cell_type in cell_types) {
     log_warning("Results directory not found for %s, run Step 1 first", cell_type)
     next
   }
-  
+
+  # Fast-skip via sentinel: if all downsampling jobs already complete, skip the
+  # expensive donor-metadata scan (~1,300 qs::qread calls per cell type).
+  grid_sentinel <- file.path(paths$results_dir, ".downsampling_grid_complete")
+  if (file.exists(grid_sentinel) && !FORCE_RECALC) {
+    log_info("Sentinel found at %s -- skipping all downsampling runs for %s",
+             grid_sentinel, cell_type)
+    next
+  }
+
+  # Track whether any work was actually performed in this cell type. If no jobs
+  # remain across all runs, we can write the completion sentinel.
+  any_jobs_remaining <- FALSE
+
   # Load donor metadata for sex proportions
   donor_meta <- load_donor_metadata(paths$manifest_path, paths$shard_dir)
   if (is.null(donor_meta)) {
@@ -183,7 +196,8 @@ for (cell_type in cell_types) {
     # ==============================================================================
     
     if (jobs_to_run > 0) {
-      
+      any_jobs_remaining <- TRUE
+
       log_info("Starting parallel execution on %d cores...", N_CORES)
       
       # Set run seed for reproducible sampling
@@ -275,9 +289,23 @@ for (cell_type in cell_types) {
     }
     
   } # End run loop
-  
+
+  # Write completion sentinel if no further jobs were needed in this pass and
+  # no errors occurred. Errors set any_jobs_remaining via the bplapply branch
+  # above (we ran jobs); successful idempotent re-runs leave it FALSE.
+  if (!any_jobs_remaining && !file.exists(grid_sentinel)) {
+    writeLines(c(
+      sprintf("completed_at: %s", format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z")),
+      sprintf("cell_type: %s",   cell_type),
+      sprintf("n_runs: %d",      N_ROBUSTNESS_RUNS),
+      sprintf("mode: %s",        DOWNSAMPLE_MODE),
+      sprintf("seed_base: %s",   SEED_BASE)
+    ), grid_sentinel)
+    log_info("Wrote downsampling-grid sentinel: %s", grid_sentinel)
+  }
+
   log_info("Completed downsampling grid for %s", cell_type)
-  
+
 } # End cell type loop
 
 log_section("STEP 2 COMPLETE")

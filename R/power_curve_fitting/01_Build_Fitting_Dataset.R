@@ -76,6 +76,31 @@ for (ds_idx in seq_along(DATASET_CONFIGS)) {
   # ------------------------------------------------------------------
   # 2a. Load shard caches for this dataset
   # ------------------------------------------------------------------
+  # Fast-skip: if every cell type in this dataset already has its per-iteration
+  # fitting file on disk, we don't need to load any shard caches at all
+  # (~1,300 qs::qread calls per cell type). Just load the per-iter files for
+  # the primary dataset so shared-gene identification can proceed.
+
+  all_per_iter_done <- all(vapply(ds_config$cell_types, function(ct) {
+    p <- get_paths_for_dataset(ct, ds_config)
+    file.exists(file.path(p$fitting_dir, "unified_fitting_data_per_iteration.qs"))
+  }, logical(1)))
+
+  if (all_per_iter_done && !FORCE_RECALC) {
+    log_info("All per-iteration fitting files exist for dataset %s -- skipping shard cache load.",
+             ds_config$dataset)
+    if (is_primary) {
+      for (cell_type in ds_config$cell_types) {
+        paths <- get_paths_for_dataset(cell_type, ds_config)
+        per_iter_path <- file.path(paths$fitting_dir,
+                                   "unified_fitting_data_per_iteration.qs")
+        primary_fitting_data[[cell_type]] <- qs::qread(per_iter_path)
+        log_info("  Loaded per-iter fitting data for %s (primary)",
+                 get_dataset_model_name(cell_type, ds_config))
+      }
+    }
+    next
+  }
 
   log_section("Loading shard read count caches")
 

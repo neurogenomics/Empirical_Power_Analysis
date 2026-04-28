@@ -59,19 +59,28 @@ for (cell_type in cell_types) {
   
   # Get paths
   paths <- get_paths(cell_type)
-  
+
   # Check manifest exists
   if (!file.exists(paths$manifest_path)) {
     log_warning("Manifest not found for %s, skipping", cell_type)
     next
   }
-  
+
   # Create output directory
   if (!dir.exists(paths$results_dir)) {
     dir.create(paths$results_dir, recursive = TRUE)
     log_info("Created output directory: %s", paths$results_dir)
   }
-  
+
+  # Fast-skip via sentinel: if all GT runs already complete, skip the
+  # expensive donor-metadata scan (~1,300 qs::qread calls per cell type).
+  gt_sentinel <- file.path(paths$results_dir, ".ground_truth_complete")
+  if (file.exists(gt_sentinel) && !FORCE_RECALC) {
+    log_info("Sentinel found at %s -- skipping all GT runs for %s",
+             gt_sentinel, cell_type)
+    next
+  }
+
   # Load donor metadata
   log_info("Loading donor metadata...")
   donor_meta <- load_donor_metadata(paths$manifest_path, paths$shard_dir)
@@ -176,6 +185,24 @@ for (cell_type in cell_types) {
     gc()
   }
   
+  # Write completion sentinel if every run produced both required outputs.
+  all_runs_ok <- all(vapply(seq_len(N_ROBUSTNESS_RUNS), function(r) {
+    rd <- file.path(paths$results_dir, paste0("Run_", r))
+    file.exists(file.path(rd, "Ground_Truth.qs")) &&
+      file.exists(file.path(rd, "Validation_Donors.qs"))
+  }, logical(1)))
+
+  if (all_runs_ok && !file.exists(gt_sentinel)) {
+    writeLines(c(
+      sprintf("completed_at: %s", format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z")),
+      sprintf("cell_type: %s",   cell_type),
+      sprintf("n_runs: %d",      N_ROBUSTNESS_RUNS),
+      sprintf("gt_split: %s",    GT_SPLIT),
+      sprintf("seed_base: %s",   SEED_BASE)
+    ), gt_sentinel)
+    log_info("Wrote ground-truth sentinel: %s", gt_sentinel)
+  }
+
   log_info("Completed ground truth generation for %s", cell_type)
 }
 

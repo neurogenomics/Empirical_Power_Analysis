@@ -220,6 +220,13 @@ inspect_shard <- function(shard_path) {
 filter_cell_type <- function(cell_type_short) {
   full_dir <- file.path(SHARDS_BASE, cell_type_short, "Roussos_Full")
   filt_dir <- file.path(SHARDS_BASE, cell_type_short, "Roussos")
+  sentinel <- file.path(filt_dir, ".filter_complete")
+
+  if (file.exists(sentinel)) {
+    message(sprintf("[STEP 2] [%s] SKIP — sentinel exists (%s). Delete it to force re-filter.",
+                    cell_type_short, sentinel))
+    return(invisible(TRUE))
+  }
 
   if (!dir.exists(full_dir)) {
     stop(sprintf("[STEP 2] [%s] Roussos_Full directory missing: %s",
@@ -345,6 +352,16 @@ filter_cell_type <- function(cell_type_short) {
 
   manifest_path <- file.path(filt_dir, "00_MASTER_MANIFEST.qs")
   qs::qsave(sharding_final, manifest_path)
+
+  # Write sentinel so future runs can skip the slow per-donor inspection.
+  writeLines(
+    c(sprintf("filtered_at: %s", sharding_final$config$filtered_at),
+      sprintf("n_donors: %d",   sharding_final$config$n_donors),
+      sprintf("total_cells: %d", sharding_final$config$total_cells),
+      sprintf("min_age: %d",    MIN_AGE_THRESHOLD),
+      sprintf("min_cells: %d",  MIN_CELLS_THRESHOLD)),
+    sentinel
+  )
 
   message(sprintf("[STEP 2] [%s] DONE — %d donors, %d cells -> %s",
                   cell_type_short,

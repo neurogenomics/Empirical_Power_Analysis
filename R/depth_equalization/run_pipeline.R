@@ -41,6 +41,32 @@ log_section(sprintf("DEPTH EQUALIZATION PIPELINE v%s", PIPELINE_VERSION))
 log_info("Start time: %s", Sys.time())
 
 # ==============================================================================
+# 0b. FAST-SKIP VIA SENTINEL
+# ==============================================================================
+# Steps 1-6 produce ~1,293 multinomially-downsampled shards. Without this skip,
+# every resume re-does the full ~minutes-to-hours of work even when outputs are
+# already on disk. Sentinel is keyed off TARGET_SHARD_DIR/.depth_eq_complete,
+# and (when the Astro_Shallow_Fewer extension is enabled) also requires
+# .shallow_fewer_complete in the matched-shards directory.
+
+depth_eq_sentinel <- file.path(TARGET_SHARD_DIR, ".depth_eq_complete")
+shallow_fewer_dir <- file.path(SHARD_BASE, SOURCE_CELL_TYPE,
+                               FEWER_EXTENSION$output_dataset)
+shallow_fewer_sentinel <- file.path(shallow_fewer_dir, ".shallow_fewer_complete")
+
+extension_done <- (!isTRUE(FEWER_EXTENSION$enabled)) ||
+                  file.exists(shallow_fewer_sentinel)
+
+if (file.exists(depth_eq_sentinel) && extension_done && !FORCE_RECALC) {
+  log_info("Sentinel found at %s -- skipping depth-equalisation pipeline.",
+           depth_eq_sentinel)
+  if (isTRUE(FEWER_EXTENSION$enabled)) {
+    log_info("Shallow-fewer sentinel: %s", shallow_fewer_sentinel)
+  }
+  quit(save = "no", status = 0)
+}
+
+# ==============================================================================
 # 1. VALIDATE SOURCE SHARDS
 # ==============================================================================
 
@@ -254,6 +280,18 @@ summary_path <- file.path(TARGET_SHARD_DIR, "depth_equalization_summary.csv")
 write.csv(summary_df, summary_path, row.names = FALSE)
 log_info("Summary CSV saved: %s", summary_path)
 
+# Write completion sentinel for Steps 1-6
+writeLines(c(
+  sprintf("completed_at: %s", format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z")),
+  sprintf("source: %s",       SOURCE_SHARD_DIR),
+  sprintf("target: %s",       TARGET_SHARD_DIR),
+  sprintf("downsample_fraction: %.6f", DOWNSAMPLE_FRACTION),
+  sprintf("target_mean_rpc: %d",       TARGET_MEAN_RPC),
+  sprintf("n_donors: %d",     manifest$config$n_donors),
+  sprintf("total_cells: %d",  manifest$config$total_cells)
+), depth_eq_sentinel)
+log_info("Wrote depth-equalisation sentinel: %s", depth_eq_sentinel)
+
 # Final summary
 log_section("PIPELINE COMPLETE")
 log_info("Source: %s (%d donors, mean RPC = %d)", 
@@ -415,6 +453,19 @@ if (FEWER_EXTENSION$enabled) {
       }
     }
     
+    # Write completion sentinel for Step 7
+    writeLines(c(
+      sprintf("completed_at: %s", format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z")),
+      sprintf("source: %s",       source_shard_dir),
+      sprintf("target: %s",       target_fewer_dir),
+      sprintf("scaling_factor: %.6f", matching_stats$scaling_factor),
+      sprintf("min_cells_threshold: %d", FEWER_EXTENSION$min_cells_threshold),
+      sprintf("n_donors_retained: %d", fewer_manifest$config$n_donors),
+      sprintf("n_donors_dropped: %d",  fewer_manifest$config$donors_dropped)
+    ), file.path(target_fewer_dir, ".shallow_fewer_complete"))
+    log_info("Wrote shallow-fewer sentinel: %s",
+             file.path(target_fewer_dir, ".shallow_fewer_complete"))
+
     # Final summary with next steps
     log_section("ASTRO_SHALLOW_FEWER EXTENSION COMPLETE")
     log_info("Output: %s", target_fewer_dir)

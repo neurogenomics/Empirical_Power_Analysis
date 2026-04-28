@@ -276,9 +276,11 @@ for (gene_set in GENE_SETS) {
     p_overlay <- ggplot(overlay_df, aes(x = n_donors, y = predicted,
                                          colour = model, linetype = model)) +
       geom_line(linewidth = 1.2) +
-      geom_hline(yintercept = POWER_TARGETS, linetype = "dotted", alpha = 0.4) +
+      # Only the 80% reference line — the default 25% interval gridlines
+      # supplied by theme_publication carry the rest.
+      geom_hline(yintercept = 0.8, linetype = "dotted", alpha = 0.6) +
       scale_x_log10(labels = comma) +
-      scale_y_continuous(limits = c(0, 1), labels = percent) +
+      scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.25), labels = percent) +
       scale_colour_manual(values = MODEL_COLOURS, labels = prettify_labeller()) +
       scale_linetype_manual(values = MODEL_LINETYPES, labels = prettify_labeller()) +
       labs(
@@ -298,6 +300,13 @@ for (gene_set in GENE_SETS) {
     
     ggsave(file.path(variant_plots_dir, "Power_Curve_Overlay.png"),
            p_overlay, width = PLOT_WIDTH, height = PLOT_HEIGHT, dpi = PLOT_DPI)
+
+    # No-legend variant for the FigPower A/B composite — the bottom panel
+    # (CellType_Sensitivity_Simple) carries the shared legend, so this top
+    # panel must not duplicate it.
+    p_overlay_nolegend <- p_overlay + theme(legend.position = "none")
+    ggsave(file.path(variant_plots_dir, "Power_Curve_Overlay_NoLegend.png"),
+           p_overlay_nolegend, width = PLOT_WIDTH, height = PLOT_HEIGHT, dpi = PLOT_DPI)
 
     # ------------------------------------------------------------------
     # 7a-LFC. PLOT 1 variants: Power Curve Overlays at fixed LFC values
@@ -394,9 +403,10 @@ for (gene_set in GENE_SETS) {
     p_simple <- ggplot(simple_df, aes(x = n_donors, y = predicted,
                                        colour = model, linetype = model)) +
       geom_line(linewidth = 1.2) +
-      geom_hline(yintercept = POWER_TARGETS, linetype = "dashed", alpha = 0.3) +
+      # Only the 80% reference line — match panel A.
+      geom_hline(yintercept = 0.8, linetype = "dotted", alpha = 0.6) +
       scale_x_log10(labels = comma) +
-      scale_y_continuous(limits = c(0, 1), labels = percent) +
+      scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.25), labels = percent) +
       scale_colour_manual(values = MODEL_COLOURS, labels = prettify_labeller()) +
       scale_linetype_manual(values = MODEL_LINETYPES, labels = prettify_labeller()) +
       labs(

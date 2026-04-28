@@ -104,7 +104,10 @@ render_iou_heatmap <- function(iou_csv, out_png, main_title,
   col_annotation_display <- col_annotation
   rownames(col_annotation_display) <- prettify_label(rownames(col_annotation_display))
 
-  png(out_png, width = 2200, height = 1800, res = 120)
+  # Canvas height enlarged so rotated x-axis labels (angle_col = 315) have room
+  # at the bottom of the device. Both raw and universe-controlled use the same
+  # dimensions so they line up cleanly when stacked in the supplementary.
+  png(out_png, width = 2200, height = 2200, res = 120)
   pheatmap(iou_mat_display,
            display_numbers = TRUE, number_format = "%.2f",
            fontsize_number = number_fontsize,
@@ -112,6 +115,7 @@ render_iou_heatmap <- function(iou_csv, out_png, main_title,
            main = main_title,
            color = colorRampPalette(c("#2166AC", "#F7F7F7", "#B2182B"))(100),
            breaks = seq(0, 1, length.out = 101),
+           border_color = NA,
            annotation_col = col_annotation_display,
            annotation_colors = ann_colors,
            cluster_rows = FALSE,
@@ -157,12 +161,14 @@ for (cell_type in CELL_TYPES) {
     show_labels = TRUE
   )
 
-  # Universe-controlled IoU
+  # Universe-controlled IoU — also show row/col labels so it lines up with the
+  # raw IoU panel when stacked in the supplementary.
   render_iou_heatmap(
     iou_csv    = file.path(diag_dir, "Expanded_IoU_Matrix_Universe_Controlled.csv"),
     out_png    = file.path(diag_dir, "Expanded_IoU_Matrix_Universe_Controlled.png"),
     main_title = glue("Universe-Controlled IoU ({REFERENCE_DATASET} Significant Genes): {prettify_label(cell_type)}"),
-    number_fontsize = 13
+    number_fontsize = 13,
+    show_labels = TRUE
   )
 
   # Collect FDP CSV for post-loop combined heatmap
@@ -244,6 +250,7 @@ tryCatch({
              main = glue("False Discovery Proportion vs {REFERENCE_DATASET} Full Ground Truth"),
              color = colorRampPalette(c("#F7F7F7", "#FEE08B", "#FC8D59", "#D73027"))(100),
              breaks = seq(0, 1, length.out = 101),
+             border_color = NA,
              annotation_col  = col_annotation,
              annotation_colors = ann_colors,
              cluster_rows = FALSE,
