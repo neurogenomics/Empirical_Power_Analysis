@@ -256,7 +256,10 @@ if [[ "${DRY_RUN}" -eq 1 ]]; then
     log "[dry-run] docker run --rm ${IMAGE_TAG} R -e '<smoke checks>'"
 else
     log "Smoke log: ${SMOKE_LOG}"
-    if ! docker run --rm --entrypoint R "${IMAGE_TAG}" \
+    # --workdir / so renv activates from the project root (.Rprofile lives at /,
+    # not at /workspace). Without this, R uses the system library only and
+    # cannot see the renv-installed packages.
+    if ! docker run --rm --workdir / --entrypoint R "${IMAGE_TAG}" \
             -e "${SMOKE_R}" > "${SMOKE_LOG}" 2>&1; then
         log "ERROR: smoke test failed. Tail of smoke log:"
         tail -n 40 "${SMOKE_LOG}" | sed 's/^/    /'
@@ -306,6 +309,10 @@ DOCKER_RUN_CMD=(
     "${RESTART_FLAG}"
     -e "PIPELINE=${PIPELINE}"
     -e "POWER_ANALYSIS_ROOT=/workspace"
+    # Host UID has no /etc/passwd entry inside the image, so glibc falls back
+    # HOME=/ which is read-only. renv tries to mkdir //.cache/R/renv and dies.
+    # Pin HOME to a writable tmpfs path so renv has a cache dir.
+    -e "HOME=/tmp"
     -u "${HOST_UID}:${HOST_GID}"
     -v "${SCRIPT_DIR}:/workspace"
     -v "${DATALINK_PATH}:/workspace/Datalink"
