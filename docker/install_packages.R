@@ -46,14 +46,25 @@ with_retry <- function(expr, attempts = 3, what = "operation") {
 # lockfile already pins versions, so the mirror just needs to serve them.
 p3m_noble <- "https://p3m.dev/cran/__linux__/noble/latest"
 repos <- c(
-  P3M           = p3m_noble,
-  CRAN          = "https://cloud.r-project.org",
-  `CRAN-UK`     = "https://www.stats.bris.ac.uk/R/",
-  BioC          = "https://bioconductor.org/packages/3.21/bioc",
-  `BioC-Ann`    = "https://bioconductor.org/packages/3.21/data/annotation",
-  `BioC-Exp`    = "https://bioconductor.org/packages/3.21/data/experiment"
+  P3M             = p3m_noble,
+  CRAN            = "https://cloud.r-project.org",
+  `CRAN-UK`       = "https://www.stats.bris.ac.uk/R/",
+  BioC            = "https://bioconductor.org/packages/3.21/bioc",
+  `BioC-Ann`      = "https://bioconductor.org/packages/3.21/data/annotation",
+  `BioC-Exp`      = "https://bioconductor.org/packages/3.21/data/experiment"
 )
 options(repos = repos)
+
+# Track packages whose installed version drifts from the lockfile pin, so the
+# build can surface "we couldn't honour the strict pin for X, used current
+# CRAN instead" rather than silently shipping a different version.
+deviation_log <- "/tmp/lockfile-deviations.txt"
+record_deviation <- function(pkg, reason) {
+  line <- sprintf("%s\t%s\t%s\n",
+                  format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
+                  pkg, reason)
+  cat(line, file = deviation_log, append = TRUE)
+}
 
 # HTTPUserAgent must advertise an R version + distro for P3M to serve Linux
 # binaries. Bioconductor_docker base image already sets something sensible,
@@ -84,6 +95,8 @@ if (!requireNamespace("renv", quietly = TRUE)) {
 
 # ---- sanity check network ---------------------------------------------------
 cat("=== Network reachability probe ===\n")
+reachable <- logical(length(repos))
+names(reachable) <- names(repos)
 for (name in names(repos)) {
   url <- paste0(repos[[name]], "/src/contrib/PACKAGES")
   ok <- tryCatch({
@@ -92,8 +105,30 @@ for (name in names(repos)) {
     readBin(con, "raw", n = 128L)
     TRUE
   }, error = function(e) FALSE)
+  reachable[[name]] <- ok
   cat(sprintf("  [%s] %s %s\n", ifelse(ok, "OK ", "XX "), name, url))
 }
+
+# Drop unreachable repos from the live list so renv doesn't waste 6+ minutes
+# per package timing out against a dead mirror (common: P3M outages,
+# institutional proxies blocking p3m.dev). MUST keep at least CRAN reachable.
+if (any(!reachable)) {
+  cat("\n[prune] dropping unreachable repos from active list:\n")
+  for (name in names(reachable)[!reachable]) {
+    cat(sprintf("  - %s (%s)\n", name, repos[[name]]))
+  }
+  repos <- repos[reachable]
+  if (length(repos) == 0L || !any(grepl("cran", names(repos), ignore.case = TRUE))) {
+    stop("No reachable CRAN-style repo left after probe — aborting build.")
+  }
+  options(repos = repos)
+}
+
+# Add CRAN Archive as an additional source-only fallback so packages whose
+# pinned version has been superseded on CRAN main (e.g. qs 0.27.2) can still
+# be fetched. renv won't auto-look here, so this only helps the loose
+# install.packages() fallback at the bottom of the script.
+cran_archive <- "https://cran.r-project.org/src/contrib/Archive"
 
 # ---- pre-install compilation-critical packages ------------------------------
 # Rcpp + friends are the most common cascade triggers. Install them FIRST
@@ -164,6 +199,9 @@ if (length(missing) > 0L) {
   # Install one-at-a-time with retries so one failure doesn't stop the rest.
   stubborn <- character()
   for (pkg in missing) {
+    locked_version <- tryCatch(lock$Packages[[pkg]]$Version, error = function(e) NA_character_)
+
+    # Tier 1 — strict pin via renv::install (honours lockfile version).
     ok <- tryCatch({
       with_retry(
         renv::install(pkg, prompt = FALSE),
@@ -172,14 +210,62 @@ if (length(missing) > 0L) {
       )
       TRUE
     }, error = function(e) FALSE)
+
+    # Tier 2 — drop the pin: take whatever version is currently on CRAN.
+    # This breaks strict reproducibility for the affected package but is
+    # better than failing the whole build. Logged to deviation_log.
+    if (!ok) {
+      cat(sprintf("\n[loose-fallback] strict install of %s failed; trying current CRAN version\n", pkg))
+      ok <- tryCatch({
+        install.packages(pkg, repos = "https://cloud.r-project.org",
+                         dependencies = TRUE, Ncpus = max(1L, parallel::detectCores() - 1L))
+        if (requireNamespace(pkg, quietly = TRUE)) {
+          new_version <- as.character(packageVersion(pkg))
+          if (!is.na(locked_version) && new_version != locked_version) {
+            record_deviation(pkg, sprintf("strict-pin %s unavailable; installed current CRAN %s",
+                                          locked_version, new_version))
+            cat(sprintf("[loose-fallback] %s: lockfile pinned %s, installed %s\n",
+                        pkg, locked_version, new_version))
+          }
+          TRUE
+        } else FALSE
+      }, error = function(e) {
+        cat(sprintf("[loose-fallback] install.packages(%s) errored: %s\n", pkg, conditionMessage(e)))
+        FALSE
+      })
+    }
+
+    # Tier 3 — try CRAN Archive directly for the pinned version.
+    # Last-ditch: useful when current CRAN version has a hard ABI break.
+    if (!ok && !is.na(locked_version)) {
+      archive_url <- sprintf("%s/%s/%s_%s.tar.gz", cran_archive, pkg, pkg, locked_version)
+      cat(sprintf("[archive-fallback] trying %s\n", archive_url))
+      ok <- tryCatch({
+        install.packages(archive_url, repos = NULL, type = "source",
+                         dependencies = TRUE, Ncpus = max(1L, parallel::detectCores() - 1L))
+        requireNamespace(pkg, quietly = TRUE)
+      }, error = function(e) {
+        cat(sprintf("[archive-fallback] %s\n", conditionMessage(e)))
+        FALSE
+      })
+      if (ok) record_deviation(pkg, sprintf("installed pin %s from CRAN Archive (main mirror missing it)", locked_version))
+    }
+
     if (!ok) stubborn <- c(stubborn, pkg)
   }
   if (length(stubborn) > 0L) {
     stop(sprintf(
-      "Unrecoverable: %d package(s) could not be installed after all retries:\n  %s\nCheck network egress from the build host (proxy, firewall, DNS).",
+      "Unrecoverable: %d package(s) could not be installed after all 3 fallback tiers:\n  %s\nCheck network egress from the build host (proxy, firewall, DNS) and that the package names are correct.",
       length(stubborn), paste(stubborn, collapse = ", ")
     ))
   }
+}
+
+# ---- surface lockfile deviations ------------------------------------------
+if (file.exists(deviation_log)) {
+  cat("\n=== Lockfile deviations during this build ===\n")
+  cat(readLines(deviation_log), sep = "\n")
+  cat("\n(See /tmp/lockfile-deviations.txt inside the image.)\n")
 }
 
 # ---- final status ----------------------------------------------------------
