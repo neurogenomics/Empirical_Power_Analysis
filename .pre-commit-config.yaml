@@ -30,9 +30,9 @@ repos:
 
   - repo: local
     hooks:
-      - id: nextflow-stub-run
-        name: Nextflow stub run
-        entry: bash -c 'nextflow run main.nf -profile test -stub-run -ansi-log false >/dev/null'
+      - id: run-all-dry-run
+        name: run_all.sh --dry-run
+        entry: bash -c './run_all.sh --dry-run >/dev/null'
         language: system
-        files: '\.(nf|config)$'
+        files: '^(run_all\.sh|run_power_curve_fitting\.sh|run_all\.config)$'
         pass_filenames: false

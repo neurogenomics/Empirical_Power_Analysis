@@ -8,11 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Nextflow DSL2 pipeline (`main.nf`, `modules/local/**`, `conf/*`) wrapping the
-  existing R-script pipelines with SLURM executor support
 - Docker image based on `bioconductor/bioconductor_docker:RELEASE_3_21`
-- GitHub Actions CI: R linting, Nextflow stub-run, unit tests, integration toy
-  pipeline, determinism check
+- `docker-overnight.sh` — one-shot orchestrator (build → smoke-test → run)
+  designed for unattended overnight runs with bind-mounted `Datalink/`
+- `docker/entrypoint.sh` — container entrypoint dispatching to the chosen
+  wrapper (`run_power_curve_fitting.sh` by default)
+- `run_all.sh` — host-native bash driver running the strict-serial DAG with
+  `--max-cores`, `--no-overwrite`/`--force`, `--mode`, `--only`, `--skip`,
+  `--from`, `--sharding-datasets`, `--stop-on-fail`, `--dry-run`
+- `run_power_curve_fitting.sh` — thin wrapper that runs only the DAG
+  required for power-curve fitting (Roussos shards only)
+- `run_all.config` — editable defaults for the bash driver
+- Explicit `BiocManager::install("glmGamPoi")` in the Dockerfile (only listed
+  as a `Suggests` of DESeq2 in `renv.lock`, so `renv::restore()` does not
+  install it; cartesian downsampling needs it for `fitType = "glmGamPoi"`)
 - GitHub Actions Docker image build + publish to GHCR on tag release
 - `AGENTS.md` — canonical AI-agent entry point
 - `CITATION.cff` — machine-readable citation metadata
@@ -20,14 +29,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `docs/reproducing-the-paper.md` — reproduction walkthrough
 - `docs/model-card-predict_power.md` — model card for `predict_power.R`
 - `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, PR + issue templates
-- Pre-commit hooks for R styling, YAML/Nextflow syntax, leak detection
 
 ### Changed
 - Paper source (`paper/paper.Rmd`) brought into the repository
-
-### Deprecated
+- Issue / PR templates rewritten to drop Nextflow-specific fields
 
 ### Removed
+- Nextflow DSL2 pipeline (`main.nf`, `nextflow.config`, `iclneuro.config`,
+  `conf/`, `modules/local/`) — superseded by `run_all.sh` + Docker image
+  (see ADR-001b in `docs/architecture.md`)
+- `.github/workflows/ci.yml` and `.github/workflows/zenodo.yml` (Nextflow-
+  specific; `.github/workflows/docker.yml` retained for image builds)
 
 ### Fixed
 

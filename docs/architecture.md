@@ -9,7 +9,8 @@ Format: [Michael Nygard's ADR template](https://github.com/joelparkerhenderson/a
 
 ## ADR-001 — Use Nextflow for pipeline orchestration
 
-**Status**: Accepted, 2026-04-21
+**Status**: SUPERSEDED by ADR-001b (2026-04-28). Original decision retained
+below for historical context.
 
 **Context**: The Cartesian downsampling step is the hot loop — up to 120,000 DESeq2
 runs per cell type × mode × robustness. This exceeds single-machine capacity when
@@ -32,6 +33,40 @@ extended (e.g. to neurons or a second cohort). We need a workflow manager that c
 **Consequences**: Maintaining both `R/<pipeline>/run_pipeline.R` (inner parallelism
 via `future.apply`) and `modules/local/<name>/main.nf` (outer orchestration). These
 must stay in sync when pipelines are added or renamed. CI stub-run enforces this.
+
+---
+
+## ADR-001b — Replace Nextflow with bash drivers + Docker image
+
+**Status**: Accepted, 2026-04-28
+
+**Context**: ADR-001 chose Nextflow for SLURM dispatch and lab consistency.
+In practice we never deployed to SLURM for this paper — all production runs
+were on a single multi-core box, with the long-pole stages (cartesian
+downsampling and power-curve fitting) consuming whole-host resources for
+days at a time. The dual-source-of-truth requirement (R `run_pipeline.R`
+files plus `modules/local/<name>/main.nf` Nextflow processes) was a
+maintenance burden that produced silent drift between the two, and the
+Nextflow staging machinery added friction without providing value when the
+DAG is run strictly serially on a single host. Reproducibility for external
+users is better served by a Docker image than by asking them to install
+Nextflow + Java.
+
+**Options considered**:
+- **Stay on Nextflow, fix the drift** — viable but does not address the
+  external reproducibility friction.
+- **Strict-serial bash driver (`run_all.sh`) + Docker image** — accepted.
+  Single source of truth (the R pipelines), one shell script for full DAG,
+  one for power-curve-only, one orchestrator (`docker-overnight.sh`) that
+  builds + smoke-tests + runs the pipeline inside a container. External
+  reproducers run one command and walk away.
+
+**Consequences**: `main.nf`, `nextflow.config`, `iclneuro.config`, `conf/`
+and `modules/local/` are removed. The R pipelines and their `config.R`
+honour `POWER_ANALYSIS_ROOT` and `POWER_ANALYSIS_FORCE_RECALC` environment
+variables so the bash driver can flip behaviour without touching code. ADR-004
+is also superseded — the paper is rendered via the bash driver / Docker
+image, not via a `RENDER_PAPER` Nextflow process.
 
 ---
 
@@ -81,7 +116,9 @@ surfaces (Fig 2 suppl 3).
 
 ## ADR-004 — Ship paper in repo as Rmd, render via Nextflow
 
-**Status**: Accepted, 2026-04-21
+**Status**: PARTIALLY SUPERSEDED by ADR-001b (2026-04-28). The "ship paper as
+Rmd in the repo" decision still stands. The "render via Nextflow"
+implementation is replaced by rendering inside the Docker image.
 
 **Context**: For the paper to be truly reproducible, the manuscript source must be
 in the repo alongside the code and data.
@@ -125,8 +162,8 @@ builds and pushes to GHCR on every main branch push.
 the agentic-AI era. This repo is a pilot for what those standards should look like.
 
 **Decision**: Maintain an `AGENTS.md` at repo root as the canonical agent-facing
-entry point. Include machine-readable metadata (CITATION.cff, nextflow.config
-manifest) to enable tool-independent discovery.
+entry point. Include machine-readable metadata (`CITATION.cff`, `Dockerfile`
+LABELs) to enable tool-independent discovery.
 
 **Consequences**: Every significant architecture change must be reflected in both
 `AGENTS.md` (agent guide) and `docs/architecture.md` (this file). PR template

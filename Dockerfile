@@ -102,9 +102,21 @@ RUN --mount=type=cache,target=/root/.cache/R/renv,sharing=locked \
  && Rscript /tmp/install_packages.R
 
 # -----------------------------------------------------------------------------
+#  glmGamPoi — required by cartesian_downsampling/config.R (DE_FIT_TYPE) but
+#  only listed as a "Suggests" dep of DESeq2 in renv.lock, so renv::restore()
+#  does not install it. Without this layer the cartesian step fails with
+#  "package 'glmGamPoi' is not installed" when DESeq2(fitType = "glmGamPoi").
+#  We install it via BiocManager directly so it lands in the project library
+#  alongside everything else.
+# -----------------------------------------------------------------------------
+RUN --mount=type=cache,target=/root/.cache/R/renv,sharing=locked \
+    --mount=type=cache,target=/root/.cache/R,sharing=locked \
+    R -e 'if (!requireNamespace("BiocManager", quietly=TRUE)) install.packages("BiocManager", repos="https://cloud.r-project.org"); BiocManager::install("glmGamPoi", update=FALSE, ask=FALSE); stopifnot(requireNamespace("glmGamPoi", quietly=TRUE))'
+
+# -----------------------------------------------------------------------------
 #  Make renv library + rstudio home world-readable so non-root runtime users
-#  (Nextflow invokes `docker run -u $(id -u):$(id -g)`) can actually load the
-#  packages. Without this the image works only when executed as root.
+#  (`docker run -u $(id -u):$(id -g)`) can actually load the packages. Without
+#  this the image works only when executed as root.
 # -----------------------------------------------------------------------------
 RUN chmod -R a+rX /home/rstudio /usr/local/lib/R 2>/dev/null || true
 
@@ -112,7 +124,7 @@ RUN chmod -R a+rX /home/rstudio /usr/local/lib/R 2>/dev/null || true
 #  Verify critical packages loaded
 # -----------------------------------------------------------------------------
 RUN R -e " \
-    critical <- c('DESeq2', 'apeglm', 'SingleCellExperiment', 'biomaRt', \
+    critical <- c('DESeq2', 'apeglm', 'glmGamPoi', 'SingleCellExperiment', 'biomaRt', \
                   'zellkonverter', 'reticulate', 'basilisk', 'qs', \
                   'Rcpp', 'RcppArmadillo', 'RcppEigen', \
                   'future.apply', 'rmarkdown', 'ggplot2', 'dplyr'); \

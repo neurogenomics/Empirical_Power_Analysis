@@ -56,6 +56,6 @@ keywords:
   - pseudobulk
   - DESeq2
   - reproducible research
-  - Nextflow
+  - Docker
   - bioinformatics
   - neurogenomics

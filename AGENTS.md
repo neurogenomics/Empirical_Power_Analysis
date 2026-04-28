@@ -12,19 +12,27 @@ here. Tool-specific symlinks (`CLAUDE.md` → `AGENTS.md`) are provided for conv
 
 ## TL;DR for agents
 
-- **One command to reproduce the paper**: `nextflow run main.nf -profile slurm,apptainer`
-- **One command to test the pipeline wiring**: `nextflow run main.nf -profile test,docker`
-- **Preferred edit surfaces**: `R/<pipeline>/` (analysis), `modules/local/<name>/main.nf` (workflow), `paper/paper.Rmd` (manuscript)
-- **Read-only surfaces**: `Datalink/` (generated outputs — regenerate via pipeline), `Reproducibility/` (environment snapshots)
+- **One command to reproduce the paper (containerised, unattended)**:
+  `nohup ./docker-overnight.sh > nohup.docker-overnight.out 2>&1 & disown`
+- **One command for power-curve fitting only** (host-native bash):
+  `./run_power_curve_fitting.sh --max-cores 24 --no-overwrite`
+- **One command for the full DAG** (host-native bash):
+  `./run_all.sh --max-cores 24 --no-overwrite`
+- **Preferred edit surfaces**: `R/<pipeline>/` (analysis), `run_all.sh` /
+  `run_power_curve_fitting.sh` (orchestration), `Dockerfile` +
+  `docker-overnight.sh` (containerisation), `paper/paper.Rmd` (manuscript)
+- **Read-only surfaces**: `Datalink/` (generated outputs — regenerate via
+  pipeline), `Reproducibility/` (environment snapshots)
 - **Entry points by intent**:
 
 | If the user wants to... | Start reading here |
 |--|--|
 | Understand the scientific claim | `paper/paper.Rmd`, `README.md` § Key findings |
 | Change an analysis step | `R/<pipeline>/run_pipeline.R` + per-pipeline `config.R` |
-| Change workflow orchestration | `main.nf` + `modules/local/<name>/main.nf` |
-| Change compute resources | `conf/base.config` (labels) + `conf/slurm.config` (executor) |
-| Add a new dataset | `R/sharding/Run_Shard_<Dataset>.R` + update `main.nf` |
+| Change workflow orchestration | `run_all.sh` (DAG order, stage skip/only, FORCE_RECALC plumbing) |
+| Change container build | `Dockerfile`, `docker/install_packages.R`, `docker/entrypoint.sh` |
+| Change overnight build/run flow | `docker-overnight.sh` |
+| Add a new dataset | `R/sharding/Run_Shard_<Dataset>.R` + add its key to `SHARDING_DATASETS` in `run_all.sh` |
 | Bump a dependency | `renv.lock` via `renv::update()` + rebuild Docker image |
 
 ---
@@ -58,8 +66,9 @@ R/sharding/                      ← donor-level shards (memory-intensive, singl
             paper/paper.Rmd                 ← rendered manuscript
 ```
 
-The same DAG is encoded in `main.nf`.  Agents editing the workflow should keep these
-two representations in sync.
+The same DAG is encoded in `run_all.sh` (strict serial, single host). Agents
+editing the workflow should keep `run_all.sh`'s stage list in sync with the
+R pipelines under `R/<pipeline>/`.
 
 ---
 
@@ -73,19 +82,21 @@ Rscript R/<pipeline>/run_pipeline.R [steps] [n_cores]
 #   n_cores  = integer for within-pipeline future.apply parallelism
 ```
 
-This contract is what the Nextflow modules depend on.  If you change
-`run_pipeline.R`'s CLI, you must update the corresponding
-`modules/local/<name>/main.nf`.  The contract is intentionally minimal to keep the
-coupling shallow.
+This contract is what `run_all.sh` depends on. If you change a
+`run_pipeline.R`'s CLI, update the corresponding `stage_*` function in
+`run_all.sh`. The contract is intentionally minimal to keep the coupling
+shallow.
 
-Each pipeline sources its own `config.R`, which resolves `POWER_ANALYSIS_ROOT` via
-(in priority order):
+Each pipeline sources its own `config.R`, which resolves `POWER_ANALYSIS_ROOT`
+via (in priority order):
 
 1. Environment variable `POWER_ANALYSIS_ROOT`
 2. `here::here()` fallback
 
-Nextflow processes always set `POWER_ANALYSIS_ROOT=$(pwd)` in the staged work dir,
-so pipelines run identically inside or outside Nextflow.
+`run_all.sh` exports `POWER_ANALYSIS_ROOT="${SCRIPT_DIR}"` and the Docker
+entrypoint exports `POWER_ANALYSIS_ROOT=/workspace`, so pipelines run
+identically host-native, container-native, or under any future workflow
+manager.
 
 ---
 
@@ -96,9 +107,9 @@ Every pipeline directory has:
 - `tests/` — unit tests via `testthat`, run with `Rscript -e "testthat::test_dir('tests')"`
 - `toy/` — miniature synthetic fixtures exercising the full step sequence end-to-end
 
-CI (`.github/workflows/ci.yml`) runs both on every PR.  Agents proposing changes
-should update tests in the same PR.  **Do not merge scientific-code changes without
-a corresponding test.**
+CI runs unit tests + a container build (`docker.yml`) on every PR. Agents
+proposing changes should update tests in the same PR. **Do not merge
+scientific-code changes without a corresponding test.**
 
 ---
 
@@ -141,8 +152,8 @@ tool.  If a user wants to:
 Portions of this repository were developed with AI coding assistance (Claude, GPT)
 under human review. Specifically:
 
-- `main.nf`, `nextflow.config`, `conf/*.config`, and `modules/local/**/main.nf` —
-  initial scaffold AI-generated, human-reviewed and human-merged
+- `run_all.sh`, `run_power_curve_fitting.sh`, `docker-overnight.sh`,
+  `docker/entrypoint.sh` — AI-scaffolded, human-reviewed
 - `Dockerfile`, CI workflows — AI-scaffolded
 - `R/**` scientific code — human-authored with AI-assisted refactoring at documented
   points (see commit history)
@@ -161,18 +172,17 @@ funders and institutional affiliations.
 Before opening a PR, run locally:
 
 ```bash
-# 1. Syntactic validity
-nextflow run main.nf -profile test,docker --help
-nextflow run main.nf -profile test,docker -stub-run
+# 1. Wrapper sanity check
+./run_all.sh --dry-run
+./run_power_curve_fitting.sh --dry-run
 
 # 2. Unit tests
 Rscript -e "for (d in list.dirs('R', recursive=FALSE)) if (dir.exists(file.path(d,'tests'))) testthat::test_dir(file.path(d,'tests'))"
 
-# 3. Full toy integration
-nextflow run main.nf -profile test,docker
+# 3. Container build + smoke test (no full pipeline)
+./docker-overnight.sh --build-only
 
 # 4. Lint
-nf-core pipelines lint .
 Rscript -e "lintr::lint_dir('R')"
 ```
 

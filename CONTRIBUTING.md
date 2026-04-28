@@ -9,8 +9,8 @@ document covers the workflow for humans. Agents should start with `AGENTS.md`.
    `git checkout -b feat/your-change dev`
 2. **Install the dev environment**: `docker compose up -d` or pull the container
    directly: `docker pull ghcr.io/neurogenomics/empirical_power_analysis:dev`
-3. **Run the test profile** before making changes to confirm baseline:
-   `nextflow run main.nf -profile test,docker`
+3. **Build + smoke-test the container** before making changes to confirm baseline:
+   `./docker-overnight.sh --build-only`
 4. **Make your change** — respect the "scientific code safety rails" listed in `AGENTS.md`
 5. **Add tests** — every scientific-logic change needs a matching `tests/` update
 6. **Run tests locally** before pushing:
@@ -18,11 +18,10 @@ document covers the workflow for humans. Agents should start with `AGENTS.md`.
    # R unit tests
    for d in R/*/tests; do [ -d "$d" ] && Rscript -e "testthat::test_dir('$d')"; done
 
-   # Nextflow stub run
-   nextflow run main.nf -profile test,docker -stub-run
+   # Wrapper sanity check
+   ./run_all.sh --dry-run
 
    # Lint
-   nf-core pipelines lint . || true
    Rscript -e 'lintr::lint_dir("R")'
    ```
 7. **Open a PR** against `dev`. Fill in the PR template. CI will run.
@@ -41,7 +40,7 @@ document covers the workflow for humans. Agents should start with `AGENTS.md`.
 
 ## Release process
 
-1. Bump `version` in `CITATION.cff` and `nextflow.config` manifest
+1. Bump `version` in `CITATION.cff` and the `Dockerfile` LABEL block
 2. Update `CHANGELOG.md`
 3. Merge `dev` → `main`
 4. Tag with semver: `git tag -a v1.0.0 -m "Release v1.0.0"`
@@ -53,9 +52,13 @@ document covers the workflow for humans. Agents should start with `AGENTS.md`.
 ## Reporting bugs
 
 Open an issue using the bug report template. Include:
-- Nextflow version (`nextflow -version`)
-- Execution profile used
-- Log output (attach `.nextflow.log` or `pipeline_info/execution_trace.txt`)
+- How you ran the pipeline (host-native `./run_all.sh`, container via
+  `./docker-overnight.sh`, or per-pipeline `Rscript R/<pipeline>/run_pipeline.R`)
+- Docker version (`docker --version`) if containerised
+- R version (`R --version`) if host-native
+- Log output: attach the contents of
+  `Datalink/Run_Output_Logs/run_all/latest/` (host-native) or
+  `logs/docker-overnight/latest/` (container)
 - Expected vs actual behaviour
 
 ## Scientific questions

@@ -61,3 +61,18 @@ __pycache__/
 
 # One-off diagnostics not part of the public release
 _diagnostics/
+
+# Nextflow has been removed (ADR-001b); keep this guard so any stray
+# `.nextflow.log` or `.nextflow/` cache from an old checkout never makes it
+# back into git.
+.nextflow/
+.nextflow.log*
+
+# Nextflow work / results / pipeline_info scratch dirs (no longer used; keep
+# the gitignore guard so a stale checkout never re-introduces them).
+work/
+results/
+test_output/
+
+# Runtime lock files written by run_all.sh — never commit these.
+.run_all.lock

@@ -81,8 +81,7 @@ Rscript -e 'pkgs <- c("DESeq2","apeglm","SingleCellExperiment","SummarizedExperi
 ## 2.5 One-shot driver: `run_all.sh`
 
 If you just want to regenerate everything end-to-end and walk away for a few
-days, use the bundled bash driver instead of running each pipeline by hand or
-spinning up Nextflow:
+days, use the bundled bash driver instead of running each pipeline by hand:
 
 ```bash
 # From the repo root, after sections 0–2 are done:
@@ -150,6 +149,53 @@ FORCE_RECALC <- if (nzchar(Sys.getenv("POWER_ANALYSIS_FORCE_RECALC"))) {
 So `--no-overwrite` is equivalent to setting `POWER_ANALYSIS_FORCE_RECALC=false`
 before launching `Rscript`. The per-pipeline skip-if-exists logic is
 unchanged — `run_all.sh` is just a thin wrapper that flips the flag.
+
+## 2.6 Fully containerised: `docker-overnight.sh`
+
+If you don't want to install R, Bioconductor, Python or anything else on the
+host, the Dockerfile in this repo bakes the entire compute environment into a
+reproducible image. The bundled `docker-overnight.sh` orchestrator builds the
+image, smoke-tests it, then runs the pipeline inside a container with the
+repo and `Datalink/` bind-mounted in.
+
+```bash
+# Build + run PCF unattended (default — power-curve-fitting only):
+nohup ./docker-overnight.sh > nohup.docker-overnight.out 2>&1 &
+disown
+
+# Full DAG instead of just PCF:
+./docker-overnight.sh --pipeline all --max-cores 24
+
+# Build + smoke-test only, don't run:
+./docker-overnight.sh --build-only
+
+# Re-run later without rebuilding the image:
+./docker-overnight.sh --skip-build
+```
+
+Useful flags (anything not listed is forwarded into the wrapper inside the
+container via `--extra-arg`):
+
+| Flag | Default | Meaning |
+| --- | --- | --- |
+| `--pipeline pcf\|all` | `pcf` | which wrapper to run inside the container |
+| `--max-cores N` | `24` | cap every Rscript step (forwarded to wrapper) |
+| `--no-overwrite` / `--force` | `--no-overwrite` | resume vs regenerate |
+| `--mode cells\|reads\|both` | `both` | cartesian sweep mode |
+| `--image NAME:TAG` | `empirical-power-analysis:overnight` | image tag |
+| `--datalink PATH` | `./Datalink` | host directory bind-mounted at `/workspace/Datalink` |
+| `--extra-arg "STR"` | (repeatable) | passes a single string into the wrapper, e.g. `--extra-arg "--skip" --extra-arg "full_ground_truth"` |
+| `--skip-build` |  | use existing image, no rebuild |
+| `--build-only` |  | build + smoke-test, do not run the pipeline |
+| `--no-restart` |  | disable `--restart=on-failure:3` (debug) |
+| `--dry-run` |  | print what would happen, run nothing |
+
+Logs, manifest, container ID and tail of the container's stdout/stderr land in
+`logs/docker-overnight/<UTC-timestamp>/`, with a `latest` symlink pointing at
+the most recent run.
+
+The container runs as your host UID/GID, so files written into the
+bind-mounted `Datalink/` are owned by your host user, not root.
 
 ## 3. Pipeline dependency graph
 
