@@ -363,11 +363,14 @@ The Genotype-Tissue Expression (GTEx) Project was supported by the Common Fund o
 
 # Author Contributions
 
-[TODO: confirm CRediT-compatible author contribution statement with all authors before submission.]
+[TODO: confirm CRediT-compatible author contribution statement with all authors before submission. These are AI generated drafts]
 
 **C.C.** —  Methodology, Software, Formal analysis, Investigation, Data curation, Visualisation, Writing – original draft, Writing – review and editing.
+
 **S.F.** — Conceptualisation, Methodology, Software (initial pipelines), Data curation, Visualisation.
+
 **H.D.** — Data curation, Formal analysis, Investigation, Software. [todo - confirm/adjust these]
+
 **N.S.** — Conceptualisation, Supervision, Funding acquisition, Writing – review and editing.
 
 All authors read and approved the final manuscript.

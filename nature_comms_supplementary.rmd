@@ -462,6 +462,46 @@ knitr::kable(
   digits = 0
 )
 ```
+```{r sourcedata-table1, echo=FALSE}
+source_data_1 <- read.csv(
+  here::here("Datalink", "Paper_Source_Data", "dataset_statistics.csv"),
+  stringsAsFactors = FALSE,
+  check.names = FALSE
+)
+
+# Preserve the paper's reduced column set (drop the SD columns the CSV carries)
+source_data_1 <- source_data_1[, c(
+  "Dataset", "Brain_Region", "Cell_Type", "N_Donors", "N_Cells",
+  "Mean_Cells_Per_Donor", "Median_Cells_Per_Donor",
+  "Mean_UMIs_Per_Cell", "Median_UMIs_Per_Cell",
+  "Mean_Genes_Per_Cell", "Median_Genes_Per_Cell"
+)]
+
+knitr::kable(
+  source_data_1,
+  caption = "Dataset characteristics for all five single-cell datasets. Roussos (PsychAD) and DeJager (ROSMAP) are the primary power analysis datasets from the Dorsolateral Prefrontal Cortex; Allen (Middle Temporal Gyrus), Rexach (Insular Cortex), and Johansen (CerebralCortex) are cross-validation datasets. Mean and median cells per donor, UMIs per cell, and genes per cell computed after filtering (age ≥40 years, cells ≥30 per donor).",
+  col.names = c("Dataset", "Brain Region", "Cell Type", "N Donors", "N Cells",
+                "Mean Cells/Donor", "Median Cells/Donor", "Mean UMIs/Cell",
+                "Median UMIs/Cell", "Mean Genes/Cell", "Median Genes/Cell"),
+  digits = c(0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0)
+)
+
+fig1_source_data_1 <- data.frame(
+  Dataset = c("Psych-AD (Roussos)", "SEA-AD Allen", "DeJager (ROSMAP)", "Rexach", "Johansen", "GTEx (Bulk)"),
+  Type = c("snRNA-seq", "scRNA-seq", "scRNA-seq", "scRNA-seq", "scRNA-seq", "Bulk RNA-seq"),
+  `Brain Region` = c("Dorsolateral Prefrontal Cortex", "Middle Temporal Gyrus", "Dorsolateral Prefrontal Cortex", "Insular Cortex", "Cerebral Cortex", "44 Tissues"),
+  `Num Donors` = c("1,214-1,303", "78-81", "445-449", "38-42", "19-33", "838"),
+  Covariates = c("Source, ethnicity, disease", "Ethnicity, disease, PMI", "Study, PMI", "Ethnicity, disease", "Medical conditions", "N/A"),
+  Availability = c("[CELLxGENE](https://cellxgene.cziscience.com/collections/84ce6837-548d-4a1f-919f-0bc0d9a3952f)", 
+                   "[CELLxGENE](https://cellxgene.cziscience.com/collections/1ca90a2d-2943-483d-b678-b809bf464c30)",
+                   "[Synapse](https://www.synapse.org/Synapse:syn31512863)",
+                   "[CELLxGENE](https://cellxgene.cziscience.com/collections/c53573b2-eff4-4c5e-9ad0-b24d422dfd9b)",
+                   "[NeMO](https://assets.nemoarchive.org/dat-p3eei0g)",
+                   "[GTEx Portal](https://gtexportal.org/home/downloads/adult-gtex#qtl)")
+)
+
+knitr::kable(fig1_source_data_1)
+```
 
 ## Supplementary Data 2. Universe-controlled IoU matrices
 
