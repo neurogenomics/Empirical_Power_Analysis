@@ -198,6 +198,9 @@ AGE_COL <- "development_stage"
 MALE_VAL <- "male"
 FEMALE_VAL <- "female"
 CATEGORICAL_VARS <- c("Source", "self_reported_ethnicity", "disease")
+# pmi (post-mortem interval, minutes) annotated onto Roussos shards by
+# R/sharding/Annotate_Roussos_PMI.R. Scaled to pmi_scaled in run_deseq_for_dds().
+NUMERIC_VARS <- c("pmi")
 
 # ==============================================================================
 # 9. DESEQ2 SETTINGS (for Step 0 GT DDS regeneration)

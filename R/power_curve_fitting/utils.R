@@ -171,6 +171,21 @@ run_deseq_for_dds <- function(agg_result,
     cts$age_scaled <- standardize_age(num_age, impute_na = TRUE)
   }
 
+  # Process numeric covariates (e.g. pmi). Each is mean-imputed for NAs,
+  # z-scaled, and entered as <name>_scaled in the design.
+  num_vars <- if (exists("NUMERIC_VARS")) NUMERIC_VARS else character()
+  numeric_terms <- character()
+  for (nv in num_vars) {
+    if (!nv %in% colnames(cts)) next
+    raw_val <- suppressWarnings(as.numeric(as.character(cts[[nv]])))
+    if (all(is.na(raw_val))) next
+    if (any(is.na(raw_val))) raw_val[is.na(raw_val)] <- mean(raw_val, na.rm = TRUE)
+    if (sd(raw_val, na.rm = TRUE) == 0) next
+    scaled_name <- paste0(nv, "_scaled")
+    cts[[scaled_name]] <- as.numeric(scale(raw_val))
+    numeric_terms <- c(numeric_terms, scaled_name)
+  }
+
   # Identify valid categorical covariates
   valid_vars <- c()
   for (v in CATEGORICAL_VARS) {
@@ -187,7 +202,7 @@ run_deseq_for_dds <- function(agg_result,
   # Build formula
   formula_parts <- c(SEX_COL)
   if (age_has_variance) formula_parts <- c(formula_parts, "age_scaled")
-  formula_parts <- c(formula_parts, valid_vars)
+  formula_parts <- c(formula_parts, numeric_terms, valid_vars)
   formula_str <- paste0("~ ", paste(formula_parts, collapse = " + "))
 
   # Create DESeqDataSet

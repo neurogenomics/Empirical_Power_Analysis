@@ -104,10 +104,14 @@ AGE_COL      <- "development_stage"
 # Paths
 SHARDING_DIR  <- file.path(PROJECT_ROOT, "R", "sharding")
 FULL_SCRIPT   <- file.path(SHARDING_DIR, "Run_Shard_Roussos_Full.R")
+PMI_SCRIPT    <- file.path(SHARDING_DIR, "Annotate_Roussos_PMI.R")
 SHARDS_BASE   <- file.path(PROJECT_ROOT, "Datalink", "Shards")
 
 if (!file.exists(FULL_SCRIPT)) {
   stop(sprintf("Run_Shard_Roussos_Full.R not found at: %s", FULL_SCRIPT))
+}
+if (!file.exists(PMI_SCRIPT)) {
+  stop(sprintf("Annotate_Roussos_PMI.R not found at: %s", PMI_SCRIPT))
 }
 
 message("\n================================================================")
@@ -384,6 +388,20 @@ for (ct in CELL_TYPES) {
 # STEP 2: filter and build manifest for every requested cell type
 for (ct in CELL_TYPES) {
   filter_cell_type(ct)
+}
+
+# STEP 3: annotate donor PMI on every Roussos / Roussos_Full / Roussos_DepthEq
+# shard (idempotent — sentinel files in each variant dir prevent duplicate work).
+message(sprintf("\n[STEP 3] Annotating PMI via %s", basename(PMI_SCRIPT)))
+rscript_bin <- file.path(R.home("bin"), "Rscript")
+status <- system2(
+  command = rscript_bin,
+  args    = c(shQuote(PMI_SCRIPT), paste(CELL_TYPES, collapse = ",")),
+  stdout  = "",
+  stderr  = ""
+)
+if (status != 0) {
+  stop(sprintf("[STEP 3] Annotate_Roussos_PMI.R exited with status %d", status))
 }
 
 message("\n================================================================")

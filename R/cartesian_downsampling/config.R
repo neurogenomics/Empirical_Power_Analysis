@@ -137,6 +137,11 @@ FEMALE_VAL <- "female"
 # Additional categorical covariates for DESeq2 model
 CATEGORICAL_VARS <- c("Source", "self_reported_ethnicity", "disease")
 
+# Numeric covariates standardised (mean 0, sd 1) before entering the design.
+# pmi (post-mortem interval, minutes) is annotated onto Roussos shards by
+# R/sharding/Annotate_Roussos_PMI.R from the PsychAD supplementary table.
+NUMERIC_VARS <- c("pmi")
+
 # ==============================================================================
 # 7. PARALLEL PROCESSING
 # ==============================================================================

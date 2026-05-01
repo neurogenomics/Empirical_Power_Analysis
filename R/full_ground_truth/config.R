@@ -98,7 +98,10 @@ DATASET_CONFIG <- list(
       age   = "development_stage"
     ),
     covariates = c("Source", "self_reported_ethnicity", "disease"),
-    numeric_covariates = c(),
+    # pmi (post-mortem interval, minutes) annotated onto shards from the
+    # PsychAD supplementary table (media-1.csv) by R/sharding/Annotate_Roussos_PMI.R.
+    # Standardised in run_deseq_for_dataset() to enter the design as pmi_scaled.
+    numeric_covariates = c("pmi"),
     sex_values = list(male = "male", female = "female"),
     age_parser = parse_verbose_age
   ),

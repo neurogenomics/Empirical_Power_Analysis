@@ -261,15 +261,19 @@ aggregate_from_shards <- function(donor_ids, shard_dir,
 #' @param sex_col Column name for sex variable
 #' @param age_col Column name for age variable
 #' @param cat_vars Character vector of categorical covariate column names
+#' @param num_vars Character vector of numeric covariate column names. They
+#'   are mean-imputed for NAs and z-scaled (suffix "_scaled") before entering
+#'   the design.
 #' @param save_path_results Path to save DESeq2 results
 #' @param save_path_log Path to save sampling log
 #' @param min_gene_count Minimum total count for gene filtering
 #' @return "SUCCESS" or error message
-run_deseq_worker <- function(agg_result, 
-                              sex_col = SEX_COL, 
+run_deseq_worker <- function(agg_result,
+                              sex_col = SEX_COL,
                               age_col = AGE_COL,
                               cat_vars = CATEGORICAL_VARS,
-                              save_path_results, 
+                              num_vars = if (exists("NUMERIC_VARS")) NUMERIC_VARS else character(),
+                              save_path_results,
                               save_path_log,
                               min_gene_count = MIN_GENE_COUNT,
                               fit_type = if (exists("DE_FIT_TYPE")) DE_FIT_TYPE else "parametric") {
@@ -314,17 +318,45 @@ run_deseq_worker <- function(agg_result,
     }
   }
   
+  # Process numeric covariates (e.g. pmi). Each is mean-imputed for NAs,
+  # z-scaled, and added to the design as <name>_scaled.
+  numeric_terms <- character()
+  for (nv in num_vars) {
+    if (!nv %in% colnames(cts)) {
+      log_warning("Numeric covariate '%s' not present in colData. Skipping.", nv)
+      next
+    }
+    raw_val <- suppressWarnings(as.numeric(as.character(cts[[nv]])))
+    if (all(is.na(raw_val))) {
+      log_warning("Numeric covariate '%s' is all NA. Skipping.", nv)
+      next
+    }
+    if (any(is.na(raw_val))) {
+      raw_val[is.na(raw_val)] <- mean(raw_val, na.rm = TRUE)
+    }
+    if (sd(raw_val, na.rm = TRUE) == 0) {
+      log_warning("Numeric covariate '%s' has zero variance. Skipping.", nv)
+      next
+    }
+    scaled_name <- paste0(nv, "_scaled")
+    cts[[scaled_name]] <- as.numeric(scale(raw_val))
+    numeric_terms <- c(numeric_terms, scaled_name)
+  }
+
   # Build formula - start with just sex
   formula_parts <- c(sex_col)
-  
+
   # Add age if it has variance
   if (age_has_variance) {
     formula_parts <- c(formula_parts, "age_scaled")
   }
-  
+
+  # Add numeric covariates (z-scaled)
+  formula_parts <- c(formula_parts, numeric_terms)
+
   # Add valid categorical covariates
   formula_parts <- c(formula_parts, valid_vars)
-  
+
   formula_str <- paste0("~ ", paste(formula_parts, collapse = " + "))
   
   # Create DESeqDataSet with error handling for rank-deficient models
