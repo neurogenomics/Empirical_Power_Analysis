@@ -19,6 +19,12 @@
 #       brute-forces it via renv::install. Any leftover aborts the build.
 # =============================================================================
 
+# Activate the renv project so installed.packages() reflects the project
+# library only, NOT the bioconductor base image's preinstalled site library.
+# Without this, renv considers DESeq2 etc. already-installed and skips them,
+# leaving /opt/renv-library empty.
+source("renv/activate.R")
+
 # ---- retry helper -----------------------------------------------------------
 with_retry <- function(expr, attempts = 3, what = "operation") {
   for (i in seq_len(attempts)) {

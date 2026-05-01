@@ -1,7 +1,12 @@
-# Exclude everything from the build context that isn't needed for env setup.
-# This keeps image builds fast and images small.
+# =============================================================================
+# .dockerignore for the empirical-power-analysis image.
+#
+# Goal: keep the build context small (BuildKit transfers it to the daemon on
+# every build invocation) and prevent accidental leakage of host-built renv
+# libraries into the image.
+# =============================================================================
 
-# Analysis data — never in the image
+# ----- Analysis data — never in the image -----------------------------------
 Datalink/raw_data/**
 Datalink/Shards/**
 Datalink/Cartesian_Downsampling/**
@@ -11,40 +16,62 @@ Datalink/Full_Ground_Truth/**
 Datalink/Exploratory_Analysis/**
 Datalink/Bulk_Analysis/**
 Datalink/DE_Diagnostics/**
+Datalink/Run_Output_Logs/**
+Datalink/Composed_Figures/**
+Datalink/Roussos_Analysis/**
 
-# Intermediate files
+# ----- Host-built artefacts that must NOT leak into the image ---------------
+# renv installs into /opt/renv-library inside the image (see Dockerfile). The
+# host's renv/library and renv/staging directories are platform-specific
+# (different glibc, possibly different R version) and would be a debugging
+# nightmare if a future Dockerfile change ever copied them in by accident.
+renv/library/**
+renv/staging/**
+renv/local/**
+renv/python/**
+
+# ----- Intermediate / binary files ------------------------------------------
 **/*.qs
 **/*.rds
+**/*.h5
 **/*.h5ad
 **/*.h5Seurat
+**/*.tar
+**/*.tar.gz
 
-# Version control
+# ----- Logs and run-output noise --------------------------------------------
+logs/**
+nohup.*.out
+_diagnostics/**
+.cbert-*/**
+
+# ----- Version control / dotfiles -------------------------------------------
 .git
 .github
 .gitignore
 .gitattributes
 
-# Rendered outputs
+# ----- Rendered manuscript outputs ------------------------------------------
 **/*.html
 **/*.pdf
 paper/_cache
 paper/_freeze
 
-# Local environments
+# ----- Local R environments / history ---------------------------------------
 .Rproj.user
 .Renviron
 .RData
 .Rhistory
 
-# macOS / editor noise
+# ----- IDE / OS noise -------------------------------------------------------
 .DS_Store
 .vscode
 .idea
+*.swp
+*.swo
 
-# Nextflow work dirs
+# ----- Workflow infrastructure not needed at build time ---------------------
 work/
 .nextflow/
 .nextflow.log*
-
-# Test outputs
 test_output/
