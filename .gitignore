@@ -51,6 +51,11 @@ Datalink/**/Fitting_Data/
 *.log
 *.pdf.synctex.gz
 
+# docker-run.sh / docker-all.sh run-output (manifests, logs, symlinks) — runtime
+# artifacts, not source. (The legacy docker-overnight.sh logs were committed; we
+# keep the new run dir out of git.)
+/logs/docker-run/
+
 # Python caches (analysis auxiliary)
 __pycache__/
 *.pyc
