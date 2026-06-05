@@ -19,7 +19,7 @@
 - [ ] Unit tests added or updated in `R/<pipeline>/tests/`
 - [ ] Toy fixtures updated in `R/<pipeline>/toy/` if behaviour changed
 - [ ] `./run_all.sh --dry-run` passes locally
-- [ ] `./docker-overnight.sh --build-only` succeeds (smoke test passes)
+- [ ] `./docker-all.sh --skip-run` succeeds (build + smoke test passes)
 - [ ] R unit tests pass locally
 - [ ] `lintr::lint_dir('R')` is clean (or rationalised in the PR)
 - [ ] Documentation updated (`README.md`, `docs/`, `AGENTS.md` as appropriate)

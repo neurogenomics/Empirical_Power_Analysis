@@ -8,11 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Docker image based on `bioconductor/bioconductor_docker:RELEASE_3_21`
-- `docker-overnight.sh` — one-shot orchestrator (build → smoke-test → run)
-  designed for unattended overnight runs with bind-mounted `Datalink/`
+- Docker image based on `bioconductor/bioconductor_docker:RELEASE_3_22`
+  (matches the Bioconductor 3.22 versions pinned in `renv.lock`)
+- `docker-build.sh` / `docker-smoke.sh` / `docker-run.sh` — single-purpose
+  build / verify / run scripts, plus `docker-all.sh` chaining them with
+  per-phase `--skip-*` flags. See `DOCKER.md`.
 - `docker/entrypoint.sh` — container entrypoint dispatching to the chosen
   wrapper (`run_power_curve_fitting.sh` by default)
+
+### Changed
+- Replaced the single 524-line `docker-overnight.sh` orchestrator with the four
+  composable scripts above; made the Dockerfile BuildKit-optional; fixed the
+  renv library visibility (`R_LIBS_SITE` baked into `Renviron.site`) so the
+  pinned packages load in every R session; aligned the base image and Bioc repos
+  to 3.22 to match `renv.lock`.
 - `run_all.sh` — host-native bash driver running the strict-serial DAG with
   `--max-cores`, `--no-overwrite`/`--force`, `--mode`, `--only`, `--skip`,
   `--from`, `--sharding-datasets`, `--stop-on-fail`, `--dry-run`

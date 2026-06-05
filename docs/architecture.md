@@ -57,9 +57,10 @@ Nextflow + Java.
   external reproducibility friction.
 - **Strict-serial bash driver (`run_all.sh`) + Docker image** — accepted.
   Single source of truth (the R pipelines), one shell script for full DAG,
-  one for power-curve-only, one orchestrator (`docker-overnight.sh`) that
-  builds + smoke-tests + runs the pipeline inside a container. External
-  reproducers run one command and walk away.
+  one for power-curve-only, and a set of small Docker scripts
+  (`docker-build.sh` / `docker-smoke.sh` / `docker-run.sh`, chained by
+  `docker-all.sh`) that build + smoke-test + run the pipeline inside a
+  container. External reproducers run one command and walk away.
 
 **Consequences**: `main.nf`, `nextflow.config`, `iclneuro.config`, `conf/`
 and `modules/local/` are removed. The R pipelines and their `config.R`
@@ -136,9 +137,14 @@ in the repo alongside the code and data.
 
 ---
 
-## ADR-005 — Use `bioconductor/bioconductor_docker:RELEASE_3_21` as container base
+## ADR-005 — Use `bioconductor/bioconductor_docker` as container base
 
-**Status**: Accepted, 2026-04-21
+**Status**: Accepted, 2026-04-21. **Amended 2026-06-05**: base pinned to
+`RELEASE_3_22` (was `RELEASE_3_21`) to match `renv.lock`, which pins
+Bioconductor 3.22 package versions throughout. The 3.21 base installed 3.22
+package versions anyway (renv resolves from the lockfile), so this only aligns
+the base layer with what was already being installed; verified the effective
+package versions are unchanged.
 
 **Context**: Need a reproducible R+Bioconductor environment with pinned package
 versions.
@@ -147,10 +153,10 @@ versions.
 - **Custom image from scratch** — overkill; re-implements Bioconductor tooling.
 - **`rocker/r-ver`** — no Bioconductor packages pre-installed; slow build.
 - **`bioconductor/bioconductor_docker`** — accepted. Pre-built with Bioconductor
-  3.21 (R 4.5.1), matches what Chris used for the v8 paper.
+  (R 4.5); release tag tracks `renv.lock` (currently `RELEASE_3_22`).
 
-**Consequences**: Container size ~3 GB (large). Build time ~2 min once cached. CI
-builds and pushes to GHCR on every main branch push.
+**Consequences**: Container size ~3 GB (large). CI builds and pushes to GHCR on
+every main branch push.
 
 ---
 

@@ -2,9 +2,10 @@
 # =============================================================================
 # docker-build.sh — build the Empirical Power Analysis image.
 #
-# The simple counterpart to docker-overnight.sh: it does ONE thing — build the
-# image — with clear preflight checks and readable errors. No manifest, no
-# heartbeat, no pipeline run. Pair it with docker-smoke.sh to verify the build.
+# Does ONE thing — build the image — with clear preflight checks and readable
+# errors. No manifest, no heartbeat, no pipeline run. Pair it with
+# docker-smoke.sh to verify the build, and docker-run.sh to run the pipeline
+# (or docker-all.sh to chain all three). See DOCKER.md.
 #
 # Usage:
 #   ./docker-build.sh [--image NAME:TAG]

@@ -10,7 +10,7 @@ document covers the workflow for humans. Agents should start with `AGENTS.md`.
 2. **Install the dev environment**: `docker compose up -d` or pull the container
    directly: `docker pull ghcr.io/neurogenomics/empirical_power_analysis:dev`
 3. **Build + smoke-test the container** before making changes to confirm baseline:
-   `./docker-overnight.sh --build-only`
+   `./docker-all.sh --skip-run` (build + smoke; see `DOCKER.md`)
 4. **Make your change** — respect the "scientific code safety rails" listed in `AGENTS.md`
 5. **Add tests** — every scientific-logic change needs a matching `tests/` update
 6. **Run tests locally** before pushing:
@@ -53,12 +53,12 @@ document covers the workflow for humans. Agents should start with `AGENTS.md`.
 
 Open an issue using the bug report template. Include:
 - How you ran the pipeline (host-native `./run_all.sh`, container via
-  `./docker-overnight.sh`, or per-pipeline `Rscript R/<pipeline>/run_pipeline.R`)
+  `./docker-run.sh` / `./docker-all.sh`, or per-pipeline `Rscript R/<pipeline>/run_pipeline.R`)
 - Docker version (`docker --version`) if containerised
 - R version (`R --version`) if host-native
 - Log output: attach the contents of
   `Datalink/Run_Output_Logs/run_all/latest/` (host-native) or
-  `logs/docker-overnight/latest/` (container)
+  `logs/docker-run/latest/` (container)
 - Expected vs actual behaviour
 
 ## Scientific questions

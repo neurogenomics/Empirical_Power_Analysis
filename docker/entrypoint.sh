@@ -4,8 +4,8 @@
 #
 # Container entrypoint. The container starts as root (required so we can
 # fix up /etc/passwd / chown /tmp / write the heartbeat file regardless of
-# the host UID), then drops to the user requested by docker-overnight.sh
-# via `gosu` for the actual pipeline run.
+# the host UID), then drops to the TARGET_UID:TARGET_GID requested by the
+# caller (docker-run.sh / docker-smoke.sh) via `gosu` for the actual run.
 #
 # Privilege model:
 #   * tini is PID 1 (set in the Dockerfile ENTRYPOINT). It forwards SIGTERM

@@ -13,14 +13,16 @@ here. Tool-specific symlinks (`CLAUDE.md` → `AGENTS.md`) are provided for conv
 ## TL;DR for agents
 
 - **One command to reproduce the paper (containerised, unattended)**:
-  `nohup ./docker-overnight.sh > nohup.docker-overnight.out 2>&1 & disown`
+  `nohup ./docker-all.sh --pipeline all --max-cores 24 > nohup.docker-all.out 2>&1 & disown`
+  (build → smoke → run; see [`DOCKER.md`](DOCKER.md))
 - **One command for power-curve fitting only** (host-native bash):
   `./run_power_curve_fitting.sh --max-cores 24 --no-overwrite`
 - **One command for the full DAG** (host-native bash):
   `./run_all.sh --max-cores 24 --no-overwrite`
 - **Preferred edit surfaces**: `R/<pipeline>/` (analysis), `run_all.sh` /
-  `run_power_curve_fitting.sh` (orchestration), `Dockerfile` +
-  `docker-overnight.sh` (containerisation), `paper/paper.Rmd` (manuscript)
+  `run_power_curve_fitting.sh` (orchestration), `Dockerfile` + `docker/` +
+  `docker-build.sh`/`docker-smoke.sh`/`docker-run.sh`/`docker-all.sh`
+  (containerisation), `paper/paper.Rmd` (manuscript)
 - **Read-only surfaces**: `Datalink/` (generated outputs — regenerate via
   pipeline), `Reproducibility/` (environment snapshots)
 - **Entry points by intent**:
@@ -31,7 +33,7 @@ here. Tool-specific symlinks (`CLAUDE.md` → `AGENTS.md`) are provided for conv
 | Change an analysis step | `R/<pipeline>/run_pipeline.R` + per-pipeline `config.R` |
 | Change workflow orchestration | `run_all.sh` (DAG order, stage skip/only, FORCE_RECALC plumbing) |
 | Change container build | `Dockerfile`, `docker/install_packages.R`, `docker/entrypoint.sh` |
-| Change overnight build/run flow | `docker-overnight.sh` |
+| Change container build/run flow | `docker-build.sh` / `docker-smoke.sh` / `docker-run.sh` / `docker-all.sh` (see `DOCKER.md`) |
 | Add a new dataset | `R/sharding/Run_Shard_<Dataset>.R` + add its key to `SHARDING_DATASETS` in `run_all.sh` |
 | Bump a dependency | `renv.lock` via `renv::update()` + rebuild Docker image |
 
@@ -152,8 +154,9 @@ tool.  If a user wants to:
 Portions of this repository were developed with AI coding assistance (Claude, GPT)
 under human review. Specifically:
 
-- `run_all.sh`, `run_power_curve_fitting.sh`, `docker-overnight.sh`,
-  `docker/entrypoint.sh` — AI-scaffolded, human-reviewed
+- `run_all.sh`, `run_power_curve_fitting.sh`, `docker-build.sh`,
+  `docker-smoke.sh`, `docker-run.sh`, `docker-all.sh`, `docker/entrypoint.sh`
+  — AI-scaffolded, human-reviewed
 - `Dockerfile`, CI workflows — AI-scaffolded
 - `R/**` scientific code — human-authored with AI-assisted refactoring at documented
   points (see commit history)
@@ -180,7 +183,7 @@ Before opening a PR, run locally:
 Rscript -e "for (d in list.dirs('R', recursive=FALSE)) if (dir.exists(file.path(d,'tests'))) testthat::test_dir(file.path(d,'tests'))"
 
 # 3. Container build + smoke test (no full pipeline)
-./docker-overnight.sh --build-only
+./docker-all.sh --skip-run
 
 # 4. Lint
 Rscript -e "lintr::lint_dir('R')"

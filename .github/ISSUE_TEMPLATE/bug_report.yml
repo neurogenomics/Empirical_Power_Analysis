@@ -7,7 +7,7 @@ body:
     attributes:
       label: How did you run the pipeline?
       options:
-        - Container via ./docker-overnight.sh
+        - Container via ./docker-run.sh / ./docker-all.sh
         - Host-native via ./run_all.sh
         - Host-native via ./run_power_curve_fitting.sh
         - Per-pipeline Rscript R/<pipeline>/run_pipeline.R
@@ -55,7 +55,7 @@ body:
       description: |
         Attach the most recent run's log directory:
         - Host-native: `Datalink/Run_Output_Logs/run_all/latest/00_run.log` (and the failing stage's `<stage>.log`)
-        - Container: `logs/docker-overnight/latest/03_run.log` (or `01_build.log` / `02_smoke.log` if the failure was during build/smoke)
+        - Container: `logs/docker-run/latest/run.log` + `manifest.json` (for build/smoke failures, the `docker-build.sh` / `docker-smoke.sh` console output)
       render: shell
 
   - type: checkboxes
