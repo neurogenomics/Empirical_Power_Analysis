@@ -43,13 +43,16 @@ with_retry <- function(expr, attempts = 3, what = "operation") {
 
 # ---- mirror configuration ---------------------------------------------------
 # Posit Public Package Manager serves precompiled Ubuntu 24.04 ("noble")
-# binaries for CRAN packages. Using it as the primary repo drops build time
-# from ~15 min to ~2 min AND removes most compile-error failure modes
-# (headers missing, etc.).
+# binaries for CRAN packages, used here as the primary repo.
 #
-# We query P3M's "latest" snapshot. For deterministic builds one could pin a
-# date, but then new Bioconductor releases fall out of sync with CRAN — the
-# lockfile already pins versions, so the mirror just needs to serve them.
+# NOTE on build speed: renv::restore() downloads SOURCE packages even when P3M
+# has a matching binary (its retrieval path differs from install.packages(),
+# which does content-negotiate for binaries). So in practice most CRAN packages
+# compile from source during restore regardless of this mirror, and all Bioc
+# packages compile too. Pinning a dated P3M snapshot was tested and made no
+# difference to restore (verified 2026-06-05). Speeding up restore would require
+# making renv itself prefer binaries — left as a future optimisation. Versions
+# are unaffected either way: restore always installs the exact lockfile pins.
 p3m_noble <- "https://p3m.dev/cran/__linux__/noble/latest"
 repos <- c(
   P3M             = p3m_noble,
@@ -285,3 +288,26 @@ if (length(missing) > 0L) {
        paste(missing, collapse = ", "))
 }
 cat(sprintf("\nAll %d lockfile packages installed.\n", length(lock_pkgs)))
+
+# ---- bake the renv library path into R's site Renviron ---------------------
+# A plain `R` / `Rscript` session does NOT add the renv project library to
+# .libPaths() on its own; that normally requires renv's autoloader, which we
+# deliberately disable inside the container (see docker/entrypoint.sh) for
+# determinism. renv installs into a platform/version-specific leaf under
+# RENV_PATHS_LIBRARY (e.g. /opt/renv-library/linux-ubuntu-noble/R-4.5/...), so
+# pointing .libPaths() at /opt/renv-library itself finds nothing. Instead we
+# record the *resolved* leaf in R's site Renviron, which R reads natively at
+# startup, making the pinned packages visible to every R session: the
+# build-time sanity checks, the smoke test, and the pipeline at runtime. We
+# keep the default site-library on the path too (glmGamPoi installs there).
+renv_lib <- grep("/opt/renv-library", .libPaths(), value = TRUE, fixed = TRUE)[1]
+if (is.na(renv_lib)) {
+  stop("Could not locate the /opt/renv-library leaf on .libPaths(); got: ",
+       paste(.libPaths(), collapse = ", "))
+}
+site_lib <- file.path(R.home(), "site-library")
+renviron_site <- file.path(R.home("etc"), "Renviron.site")
+cat(sprintf("R_LIBS_SITE=%s:%s\n", renv_lib, site_lib),
+    file = renviron_site, append = TRUE)
+cat(sprintf("Baked R_LIBS_SITE into %s:\n  %s:%s\n",
+            renviron_site, renv_lib, site_lib))

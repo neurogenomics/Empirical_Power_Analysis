@@ -1,16 +1,21 @@
-# syntax=docker/dockerfile:1.7
 # =============================================================================
 #  Empirical Power Analysis — Reproducible Compute Environment
 #  Base: Bioconductor 3.21 (R 4.5.1) on Ubuntu 24.04
 #
-#  Build:        DOCKER_BUILDKIT=1 docker build -t empirical-power-analysis:overnight .
-#  Run:          ./docker-overnight.sh   (orchestrator handles everything)
+#  Build:        ./docker-build.sh         (auto-detects BuildKit vs legacy)
+#  Verify:       ./docker-smoke.sh
+#
+#  This Dockerfile is intentionally BuildKit-OPTIONAL: it uses no `# syntax=`
+#  directive, no `--mount=type=cache` mounts, and no RUN here-docs, so it builds
+#  identically under the legacy builder and under BuildKit. That keeps it
+#  "runnable anywhere", including hosts without the buildx plugin installed.
 #
 #  Architecture:
 #    * R packages installed into /opt/renv-library (NOT inside /workspace) so
 #      a runtime bind-mount of the host repo on /workspace cannot shadow them.
-#      Activated via RENV_PATHS_LIBRARY (which renv reads natively) and a small
-#      shim in /etc/Rprofile.site.
+#      Made visible to every R session via R_LIBS_SITE, baked into
+#      R_HOME/etc/Renviron.site by docker/install_packages.R (renv installs into
+#      a platform-specific leaf, so we record the resolved leaf, not the root).
 #    * Python+anndata pre-installed via reticulate at build time so the first
 #      sharding step does not have to download Miniconda over the network.
 #    * Working directory is /workspace at runtime (host repo bind-mount target).
@@ -39,15 +44,8 @@ LABEL org.opencontainers.image.authors="Skene Lab, UK DRI Imperial"
 #  - gosu:             drop privileges in entrypoint (used to add passwd entry).
 #  - python3-venv etc: support reticulate's miniconda-free env path.
 #
-#  The cache mounts (BuildKit) keep apt downloads between rebuilds. Removing
-#  /etc/apt/apt.conf.d/docker-clean is required because the bioconductor base
-#  image installs that file, which wipes the cache after every install and
-#  defeats BuildKit cache mounts.
 # -----------------------------------------------------------------------------
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    rm -f /etc/apt/apt.conf.d/docker-clean \
- && apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
       pandoc \
       texlive-xetex \
       texlive-fonts-recommended \
@@ -61,7 +59,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
       python3-pip \
       python3-venv \
       ca-certificates \
-      curl
+      curl \
+ && rm -rf /var/lib/apt/lists/*
 
 # -----------------------------------------------------------------------------
 #  Pin the R library path OUTSIDE /workspace.
@@ -72,34 +71,19 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 #  library), making the carefully-pinned packages installed at build time
 #  invisible.
 #
-#  RENV_PATHS_LIBRARY is honoured by renv directly (no project-level config
-#  needed), and we also expose it as the default site-wide library via
-#  /etc/Rprofile.site so even non-renv R sessions see the packages.
+#  renv installs into a platform/version-specific *leaf* under
+#  RENV_PATHS_LIBRARY (e.g. /opt/renv-library/linux-ubuntu-noble/R-4.5/...).
+#  To make those packages visible to every plain R/Rscript session — the
+#  build-time sanity checks, the smoke test, and the pipeline at runtime —
+#  install_packages.R bakes the resolved leaf into R's site Renviron
+#  (R_HOME/etc/Renviron.site) as R_LIBS_SITE. That is the native, no-profile
+#  mechanism R reads at startup; it does not depend on renv re-activating
+#  (which we disable at runtime in docker/entrypoint.sh).
 # -----------------------------------------------------------------------------
 ENV RENV_PATHS_LIBRARY=/opt/renv-library
 ENV RENV_PATHS_CACHE=/opt/renv-cache
 RUN mkdir -p /opt/renv-library /opt/renv-cache /opt/build \
  && chmod 0777 /opt/renv-library /opt/renv-cache
-
-# Site-wide R profile that puts /opt/renv-library on .libPaths() before any
-# project-level .Rprofile runs. This is the safety net when /workspace/.Rprofile
-# is bind-mounted from the host: even if the host's .Rprofile is stale, the
-# image's library is reachable.
-RUN cat > /etc/Rprofile.site <<'EOF'
-# Empirical Power Analysis — site profile
-# Prepend the image's renv library so packages installed at build time are
-# always reachable, even when /workspace is bind-mounted from a host that
-# doesn't have its own renv library.
-local({
-  lib <- Sys.getenv("RENV_PATHS_LIBRARY", unset = "/opt/renv-library")
-  if (dir.exists(lib)) {
-    current <- .libPaths()
-    if (!(lib %in% current)) {
-      .libPaths(c(lib, current))
-    }
-  }
-})
-EOF
 
 # -----------------------------------------------------------------------------
 #  R package installation via renv (lockfile-pinned, retry-heavy).
@@ -112,17 +96,14 @@ COPY renv/settings.json  renv/settings.json
 COPY docker/install_packages.R install_packages.R
 
 # Install renv itself first (rare-changing layer; small download).
-RUN --mount=type=cache,target=/root/.cache/R,sharing=locked \
-    R -e "install.packages('renv', repos = 'https://cloud.r-project.org')"
+RUN R -e "install.packages('renv', repos = 'https://cloud.r-project.org')"
 
 # Restore the pinned environment with a hardened policy. The script lives in
 # its own file so we can iterate on restore logic without busting the apt or
-# renv-install layers above.
-RUN --mount=type=cache,target=/root/.cache/R/renv,sharing=locked \
-    --mount=type=cache,target=/root/.cache/R,sharing=locked \
-    --mount=type=cache,target=/tmp/ccache,sharing=locked \
-    --mount=type=cache,target=/opt/renv-cache,sharing=locked \
-    mkdir -p ~/.R \
+# renv-install layers above. ccache still accelerates compiles within a single
+# build; cross-build caching (the former BuildKit cache mounts) is dropped to
+# keep the build portable to hosts without buildx.
+RUN mkdir -p ~/.R \
  && echo "CC=ccache gcc"     >> ~/.R/Makevars \
  && echo "CXX=ccache g++"    >> ~/.R/Makevars \
  && echo "CXX11=ccache g++"  >> ~/.R/Makevars \
@@ -135,9 +116,7 @@ RUN --mount=type=cache,target=/root/.cache/R/renv,sharing=locked \
 # glmGamPoi is a Suggests of DESeq2 in renv.lock so renv::restore() skips it,
 # but cartesian_downsampling/config.R uses fitType="glmGamPoi" and will hard-fail
 # without it. Install via BiocManager so it lands in the same library tree.
-RUN --mount=type=cache,target=/root/.cache/R/renv,sharing=locked \
-    --mount=type=cache,target=/root/.cache/R,sharing=locked \
-    R -e 'if (!requireNamespace("BiocManager", quietly=TRUE)) install.packages("BiocManager", repos="https://cloud.r-project.org"); BiocManager::install("glmGamPoi", update=FALSE, ask=FALSE); stopifnot(requireNamespace("glmGamPoi", quietly=TRUE))'
+RUN R -e 'if (!requireNamespace("BiocManager", quietly=TRUE)) install.packages("BiocManager", repos="https://cloud.r-project.org"); BiocManager::install("glmGamPoi", update=FALSE, ask=FALSE); stopifnot(requireNamespace("glmGamPoi", quietly=TRUE))'
 
 # -----------------------------------------------------------------------------
 #  Pre-bake the Python environment for reticulate (anndata).

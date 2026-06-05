@@ -90,6 +90,14 @@ if [[ ! -d "${RENV_PATHS_LIBRARY:-/opt/renv-library}" ]]; then
 This image is broken — rebuild from a clean state." 67
 fi
 
+# Disable renv's autoloader inside the container. The bind-mounted host repo
+# carries a .Rprofile that sources renv/activate.R; if it ran, renv would
+# isolate .libPaths() to the (host-platform) project library and shadow the
+# image's pinned library. We instead rely on the R_LIBS_SITE baked into the
+# image's Renviron.site (see docker/install_packages.R), which makes the pinned
+# packages visible deterministically without renv re-activating at runtime.
+export RENV_CONFIG_AUTOLOADER_ENABLED=FALSE
+
 # -----------------------------------------------------------------------------
 # Step 3 — Heartbeat ticker for HEALTHCHECK.
 # -----------------------------------------------------------------------------
