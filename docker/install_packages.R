@@ -58,9 +58,9 @@ repos <- c(
   P3M             = p3m_noble,
   CRAN            = "https://cloud.r-project.org",
   `CRAN-UK`       = "https://www.stats.bris.ac.uk/R/",
-  BioC            = "https://bioconductor.org/packages/3.21/bioc",
-  `BioC-Ann`      = "https://bioconductor.org/packages/3.21/data/annotation",
-  `BioC-Exp`      = "https://bioconductor.org/packages/3.21/data/experiment"
+  BioC            = "https://bioconductor.org/packages/3.22/bioc",
+  `BioC-Ann`      = "https://bioconductor.org/packages/3.22/data/annotation",
+  `BioC-Exp`      = "https://bioconductor.org/packages/3.22/data/experiment"
 )
 options(repos = repos)
 

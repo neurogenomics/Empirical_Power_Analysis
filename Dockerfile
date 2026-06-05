@@ -1,6 +1,7 @@
 # =============================================================================
 #  Empirical Power Analysis — Reproducible Compute Environment
-#  Base: Bioconductor 3.21 (R 4.5.1) on Ubuntu 24.04
+#  Base: Bioconductor 3.22 (R 4.5) on Ubuntu 24.04 — matches renv.lock, which
+#  pins Bioconductor 3.22 package versions (e.g. DESeq2 1.50.2).
 #
 #  Build:        ./docker-build.sh         (auto-detects BuildKit vs legacy)
 #  Verify:       ./docker-smoke.sh
@@ -25,7 +26,7 @@
 #      is fixed up by the entrypoint so commands like whoami / Sys.info() work.
 # =============================================================================
 
-FROM bioconductor/bioconductor_docker:RELEASE_3_21
+FROM bioconductor/bioconductor_docker:RELEASE_3_22
 
 LABEL org.opencontainers.image.title="Empirical Power Analysis"
 LABEL org.opencontainers.image.description="Reproducible environment for empirical scRNA-seq power analysis"
