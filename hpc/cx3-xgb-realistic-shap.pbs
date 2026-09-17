@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# XGBoost realistic-grid reweighting sweep -- Stage D (SHAP figures). Imperial CX3.
+# ==============================================================================
+# Copy of cx3-xgb-shap.pbs, adapted for the realistic sub-grid. Single node.
+# Stages aggregated data (Stage A) + realistic model tree (Stage C-realistic) +
+# every realistic search config tar (Stage B-realistic), then runs
+# 04_SHAP_Figures.R in realistic mode (XGB_MODEL_SUBDIR=realistic):
+#   - loops over shap_selection.csv, rendering beeswarm / violin /
+#     size x alpha / per-feature dependence figures for each of 5 SHAP models
+#   - one cross-model mean|SHAP| heatmap at the root
+#   - tars the whole shap_figures/ dir and copies to RDS
+#
+#   IN  (RDS): HPC_XGB_Input/xgb-aggregated-<tag>.tar                    (Stage A)
+#              HPC_XGB_Model/xgb-model-<tag>-realistic.tar               (Stage C-realistic)
+#              HPC_XGB_Search/incoming/<tag>-realistic/config_*.tar      (Stage B-realistic)
+#   OUT (RDS): HPC_XGB_Figures/shap-figures-<tag>-realistic.tar
+#                (member: Power_Curve_Fitting/Models/xgboost/realistic/shap_figures/)
+#
+# Submit (after Stage C-realistic has produced the model tar):
+#   qsub -v EPA_SIF=$PWD/epa-cx3-2026-07-19.sif,EPA_DATALINK=$PWD/Datalink \
+#        hpc/cx3-xgb-realistic-shap.pbs
+# ==============================================================================
+#PBS -N epa-xgb-realistic-shap
+#PBS -l select=1:ncpus=8:mem=64gb
+# 5 SHAP models already refit in Stage C-realistic; here we only re-load
+# shap_values.qs and render PNGs, so this is lighter than baseline SHAP.
+# 4h is ample headroom; <=8h short-queue eligible.
+#PBS -l walltime=04:00:00
+#PBS -j oe
+
+set -euo pipefail
+
+: "${EPA_SIF:?set EPA_SIF to the apptainer .sif path}"
+: "${EPA_DATALINK:?set EPA_DATALINK to the RDS Datalink path}"
+EPA_DE_METHODS="${EPA_DE_METHODS:-deseq2,edger,limma}"
+EPA_NCPUS="${EPA_NCPUS:-8}"
+EPA_XGB_SHAP_MAX_ROWS="${EPA_XGB_SHAP_MAX_ROWS:-200000}"
+_safe_methods="${EPA_DE_METHODS//,/-}"
+EPA_XGB_TAG="${EPA_XGB_TAG:-${_safe_methods}_runs01-10}"
+
+cd "${PBS_O_WORKDIR:-$PWD}"
+module load apptainer 2>/dev/null || true
+
+WORKSPACE="${PBS_O_WORKDIR:-$PWD}"
+AGG_TAR="$EPA_DATALINK/HPC_XGB_Input/xgb-aggregated-${EPA_XGB_TAG}.tar"
+MODEL_TAR="$EPA_DATALINK/HPC_XGB_Model/xgb-model-${EPA_XGB_TAG}-realistic.tar"
+SEARCH_INCOMING="$EPA_DATALINK/HPC_XGB_Search/incoming/$EPA_XGB_TAG-realistic"
+FIG_OUT_DIR="$EPA_DATALINK/HPC_XGB_Figures"
+LOCAL_DATALINK="$TMPDIR/epa-xgb-realistic-shap/Datalink"
+
+mkdir -p "$LOCAL_DATALINK" "$TMPDIR/home" "$FIG_OUT_DIR"
+
+FINAL_FIG_TAR="$FIG_OUT_DIR/shap-figures-${EPA_XGB_TAG}-realistic.tar"
+
+echo "================ EPA xgb-realistic-shap ================"
+echo "aggregated tar: $AGG_TAR"
+echo "model tar     : $MODEL_TAR"
+echo "search tars   : $SEARCH_INCOMING"
+echo "figures out   : $FINAL_FIG_TAR"
+echo "========================================================"
+
+# ---- resume: skip if the figure tar already exists on RDS ---------------------
+if [ -f "$FINAL_FIG_TAR" ]; then
+  echo "RESUME: realistic figure tar already present -- nothing to do."
+  echo "  $FINAL_FIG_TAR"
+  echo "================ xgb-realistic-shap: already complete ================"
+  exit 0
+fi
+
+# ---- safe-extract helper (reject absolute / .. paths) -------------------------
+safe_extract() {
+  local t="$1"
+  if tar tf "$t" | grep -qE '(^/|(^|/)\.\.(/|$))'; then
+    echo "FATAL: unsafe path in $t" >&2; exit 4
+  fi
+  tar xf "$t" -C "$LOCAL_DATALINK"
+}
+
+# ---- stage aggregated data (Stage A) ------------------------------------------
+[ -f "$AGG_TAR" ] || { echo "FATAL: aggregated tar missing: $AGG_TAR (run Stage A first)" >&2; exit 3; }
+safe_extract "$AGG_TAR"
+
+REAL_QS="$LOCAL_DATALINK/Power_Curve_Fitting/Fitting_Data/aggregated_fitting_data_realistic.qs"
+[ -f "$REAL_QS" ] || { echo "FATAL: aggregated_fitting_data_realistic.qs missing from staged data." >&2; exit 3; }
+
+# ---- stage the promoted realistic winner + 5 SHAP models (Stage C-realistic) --
+[ -f "$MODEL_TAR" ] || { echo "FATAL: realistic model tar missing: $MODEL_TAR (run Stage C-realistic first)" >&2; exit 3; }
+safe_extract "$MODEL_TAR"
+
+# ---- stage every realistic search config (Stage B-realistic) ------------------
+# Not strictly required by the realistic-mode branch of 04_SHAP_Figures.R (which
+# reads shap_values.qs from shap_models/<tag>/), but staged for parity with the
+# baseline and to allow later cross-config diagnostics without a re-stage.
+shopt -s nullglob
+cfg_tars=("$SEARCH_INCOMING"/config_*.tar)
+[ ${#cfg_tars[@]} -gt 0 ] || { echo "FATAL: no realistic config tars in $SEARCH_INCOMING (run realistic Stage B first)" >&2; exit 3; }
+for t in "${cfg_tars[@]}"; do
+  safe_extract "$t"
+done
+echo "staged ${#cfg_tars[@]} realistic config tar(s)"
+
+# ---- make SHAP figures (realistic mode) --------------------------------------
+apptainer exec --cleanenv --home "$TMPDIR/home" \
+  --bind "$WORKSPACE:/workspace" \
+  --bind "$LOCAL_DATALINK:/workspace/Datalink" \
+  --env POWER_ANALYSIS_ROOT=/workspace \
+  --env EPA_XGB_TAG="$EPA_XGB_TAG" \
+  --env XGB_MODEL_SUBDIR="realistic" \
+  --env XGB_FITTING_DATA="aggregated_fitting_data_realistic.qs" \
+  --env XGB_NTHREAD="$EPA_NCPUS" \
+  --env XGB_SHAP_MAX_ROWS="$EPA_XGB_SHAP_MAX_ROWS" \
+  --env RENV_CONFIG_AUTOLOADER_ENABLED=FALSE \
+  "$EPA_SIF" \
+  Rscript /workspace/R/power_curve_fitting/04_SHAP_Figures.R
+
+# ---- stage out the figure tar the script produced (atomic) --------------------
+# Realistic-mode R script writes model_base/shap-figures-<TAG>.tar where
+# model_base = Models/xgboost/realistic/, TAG = EPA_XGB_TAG.
+FIG_REL="Power_Curve_Fitting/Models/xgboost/realistic/shap-figures-${EPA_XGB_TAG}.tar"
+[ -f "$LOCAL_DATALINK/$FIG_REL" ] || { echo "FATAL: no figure tar at $FIG_REL" >&2; exit 5; }
+tmp="$FIG_OUT_DIR/.shap-figures-${EPA_XGB_TAG}-realistic.$$.partial.tar"
+cp -f "$LOCAL_DATALINK/$FIG_REL" "$tmp"
+mv -f "$tmp" "$FINAL_FIG_TAR"
+echo "REALISTIC FIGURE TAR -> $FINAL_FIG_TAR"
+
+rm -rf "$LOCAL_DATALINK" 2>/dev/null || true
+echo "================ xgb-realistic-shap done ================"

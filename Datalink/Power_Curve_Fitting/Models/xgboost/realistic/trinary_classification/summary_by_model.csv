@@ -1,0 +1,3 @@
+"model","role","mode","lower","upper","n","accuracy","macro_f1","weighted_f1"
+"realistic_winner","winner","insample",0.2,0.8,3433289,0.955718263158155,0.818270625253187,0.958244083090381
+"baseline","baseline","insample",0.2,0.8,3433289,0.954524364246645,0.813568861858118,0.957170688339054

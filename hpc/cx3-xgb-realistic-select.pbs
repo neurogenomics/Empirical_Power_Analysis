@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# XGBoost realistic-grid reweighting sweep -- Stage C (select). Imperial CX3.
+# ==============================================================================
+# Copy of cx3-xgb-select.pbs, adapted for the realistic sub-grid produced by
+# cx3-xgb-realistic-search.pbs. Single compute-node job. Stages the aggregated
+# data tar (containing the realistic .qs) plus every Stage B-realistic config
+# tar to LOCAL scratch, then runs 03_Select_XGBoost.R in realistic mode:
+#   - ranks all 36 configs by bin_balanced_MAE from OOF predictions
+#   - selects 5 SHAP models (3 alpha winners + median + worst)
+#   - refits each of the 5 on the full filtered data, runs exact TreeSHAP
+#   - promotes the overall winner to Models/xgboost/realistic/
+#
+#   IN  (RDS): HPC_XGB_Input/xgb-aggregated-<tag>.tar                       (Stage A)
+#              HPC_XGB_Search/incoming/<tag>-realistic/config_*.tar         (Stage B-realistic)
+#   OUT (RDS): HPC_XGB_Model/xgb-model-<tag>-realistic.tar
+#                (member: Power_Curve_Fitting/Models/xgboost/realistic/)
+#
+# Submit (after Stage B-realistic array has fully drained):
+#   qsub -v EPA_SIF=$PWD/epa-cx3-2026-07-19.sif,EPA_DATALINK=$PWD/Datalink \
+#        hpc/cx3-xgb-realistic-select.pbs
+# ==============================================================================
+#PBS -N epa-xgb-realistic-select
+#PBS -l select=1:ncpus=8:mem=64gb
+# 5 SHAP refits + TreeSHAP on the winner. Realistic set is smaller than the full
+# grid but bin-reweighting amplifies tail rows, so the refit trees can grow.
+# 8h gives a wide margin; still short-queue eligible.
+#PBS -l walltime=08:00:00
+#PBS -j oe
+
+set -euo pipefail
+
+: "${EPA_SIF:?set EPA_SIF to the apptainer .sif path}"
+: "${EPA_DATALINK:?set EPA_DATALINK to the RDS Datalink path}"
+EPA_DE_METHODS="${EPA_DE_METHODS:-deseq2,edger,limma}"
+EPA_NCPUS="${EPA_NCPUS:-8}"
+_safe_methods="${EPA_DE_METHODS//,/-}"
+EPA_XGB_TAG="${EPA_XGB_TAG:-${_safe_methods}_runs01-10}"
+
+cd "${PBS_O_WORKDIR:-$PWD}"
+module load apptainer 2>/dev/null || true
+
+WORKSPACE="${PBS_O_WORKDIR:-$PWD}"
+AGG_TAR="$EPA_DATALINK/HPC_XGB_Input/xgb-aggregated-${EPA_XGB_TAG}.tar"
+SEARCH_INCOMING="$EPA_DATALINK/HPC_XGB_Search/incoming/$EPA_XGB_TAG-realistic"
+MODEL_OUT_DIR="$EPA_DATALINK/HPC_XGB_Model"
+LOCAL_DATALINK="$TMPDIR/epa-xgb-realistic-select/Datalink"
+
+mkdir -p "$LOCAL_DATALINK" "$TMPDIR/home" "$MODEL_OUT_DIR"
+
+FINAL_MODEL_TAR="$MODEL_OUT_DIR/xgb-model-${EPA_XGB_TAG}-realistic.tar"
+
+echo "================ EPA xgb-realistic-select ================"
+echo "aggregated tar: $AGG_TAR"
+echo "search tars   : $SEARCH_INCOMING"
+echo "model out     : $FINAL_MODEL_TAR"
+echo "=========================================================="
+
+# ---- resume: skip if the final model tar already exists on RDS ----------------
+if [ -f "$FINAL_MODEL_TAR" ]; then
+  echo "RESUME: final realistic model tar already present -- nothing to do."
+  echo "  $FINAL_MODEL_TAR"
+  echo "================ xgb-realistic-select: already complete ================"
+  exit 0
+fi
+
+# ---- stage aggregated data ----------------------------------------------------
+[ -f "$AGG_TAR" ] || { echo "FATAL: aggregated tar missing: $AGG_TAR" >&2; exit 3; }
+tar xf "$AGG_TAR" -C "$LOCAL_DATALINK"
+
+REAL_QS="$LOCAL_DATALINK/Power_Curve_Fitting/Fitting_Data/aggregated_fitting_data_realistic.qs"
+[ -f "$REAL_QS" ] || { echo "FATAL: aggregated_fitting_data_realistic.qs missing from staged data; run 01e_Filter_Realistic.R before Stage A." >&2; exit 3; }
+
+# ---- stage every realistic config tar (extract each, safe-path checked) ------
+shopt -s nullglob
+cfg_tars=("$SEARCH_INCOMING"/config_*.tar)
+[ ${#cfg_tars[@]} -gt 0 ] || { echo "FATAL: no realistic config tars in $SEARCH_INCOMING (run realistic Stage B first)" >&2; exit 3; }
+for t in "${cfg_tars[@]}"; do
+  if tar tf "$t" | grep -qE '(^/|(^|/)\.\.(/|$))'; then
+    echo "FATAL: unsafe path in $t" >&2; exit 4
+  fi
+  tar xf "$t" -C "$LOCAL_DATALINK"
+done
+echo "staged ${#cfg_tars[@]} realistic config tar(s)"
+
+# ---- select + refit 5 SHAP models + promote winner ---------------------------
+apptainer exec --cleanenv --no-home \
+  --bind "$WORKSPACE:/workspace" \
+  --bind "$LOCAL_DATALINK:/workspace/Datalink" \
+  --env POWER_ANALYSIS_ROOT=/workspace \
+  --env HOME="$TMPDIR/home" \
+  --env XGB_MODEL_SUBDIR="realistic" \
+  --env XGB_FITTING_DATA="aggregated_fitting_data_realistic.qs" \
+  --env XGB_NTHREAD="$EPA_NCPUS" \
+  --env RENV_CONFIG_AUTOLOADER_ENABLED=FALSE \
+  "$EPA_SIF" \
+  Rscript /workspace/R/power_curve_fitting/03_Select_XGBoost.R
+
+# ---- stage out the realistic model tree to RDS ------------------------------
+MODEL_REL="Power_Curve_Fitting/Models/xgboost/realistic"
+[ -f "$LOCAL_DATALINK/$MODEL_REL/booster.ubj" ] || { echo "FATAL: no promoted booster at $MODEL_REL" >&2; exit 5; }
+tmp="$MODEL_OUT_DIR/.xgb-model-${EPA_XGB_TAG}-realistic.$$.partial.tar"
+( cd "$LOCAL_DATALINK" && tar -cf "$tmp" "$MODEL_REL" )
+mv -f "$tmp" "$FINAL_MODEL_TAR"
+echo "FINAL REALISTIC MODEL -> $FINAL_MODEL_TAR"
+
+rm -rf "$LOCAL_DATALINK" 2>/dev/null || true
+echo "================ xgb-realistic-select done ================"

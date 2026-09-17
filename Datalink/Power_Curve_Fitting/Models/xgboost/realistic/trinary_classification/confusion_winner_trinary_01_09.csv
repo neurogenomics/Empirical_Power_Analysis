@@ -1,0 +1,10 @@
+"truth_class","pred_class","n"
+"unpowered","unpowered",2789393
+"contested","unpowered",71233
+"powered","unpowered",318
+"unpowered","contested",120768
+"contested","contested",186033
+"powered","contested",38301
+"unpowered","powered",18
+"contested","powered",7735
+"powered","powered",219490

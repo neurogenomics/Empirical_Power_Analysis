@@ -1,0 +1,4 @@
+"Cell_Type","N_Genes","Median_LFC","Mean_LFC","Median_SNR","Mean_SNR","Median_BaseMean","Mean_BaseMean","Median_Dispersion","Mean_Dispersion"
+"Astro",34,4.651,4.417,66.4,70.81,16.72,157.72,NA,NA
+"Micro",29,4.232,4.109,51.7,55.27,7.72,44.38,NA,NA
+"Oligo",44,3.963,3.558,48.37,56.31,11.44,227.1,NA,NA

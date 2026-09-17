@@ -1,0 +1,61 @@
+"tag","feature","mean_abs_shap"
+"winner_alpha_0","Donors",1.86032191503243
+"winner_alpha_0","Cells / donor",0.764467589527045
+"winner_alpha_0","Counts / cell",0.161551823454076
+"winner_alpha_0","|LFC|",2.64228309134836
+"winner_alpha_0","Mean expression",1.77073079763606
+"winner_alpha_0","Dispersion",1.2015303569711
+"winner_alpha_0","Astrocytes",0.0269698477348854
+"winner_alpha_0","Microglia",0.0932229470783194
+"winner_alpha_0","Oligodendrocytes",0.244242199567364
+"winner_alpha_0","DESeq2",0.589600325683825
+"winner_alpha_0","edgeR",0.107309455324456
+"winner_alpha_0","limma-voom",0.134708868990878
+"winner_alpha_0.5","Donors",1.83157398788796
+"winner_alpha_0.5","Cells / donor",0.72329004218203
+"winner_alpha_0.5","Counts / cell",0.144678632098108
+"winner_alpha_0.5","|LFC|",2.44342416261014
+"winner_alpha_0.5","Mean expression",1.69473671845088
+"winner_alpha_0.5","Dispersion",1.06530444417163
+"winner_alpha_0.5","Astrocytes",0.0232230572513727
+"winner_alpha_0.5","Microglia",0.0931555963319522
+"winner_alpha_0.5","Oligodendrocytes",0.230499651517611
+"winner_alpha_0.5","DESeq2",0.556557636145659
+"winner_alpha_0.5","edgeR",0.0834341877332273
+"winner_alpha_0.5","limma-voom",0.127103425467117
+"winner_alpha_1","Donors",1.517287982134
+"winner_alpha_1","Cells / donor",0.594467700675803
+"winner_alpha_1","Counts / cell",0.110199789427186
+"winner_alpha_1","|LFC|",1.84004654451426
+"winner_alpha_1","Mean expression",1.31858931398659
+"winner_alpha_1","Dispersion",0.792086715518003
+"winner_alpha_1","Astrocytes",0.0162467670534442
+"winner_alpha_1","Microglia",0.0740072773499024
+"winner_alpha_1","Oligodendrocytes",0.19966698620632
+"winner_alpha_1","DESeq2",0.445135700957861
+"winner_alpha_1","edgeR",0.0700760285089925
+"winner_alpha_1","limma-voom",0.0865809681470664
+"median","Donors",1.78211533152917
+"median","Cells / donor",0.663411299610123
+"median","Counts / cell",0.137330575656857
+"median","|LFC|",2.41321517358225
+"median","Mean expression",1.65183056074783
+"median","Dispersion",1.06994707574278
+"median","Astrocytes",0.0169714722038026
+"median","Microglia",0.0987989052570929
+"median","Oligodendrocytes",0.235712309124449
+"median","DESeq2",0.571996603632021
+"median","edgeR",0.0790932540148923
+"median","limma-voom",0.128953335042656
+"worst","Donors",1.31753149410395
+"worst","Cells / donor",0.473190794235136
+"worst","Counts / cell",0.0943882681268057
+"worst","|LFC|",1.75718426101012
+"worst","Mean expression",1.16865589454122
+"worst","Dispersion",0.679951903423465
+"worst","Astrocytes",0.00713821447286889
+"worst","Microglia",0.0761220184522241
+"worst","Oligodendrocytes",0.177727832632996
+"worst","DESeq2",0.368436663157687
+"worst","edgeR",0.048985551230127
+"worst","limma-voom",0.0561770499973293

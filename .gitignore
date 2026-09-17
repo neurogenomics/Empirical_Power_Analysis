@@ -1,0 +1,171 @@
+# =============================================================================
+# .gitignore for Empirical_Power_Analysis (public release)
+#
+# Goal: ship the CLEANEST MINIMAL set needed to understand and reproduce the
+# paper. Only code that backs the manuscript's methods/results, the container
+# and HPC build assets, the paper-cited figures + source data under Datalink/,
+# and the docs are tracked. Everything else (runtime artefacts, large binaries,
+# staging outputs, exploratory/off-paper analyses, personal helper scripts, and
+# superseded drafts) is ignored.
+#
+# NOTE: .gitignore only affects UNTRACKED files. Files already committed stay
+# tracked even if matched here. To finish cleaning an existing checkout, run
+# `git rm -r --cached <path>` for the already-tracked clutter, then commit.
+# =============================================================================
+
+# ----- R runtime artefacts --------------------------------------------------
+.Rhistory
+.Rapp.history
+.RData
+.Ruserdata
+*.Rproj.user/
+*.Rcheck/
+
+# ----- Environment ----------------------------------------------------------
+.Renviron
+# .Rprofile intentionally tracked: renv activates via this file, needed for Docker build
+# renv library is machine-specific; the lockfile (renv.lock) is the source of truth.
+renv/library/
+renv/staging/
+renv/local/
+renv/python/
+
+# ----- Editors / OS noise ---------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ----- Syncthing (this repo is Syncthing-mirrored to the analysis server) ---
+*.sync-conflict-*
+.syncthing.*
+.stversions/
+.stfolder/
+
+# =============================================================================
+# Large data & pipeline intermediates — NOT distributed
+# (regenerable; the repo ships only the paper-cited final artefacts in Datalink/)
+# =============================================================================
+Datalink/Shards/**
+!Datalink/Shards/.gitkeep
+Datalink/raw_data/**
+!Datalink/raw_data/.gitkeep
+Datalink/Run_Output_Logs/
+Datalink/**/checkpoints/
+Datalink/**/Shard_Cache/
+Datalink/**/Fitting_Data/
+
+# Oversized per-point diagnostic exports (600+ MB, regenerable; exceed GitHub's
+# 100 MB limit and clog Syncthing). The downsampled summary tables/plots ship.
+Datalink/**/swing_vs_error/*perpoint*.csv
+
+# Editor / pipeline backup files.
+*.bak
+
+# HPC result-tar staging area: chunk tars + per-chunk .done sentinels + done/
+# markers are all runtime staging, not source.
+/Datalink/HPC_Result_Tars/
+/Datalink/HPC_Control_Tar/
+/Datalink/HPC_XGB_Input/
+
+# Serialised R objects — too large for Git; regenerate from pipelines.
+*.qs
+*.rds
+*.rda
+
+# Raw single-cell / matrix formats.
+*.h5
+*.h5ad
+*.h5Seurat
+*.tar
+*.tar.gz
+*.mtx
+*.loom
+
+# =============================================================================
+# Rendered / compiled manuscript outputs — regenerable by knitting the .rmd
+# =============================================================================
+*.html
+*.aux
+*.log
+*.pdf.synctex.gz
+*.knit.md
+*.utf8.md
+*_files/
+*_cache/
+
+# Build-generated manuscript variants (produced by render_pdf.R at render time).
+nature_comms_draft_pdf.rmd
+nature_comms_draft_pdf.pdf
+nature_comms_draft.pdf
+nature_comms_draft.tex
+
+# Stray R plotting artefact (auto-written by base graphics when a device is left open).
+Rplots.pdf
+
+# =============================================================================
+# Runtime logs, locks, and nohup capture — never source
+# =============================================================================
+/logs/
+nohup*.out
+.run_all.lock
+docker.lock
+
+# =============================================================================
+# Python caches
+# =============================================================================
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# =============================================================================
+# Nextflow removed (ADR-001b); guards so a stale checkout never re-introduces it.
+# =============================================================================
+.nextflow/
+.nextflow.log*
+work/
+results/
+test_output/
+
+# =============================================================================
+# One-off diagnostics not part of the public release
+# =============================================================================
+_diagnostics/
+fittype_benchmark_report.md
+fittype_benchmark_report.html
+
+# =============================================================================
+# Figure-composition staging outputs — regenerable; the canonical figures the
+# paper cites live under Datalink/ (Composed_Figures/, Cartesian_Downsampling/,
+# Power_Curve_Fitting/, ...), NOT here.
+# =============================================================================
+R/figure_composition/output/
+R/figure_composition/output_*/
+R/**/output/
+
+# =============================================================================
+# Exploratory / off-paper analyses — related work, but NOT part of the paper's
+# methods or results, so kept out of the public release.
+# =============================================================================
+blog/
+R/gene_classification/
+
+# =============================================================================
+# Orphaned / personal helper scripts — real code, but not wired into any
+# tracked pipeline, orchestrator, or the manuscript (i.e. related-but-unused).
+# =============================================================================
+_launch_crossscore.R
+_render_pdf_draft.R
+sendStuff.sh
+R/cartesian_downsampling/_render_cells_allmethods.R
+R/cartesian_downsampling/_render_reads_allmethods.R
+R/figure_data_generation/08_Recall_Precision_Grid.R
+
+# =============================================================================
+# Superseded drafts — clutter for a clean release.
+# =============================================================================
+manuscript.rmd
+paper_final_draft.rmd

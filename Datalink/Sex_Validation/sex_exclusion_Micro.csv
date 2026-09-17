@@ -1,0 +1,4 @@
+"donor_id","cell_type","sex_label","flag","XIST_cpm","P_female_XIST","Y_combined_cpm","P_male_Y","n_cells","total_umi"
+"Donor_1296","Micro","Male","XIST_present_in_male",1149.8755,0.998653914107547,79.7653,0.997843427542293,371,1115773
+"Donor_484","Micro","Female","Y_present_in_female",1515.4392,0.99974609587065,44.6812,0.87423569088312,92,268569
+"Donor_695","Micro","Male","Y_absent_in_male",124.7921,0.00112892955850787,7.7995,3.73787484242942e-05,138,641066

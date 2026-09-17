@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# XGBoost power model — Stage C: select best config + SHAP. Imperial CX3.
+# ==============================================================================
+# Single compute-node job. Stages the aggregated-data tar plus EVERY Stage B
+# config tar to LOCAL scratch, then runs 03_Select_XGBoost.R:
+#   - ranks all configs by grouped-CV logloss, picks the winner
+#   - promotes the winner's booster to the canonical Models/xgboost/ location
+#   - recomputes honest OOF calibration for the winner
+#   - runs SHAP (xgboost built-in predcontrib) + gain importance
+#
+#   IN  (RDS): HPC_XGB_Input/xgb-aggregated-<tag>.tar        (Stage A)
+#              HPC_XGB_Search/incoming/<tag>/config_*.tar    (Stage B)
+#   OUT (RDS): HPC_XGB_Model/xgb-model-<tag>.tar
+#                (member: Power_Curve_Fitting/Models/xgboost/ — the paper artifact)
+#
+# Submit (after the Stage B array has fully drained):
+#   qsub -v EPA_SIF=$PWD/epa-cx3-2026-07-19.sif,EPA_DATALINK=$PWD/Datalink \
+#        hpc/cx3-xgb-select.pbs
+# ==============================================================================
+#PBS -N epa-xgb-select
+#PBS -l select=1:ncpus=8:mem=64gb
+# OOF refit + SHAP scale ~linearly with the winner's tree count; a ~5000-tree
+# winner (raised cap) can approach the old 4h limit, so bump to 8h for headroom.
+#PBS -l walltime=08:00:00
+#PBS -j oe
+
+set -euo pipefail
+
+: "${EPA_SIF:?set EPA_SIF to the apptainer .sif path}"
+: "${EPA_DATALINK:?set EPA_DATALINK to the RDS Datalink path}"
+EPA_DE_METHODS="${EPA_DE_METHODS:-deseq2,edger,limma}"
+EPA_NCPUS="${EPA_NCPUS:-8}"
+_safe_methods="${EPA_DE_METHODS//,/-}"
+EPA_XGB_TAG="${EPA_XGB_TAG:-${_safe_methods}_runs01-10}"
+
+cd "${PBS_O_WORKDIR:-$PWD}"
+module load apptainer 2>/dev/null || true
+
+WORKSPACE="${PBS_O_WORKDIR:-$PWD}"
+AGG_TAR="$EPA_DATALINK/HPC_XGB_Input/xgb-aggregated-${EPA_XGB_TAG}.tar"
+SEARCH_INCOMING="$EPA_DATALINK/HPC_XGB_Search/incoming/$EPA_XGB_TAG"
+MODEL_OUT_DIR="$EPA_DATALINK/HPC_XGB_Model"
+LOCAL_DATALINK="$TMPDIR/epa-xgb-select/Datalink"
+
+mkdir -p "$LOCAL_DATALINK" "$TMPDIR/home" "$MODEL_OUT_DIR"
+
+FINAL_MODEL_TAR="$MODEL_OUT_DIR/xgb-model-${EPA_XGB_TAG}.tar"
+
+echo "================ EPA xgb-select ================"
+echo "aggregated tar: $AGG_TAR"
+echo "search tars   : $SEARCH_INCOMING"
+echo "model out     : $FINAL_MODEL_TAR"
+echo "================================================"
+
+# ---- resume: skip if the final model tar already exists on RDS ----------------
+if [ -f "$FINAL_MODEL_TAR" ]; then
+  echo "RESUME: final model tar already present — nothing to do."
+  echo "  $FINAL_MODEL_TAR"
+  echo "================ xgb-select: already complete ================"
+  exit 0
+fi
+
+# ---- stage aggregated data ----------------------------------------------------
+[ -f "$AGG_TAR" ] || { echo "FATAL: aggregated tar missing: $AGG_TAR" >&2; exit 3; }
+tar xf "$AGG_TAR" -C "$LOCAL_DATALINK"
+
+# ---- stage every config tar (extract each, safe-path checked) -----------------
+shopt -s nullglob
+cfg_tars=("$SEARCH_INCOMING"/config_*.tar)
+[ ${#cfg_tars[@]} -gt 0 ] || { echo "FATAL: no config tars in $SEARCH_INCOMING (run Stage B first)" >&2; exit 3; }
+for t in "${cfg_tars[@]}"; do
+  if tar tf "$t" | grep -qE '(^/|(^|/)\.\.(/|$))'; then
+    echo "FATAL: unsafe path in $t" >&2; exit 4
+  fi
+  tar xf "$t" -C "$LOCAL_DATALINK"
+done
+echo "staged ${#cfg_tars[@]} config tar(s)"
+
+# ---- select + interpret -------------------------------------------------------
+apptainer exec --cleanenv --no-home \
+  --bind "$WORKSPACE:/workspace" \
+  --bind "$LOCAL_DATALINK:/workspace/Datalink" \
+  --env POWER_ANALYSIS_ROOT=/workspace \
+  --env HOME="$TMPDIR/home" \
+  --env XGB_NTHREAD="$EPA_NCPUS" \
+  --env RENV_CONFIG_AUTOLOADER_ENABLED=FALSE \
+  "$EPA_SIF" \
+  Rscript /workspace/R/power_curve_fitting/03_Select_XGBoost.R
+
+# ---- stage out the final model tree to RDS ------------------------------------
+MODEL_REL="Power_Curve_Fitting/Models/xgboost"
+[ -f "$LOCAL_DATALINK/$MODEL_REL/booster.ubj" ] || { echo "FATAL: no promoted booster at $MODEL_REL" >&2; exit 5; }
+tmp="$MODEL_OUT_DIR/.xgb-model-${EPA_XGB_TAG}.$$.partial.tar"
+( cd "$LOCAL_DATALINK" && tar -cf "$tmp" "$MODEL_REL" )
+mv -f "$tmp" "$FINAL_MODEL_TAR"
+echo "FINAL MODEL -> $FINAL_MODEL_TAR"
+
+rm -rf "$LOCAL_DATALINK" 2>/dev/null || true
+echo "================ xgb-select done ================"

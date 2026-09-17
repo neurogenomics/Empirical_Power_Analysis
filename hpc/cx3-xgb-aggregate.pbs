@@ -1,0 +1,443 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# XGBoost power model — Stage A: consolidate runs 1-10 + build aggregated
+# training data. Imperial CX3, single compute-node PBS job.
+# ==============================================================================
+# Follows the golden HPC rule (data/workspace/skills/hpc.md): tar everything,
+# move big, compute on node-local $TMPDIR. RDS only ever sees big tars.
+#
+#   IN  (RDS): shard tars                Shards_tar/<CT>_Roussos.tar
+#              runs 1-5 cartesian tar    HPC_XGB_Input/cartesian_runs01-05.tar
+#              runs 6-10 result chunks   HPC_Result_Tars/incoming/<tag>/*.tar
+#              runs 6-10 control tar     HPC_Control_Tar/epa-control-<tag>.tar
+#   OUT (RDS): aggregated training data  HPC_XGB_Input/xgb-aggregated-<tag>.tar
+#                (member: Power_Curve_Fitting/Fitting_Data/aggregated_fitting_data_all.qs)
+#
+# HARMONISATION happens ON THIS COMPUTE NODE (not the login node): the runs 6-10
+# result chunk tars are copied to LOCAL scratch and harvested there with the
+# repo's own harvest-grid-results.sh, which deletes only the LOCAL copies (RDS
+# untouched). This keeps the many small-file IO ops off the shared login node.
+#
+# Then, all on node-local scratch:
+#   00_Generate_GT_DDS_Checkpoints.R  (rebuilds GT DESeq2 dispersions from shards;
+#                                      method-independent, once for all 10 runs)
+#   00b_Cache_Shard_Read_Counts.R     (caches per-shard colSums that Step 01 reads;
+#                                      method-independent, once for all 10 runs)
+#   01_Build_Fitting_Dataset.R        (once per DE method; output renamed to the
+#                                      method-namespaced filename 01b expects)
+#   01b_Aggregate_Fitting_Data.R      (stacks methods -> per-grid-point rates)
+#
+# Submit:
+#   qsub -v EPA_SIF=$PWD/epa-cx3-2026-07-19.sif,EPA_DATALINK=$PWD/Datalink \
+#        hpc/cx3-xgb-aggregate.pbs
+# ==============================================================================
+#PBS -N epa-xgb-aggregate
+#PBS -l select=1:ncpus=24:mem=200gb
+# Observed 2026-07-24: 14h used of 24h. Set to 20h = 14h + headroom for the
+# added cross-score + detection-scatter phases and I/O variance. Shorter walltime
+# improves backfill scheduling (faster queue start).
+#PBS -l walltime=20:00:00
+#PBS -j oe
+
+set -euo pipefail
+
+# ---- inputs -------------------------------------------------------------------
+: "${EPA_SIF:?set EPA_SIF to the apptainer .sif path}"
+: "${EPA_DATALINK:?set EPA_DATALINK to the RDS Datalink path}"
+EPA_SHARD_DATASET="${EPA_SHARD_DATASET:-Roussos}"
+EPA_DE_METHODS="${EPA_DE_METHODS:-deseq2,edger,limma}"
+EPA_NCPUS="${EPA_NCPUS:-24}"
+
+# Figure phase (fat Stage A). Set EPA_BUILD_FIGURES=false to skip. EPA_FIG_MODES
+# is the space-separated list of downsampling modes to render (cells / reads).
+EPA_BUILD_FIGURES="${EPA_BUILD_FIGURES:-true}"
+EPA_FIG_MODES="${EPA_FIG_MODES:-cells reads}"
+
+# Cross-method 3x3 truth-scoring phase (cartesian Step 10). Reads the same staged runs 1-10
+# tree; scores each method's subsample calls against every method's full-data
+# truth to separate cross-method detection from self-consistency
+# inflation. BEST-EFFORT like the figure phase: a failure here never fails the
+# job or blocks Stage B/C. Set EPA_BUILD_CROSSSCORE=false to skip.
+EPA_BUILD_CROSSSCORE="${EPA_BUILD_CROSSSCORE:-true}"
+
+# runs 6-10 grid tag (namespaces the result-chunk + control tars to harvest).
+EPA_RUN_START="${EPA_RUN_START:-6}"
+EPA_RUN_END="${EPA_RUN_END:-10}"
+_safe_methods="${EPA_DE_METHODS//,/-}"
+EPA_GRID_TAG="${EPA_GRID_TAG:-${_safe_methods}_runs$(printf '%02d' "$EPA_RUN_START")-$(printf '%02d' "$EPA_RUN_END")}"
+
+# Output tag for the aggregated-data tar (full run range).
+EPA_XGB_TAG="${EPA_XGB_TAG:-${_safe_methods}_runs01-10}"
+
+# Input tar locations on RDS (overridable).
+XGB_INPUT_DIR="$EPA_DATALINK/HPC_XGB_Input"
+RUNS15_TAR="${EPA_RUNS15_TAR:-$XGB_INPUT_DIR/cartesian_runs01-05.tar}"
+RESULT_INCOMING="$EPA_DATALINK/HPC_Result_Tars/incoming/$EPA_GRID_TAG"
+CONTROL_TAR="$EPA_DATALINK/HPC_Control_Tar/epa-control-${EPA_GRID_TAG}.tar"
+
+cd "${PBS_O_WORKDIR:-$PWD}"
+module load apptainer 2>/dev/null || true   # not required on CX3; harmless
+
+WORKSPACE="${PBS_O_WORKDIR:-$PWD}"
+SHARD_TAR_DIR="$EPA_DATALINK/Shards_tar"
+LOCAL_DATALINK="${TMPDIR:?TMPDIR not set}/epa-xgb-agg/Datalink"
+HARVEST="$WORKSPACE/hpc/harvest-grid-results.sh"
+
+mkdir -p "$LOCAL_DATALINK/Shards" "$TMPDIR/home" "$XGB_INPUT_DIR"
+
+echo "================ EPA xgb-aggregate ================"
+echo "grid tag (6-10) : $EPA_GRID_TAG"
+echo "output tag      : $EPA_XGB_TAG"
+echo "methods         : $EPA_DE_METHODS    dataset: $EPA_SHARD_DATASET    ncpus: $EPA_NCPUS"
+echo "runs 1-5 tar    : $RUNS15_TAR"
+echo "runs 6-10 incoming: $RESULT_INCOMING"
+echo "runs 6-10 control : $CONTROL_TAR"
+echo "local Datalink  : $LOCAL_DATALINK"
+echo "==================================================="
+
+# ---- 0. RESUME / SKIP GATE ----------------------------------------------------
+# Stage A stages out exactly two big tars to RDS: the aggregated training data
+# (Stage B's input) and the figures tar. Both are the definitive "this half is
+# done" signals. On a resubmission after a crash/walltime kill we consult them:
+#   * aggregated tar present -> skip the whole aggregation (steps 5-8).
+#   * figures tar present (or figures disabled) -> skip the figure phase.
+# If BOTH are already on RDS there is nothing to do and we exit 0 immediately,
+# rather than re-staging ~15 GB and recomputing. Intermediate compute inside the
+# aggregation (GT DDS, shard cache, per-method fitting) is separately
+# checkpointed below so even a mid-aggregation crash never re-pays completed work.
+AGG_FINAL="$XGB_INPUT_DIR/xgb-aggregated-${EPA_XGB_TAG}.tar"
+FIG_DIR_RDS="$EPA_DATALINK/HPC_XGB_Figures"
+FIG_FINAL="$FIG_DIR_RDS/epa-figures-${EPA_XGB_TAG}.tar"
+XS_DIR_RDS="$EPA_DATALINK/HPC_XGB_CrossScore"
+XS_FINAL="$XS_DIR_RDS/xgb-crossscore-${EPA_XGB_TAG}.tar"
+# Per-tag checkpoint namespace on RDS (single tars only; deleted once the
+# aggregated tar supersedes them). Keyed by EPA_XGB_TAG so a different
+# methods/run-range combination can never reuse a stale checkpoint.
+CKPT_DIR="$XGB_INPUT_DIR/checkpoints/$EPA_XGB_TAG"
+
+NEED_AGG=true;  [ -f "$AGG_FINAL" ] && NEED_AGG=false
+NEED_FIG=false
+if [ "$EPA_BUILD_FIGURES" = "true" ] && [ ! -f "$FIG_FINAL" ]; then NEED_FIG=true; fi
+NEED_XS=false
+if [ "$EPA_BUILD_CROSSSCORE" = "true" ] && [ ! -f "$XS_FINAL" ]; then NEED_XS=true; fi
+
+if [ "$NEED_AGG" = false ] && [ "$NEED_FIG" = false ] && [ "$NEED_XS" = false ]; then
+  echo "RESUME: nothing to do — all outputs already on RDS:"
+  echo "  aggregated : $AGG_FINAL"
+  [ "$EPA_BUILD_FIGURES" = "true" ] && echo "  figures    : $FIG_FINAL" \
+                                    || echo "  figures    : (disabled)"
+  [ "$EPA_BUILD_CROSSSCORE" = "true" ] && echo "  cross-score: $XS_FINAL" \
+                                       || echo "  cross-score: (disabled)"
+  echo "================ xgb-aggregate: already complete ================"
+  exit 0
+fi
+echo "RESUME state    : NEED_AGG=$NEED_AGG  NEED_FIG=$NEED_FIG  NEED_XS=$NEED_XS"
+[ "$NEED_AGG" = true ] && mkdir -p "$CKPT_DIR"
+
+# ---- 1. stage shards to LOCAL scratch (never RDS) -----------------------------
+for CT in Astro Micro Oligo; do
+  tarf="$SHARD_TAR_DIR/${CT}_${EPA_SHARD_DATASET}.tar"
+  [ -f "$tarf" ] || { echo "FATAL: shard tar missing: $tarf" >&2; exit 3; }
+  tar xf "$tarf" -C "$LOCAL_DATALINK/Shards"
+done
+
+# ---- 2. runs 1-5 cartesian tree (iterations + GT for 1-5) ---------------------
+[ -f "$RUNS15_TAR" ] || { echo "FATAL: runs 1-5 tar missing: $RUNS15_TAR" >&2; exit 3; }
+if tar tf "$RUNS15_TAR" | grep -qE '(^/|(^|/)\.\.(/|$))'; then
+  echo "FATAL: unsafe path in $RUNS15_TAR" >&2; exit 4
+fi
+tar xf "$RUNS15_TAR" -C "$LOCAL_DATALINK"
+
+# ---- 3. runs 6-10 iterations: harvest chunk tars ON THIS NODE ------------------
+# Copy the RDS chunk tars to a LOCAL incoming dir, then harvest locally. The
+# harvest script deletes only the LOCAL copies on success; RDS is untouched.
+if [ -d "$RESULT_INCOMING" ]; then
+  mkdir -p "$LOCAL_DATALINK/HPC_Result_Tars/incoming/$EPA_GRID_TAG"
+  cp "$RESULT_INCOMING"/*.tar "$LOCAL_DATALINK/HPC_Result_Tars/incoming/$EPA_GRID_TAG/" 2>/dev/null || true
+  bash "$HARVEST" "$LOCAL_DATALINK" "$EPA_GRID_TAG"
+else
+  echo "WARN: no runs 6-10 incoming dir ($RESULT_INCOMING) — aggregating runs 1-5 only" >&2
+fi
+
+# ---- 4. runs 6-10 ground truth: extract control tar ---------------------------
+if [ -f "$CONTROL_TAR" ]; then
+  if tar tf "$CONTROL_TAR" | grep -qE '(^/|(^|/)\.\.(/|$))'; then
+    echo "FATAL: unsafe path in control tar $CONTROL_TAR" >&2; exit 4
+  fi
+  tar xf "$CONTROL_TAR" -C "$LOCAL_DATALINK"
+else
+  echo "WARN: runs 6-10 control tar absent ($CONTROL_TAR) — GT for 6-10 may be missing" >&2
+fi
+
+# ---- helper: run one pcf script in the container ------------------------------
+run_pcf() {  # script_basename  CARTESIAN_DE_METHOD
+  local script="$1" method="$2"
+  apptainer exec --cleanenv --no-home \
+    --bind "$WORKSPACE:/workspace" \
+    --bind "$LOCAL_DATALINK:/workspace/Datalink" \
+    --env POWER_ANALYSIS_ROOT=/workspace \
+    --env HOME="$TMPDIR/home" \
+    --env CARTESIAN_DE_METHOD="$method" \
+    --env POWER_ANALYSIS_FORCE_RECALC=false \
+    --env RENV_CONFIG_AUTOLOADER_ENABLED=FALSE \
+    "$EPA_SIF" \
+    Rscript "/workspace/R/power_curve_fitting/$script"
+}
+
+# ---- helper: run one cartesian_downsampling script in the container -----------
+# Cartesian figures reuse the harmonised runs-1-10 tree already on local scratch.
+# DOWNSAMPLE_MODE / DE_METHODS / CARTESIAN_INCLUDE_ALL_METHODS drive config.R.
+#
+# FORCE_RECALC=true is deliberate: the runs 1-5 tar may carry OLD Step 3
+# checkpoints that predate the fine-cross / Sub_Harm_Count additions. Without
+# forcing, Step 3 would load those stale checkpoints and skip re-aggregation,
+# leaving no df_finecross_raw and breaking Step 8. Local scratch is ephemeral,
+# so recomputing there is safe. Callers pass FORCE per script.
+run_cart() {  # script_basename  MODE  FORCE(true|false)
+  local script="$1" mode="$2" force="${3:-true}"
+  apptainer exec --cleanenv --no-home \
+    --bind "$WORKSPACE:/workspace" \
+    --bind "$LOCAL_DATALINK:/workspace/Datalink" \
+    --env POWER_ANALYSIS_ROOT=/workspace \
+    --env HOME="$TMPDIR/home" \
+    --env DOWNSAMPLE_MODE="$mode" \
+    --env DE_METHODS="$EPA_DE_METHODS" \
+    --env SHARD_DATASET="$EPA_SHARD_DATASET" \
+    --env CARTESIAN_INCLUDE_ALL_METHODS=true \
+    --env POWER_ANALYSIS_FORCE_RECALC="$force" \
+    --env RENV_CONFIG_AUTOLOADER_ENABLED=FALSE \
+    "$EPA_SIF" \
+    Rscript "/workspace/R/cartesian_downsampling/$script"
+}
+
+# ---- checkpoint helpers: single-tar-to-RDS, restore-on-resume -----------------
+# Golden HPC rule (data/workspace/skills/hpc.md): a checkpoint is ALWAYS ONE tar
+# on RDS, never loose files, so restoring after a crash skips recompute without
+# spraying thousands of small files onto the shared filesystem. Restores extract
+# into node-local scratch. A save/restore failure is non-fatal: it only forfeits
+# the resume speed-up, never correctness (the step recomputes).
+ckpt_restore() {  # name  rel_under_LOCAL_DATALINK   -> 0 if restored, 1 if none
+  local name="$1" rel="$2"
+  local tarf="$CKPT_DIR/${name}.tar"
+  [ -f "$tarf" ] || return 1
+  if tar tf "$tarf" 2>/dev/null | grep -qE '(^/|(^|/)\.\.(/|$))'; then
+    echo "WARN: unsafe path in checkpoint $tarf — ignoring, will recompute" >&2
+    return 1
+  fi
+  if ! tar tf "$tarf" >/dev/null 2>&1; then
+    echo "WARN: checkpoint $tarf unreadable (truncated?) — ignoring, will recompute" >&2
+    return 1
+  fi
+  echo "CKPT restore  $name  <-  $tarf"
+  mkdir -p "$LOCAL_DATALINK/$(dirname "$rel")"
+  tar xf "$tarf" -C "$LOCAL_DATALINK"
+  return 0
+}
+ckpt_save() {  # name  rel_under_LOCAL_DATALINK   (rel is a dir or single file)
+  local name="$1" rel="$2"
+  local src="$LOCAL_DATALINK/$rel"
+  local final="$CKPT_DIR/${name}.tar" tmp="$CKPT_DIR/.${name}.$$.partial.tar"
+  [ -e "$src" ] || { echo "WARN: ckpt_save $name: '$rel' absent — not saved" >&2; return 0; }
+  if ( cd "$LOCAL_DATALINK" && tar -cf "$tmp" "$rel" ); then
+    mv -f "$tmp" "$final"; echo "CKPT save     $name  ->  $final"
+  else
+    echo "WARN: ckpt_save $name failed to tar — continuing without checkpoint" >&2
+    rm -f "$tmp" 2>/dev/null || true
+  fi
+}
+ckpt_save_glob() {  # name  find_expr...   (tars every relative match as one tar)
+  local name="$1"; shift
+  local final="$CKPT_DIR/${name}.tar" tmp="$CKPT_DIR/.${name}.$$.partial.tar"
+  local matched
+  matched=$(cd "$LOCAL_DATALINK" && find "$@" 2>/dev/null | head -n1 || true)
+  [ -n "$matched" ] || { echo "WARN: ckpt_save_glob $name: no files matched — not saved" >&2; return 0; }
+  if ( cd "$LOCAL_DATALINK" && find "$@" -print0 | tar --null -cf "$tmp" -T - ); then
+    mv -f "$tmp" "$final"; echo "CKPT save     $name  ->  $final"
+  else
+    echo "WARN: ckpt_save_glob $name failed to tar — continuing without checkpoint" >&2
+    rm -f "$tmp" 2>/dev/null || true
+  fi
+}
+
+# ==============================================================================
+# AGGREGATION (steps 5-8). Skipped wholesale on resume if the aggregated tar is
+# already on RDS. Each expensive sub-step checkpoints to RDS as a single tar and
+# restores it on resume, so a crash never re-pays completed work.
+# ==============================================================================
+if [ "$NEED_AGG" = true ]; then
+
+  # ---- 5. GT DDS checkpoints (method-independent; deseq2 GT) — the ~1.5h step --
+  echo "---- 00_Generate_GT_DDS_Checkpoints.R ----"
+  if ckpt_restore gt-dds Power_Curve_Fitting/GT_DDS_Checkpoints; then
+    echo "  (restored GT DDS checkpoint — skipping DESeq2 dispersion rebuild)"
+  else
+    run_pcf 00_Generate_GT_DDS_Checkpoints.R deseq2
+    ckpt_save gt-dds Power_Curve_Fitting/GT_DDS_Checkpoints
+  fi
+
+  # ---- 5b. shard read-count caches (method-independent; Step 01 depends on these)
+  # Step 01 reads Power_Curve_Fitting/Shard_Cache/<CT>/donor_*_reads.qs. Without
+  # this, 01 aborts with "Run Step 00b first". This produces ~3,800 tiny files,
+  # so the checkpoint is ONE tar (golden HPC rule — never loose files on RDS).
+  echo "---- 00b_Cache_Shard_Read_Counts.R ----"
+  if ckpt_restore shard-cache Power_Curve_Fitting/Shard_Cache; then
+    echo "  (restored shard-cache checkpoint — skipping shard rescan)"
+  else
+    run_pcf 00b_Cache_Shard_Read_Counts.R deseq2
+    ckpt_save shard-cache Power_Curve_Fitting/Shard_Cache
+  fi
+
+  # ---- 6. build per-iteration fitting data per method, namespaced --------------
+  # Step 1 writes Fitting_Data/<model>/unified_fitting_data_per_iteration.qs. Run
+  # it once per method and rename to the __<method> form 01b discovers, so all
+  # three methods coexist for the stack. Each method's namespaced files are
+  # checkpointed, so a crash mid-loop keeps the methods already built.
+  IFS=',' read -r -a METHOD_ARR <<< "$EPA_DE_METHODS"
+  FITTING_ROOT="$LOCAL_DATALINK/Power_Curve_Fitting/Fitting_Data"
+  for m in "${METHOD_ARR[@]}"; do
+    echo "---- 01_Build_Fitting_Dataset.R  method=$m ----"
+    if ckpt_restore "fitting-$m" Power_Curve_Fitting/Fitting_Data; then
+      echo "  (restored fitting checkpoint for $m — skipping rebuild)"
+      continue
+    fi
+    run_pcf 01_Build_Fitting_Dataset.R "$m"
+    # Rename this method's per-iteration outputs to the namespaced filename.
+    if [ -d "$FITTING_ROOT" ]; then
+      while IFS= read -r -d '' f; do
+        mv -f "$f" "${f/unified_fitting_data_per_iteration.qs/unified_fitting_data_per_iteration__${m}.qs}"
+      done < <(find "$FITTING_ROOT" -type f -name 'unified_fitting_data_per_iteration.qs' -print0)
+    fi
+    ckpt_save_glob "fitting-$m" Power_Curve_Fitting/Fitting_Data \
+      -type f -name "unified_fitting_data_per_iteration__${m}.qs"
+  done
+
+  # ---- 7. aggregate to per-grid-point detection rate --------------------------
+  echo "---- 01b_Aggregate_Fitting_Data.R ----"
+  run_pcf 01b_Aggregate_Fitting_Data.R deseq2
+
+  # ---- 7b. produce realistic-grid subset for reweighting sweep ----------------
+  # 01e_Filter_Realistic.R reads aggregated_fitting_data_all.qs and writes the
+  # n_cells >= 100 subset to aggregated_fitting_data_realistic.qs. Both files
+  # ride the same Stage A output tar so downstream Stage B / B-realistic and
+  # their select/shap stages can pick the one they need via XGB_FITTING_DATA.
+  echo "---- 01e_Filter_Realistic.R ----"
+  run_pcf 01e_Filter_Realistic.R deseq2
+
+  # ---- 8. stage out ONE aggregated-data tar to RDS ----------------------------
+  AGG_REL="Power_Curve_Fitting/Fitting_Data/aggregated_fitting_data_all.qs"
+  AGG_REAL_REL="Power_Curve_Fitting/Fitting_Data/aggregated_fitting_data_realistic.qs"
+  [ -f "$LOCAL_DATALINK/$AGG_REL" ] || { echo "FATAL: aggregation produced no $AGG_REL" >&2; exit 5; }
+  [ -f "$LOCAL_DATALINK/$AGG_REAL_REL" ] || { echo "FATAL: 01e produced no $AGG_REAL_REL" >&2; exit 5; }
+  tmp="$XGB_INPUT_DIR/.xgb-aggregated-${EPA_XGB_TAG}.$$.partial.tar"
+  ( cd "$LOCAL_DATALINK" && tar -cf "$tmp" "$AGG_REL" "$AGG_REAL_REL" )
+  mv -f "$tmp" "$AGG_FINAL"
+  echo "AGGREGATED DATA -> $AGG_FINAL"
+
+  # Aggregated tar now supersedes every intermediate checkpoint (steps 5-8 are
+  # skipped wholesale on any future resume). Reclaim the RDS checkpoint space.
+  rm -rf "$CKPT_DIR" 2>/dev/null || true
+
+else
+  echo "RESUME: aggregated tar already present — skipping aggregation steps 5-8."
+  echo "  $AGG_FINAL"
+fi
+
+# ---- 9. FIGURE PHASE (fat Stage A) --------------------------------------------
+# Runs on the SAME node with the harmonised runs-1-10 cartesian tree still local,
+# so no re-staging. Produces, per mode: cartesian Step 3 aggregation (per method)
+# -> Step 8 cross-method pool (all_methods) -> Step 4/07 heatmaps (per method +
+# all_methods) -> Step 9 Figure T/S -> stage ONLY the PNGs to RDS.
+#
+# BEST-EFFORT: the xgb-aggregated tar (Stage B's actual input) is already staged
+# out above, so a plotting hiccup must NOT fail this job and block Stage B/C.
+# The figure phase runs with errexit disabled and its failure is a warning only.
+if [ "$NEED_FIG" = true ]; then
+  echo "================ figure phase ================"
+  set +e
+  (
+    set +e
+    for mode in $EPA_FIG_MODES; do
+      echo "---- figures: mode=$mode : 03_Aggregate_Results.R ----"
+      run_cart 03_Aggregate_Results.R "$mode"
+      echo "---- figures: mode=$mode : 08_Aggregate_CrossMethod.R ----"
+      run_cart 08_Aggregate_CrossMethod.R "$mode"
+      echo "---- figures: mode=$mode : 04_Visualise_Power.R ----"
+      run_cart 04_Visualise_Power.R "$mode"
+      echo "---- figures: mode=$mode : 07_Visualise_Continuous_Grid.R ----"
+      run_cart 07_Visualise_Continuous_Grid.R "$mode"
+      echo "---- figures: mode=$mode : 09_Visualise_Figure_TS.R ----"
+      run_cart 09_Visualise_Figure_TS.R "$mode"
+    done
+  )
+  fig_phase_rc=$?
+  [ "$fig_phase_rc" -eq 0 ] || echo "WARN: figure phase returned $fig_phase_rc (continuing; aggregated tar already staged)" >&2
+
+  # ---- stage out ONLY the PNGs (figures-only tar) ------------------------------
+  mkdir -p "$FIG_DIR_RDS"
+  fig_final="$FIG_FINAL"
+  fig_tmp="$FIG_DIR_RDS/.epa-figures-${EPA_XGB_TAG}.$$.partial.tar"
+  if ( cd "$LOCAL_DATALINK" \
+        && find Cartesian_Downsampling -type f -name '*.png' -print0 \
+           | tar --null -cf "$fig_tmp" -T - ) 2>/dev/null; then
+    if [ -s "$fig_tmp" ]; then
+      mv -f "$fig_tmp" "$fig_final"
+      n_png=$(tar tf "$fig_final" | wc -l)
+      echo "FIGURES -> $fig_final ($n_png PNGs)"
+    else
+      echo "WARN: no PNGs found under Cartesian_Downsampling — figures tar not written" >&2
+      rm -f "$fig_tmp" 2>/dev/null || true
+    fi
+  else
+    echo "WARN: figures tar creation failed" >&2
+    rm -f "$fig_tmp" 2>/dev/null || true
+  fi
+  set -e
+elif [ "$EPA_BUILD_FIGURES" != "true" ]; then
+  echo "EPA_BUILD_FIGURES=$EPA_BUILD_FIGURES — skipping figure phase"
+else
+  echo "RESUME: figures tar already present — skipping figure phase."
+  echo "  $FIG_FINAL"
+fi
+
+# ---- 10. CROSS-METHOD 3x3 TRUTH-SCORING PHASE (best-effort) -------------------
+# Reuses the harmonised runs-1-10 cartesian tree still on local scratch (no
+# re-staging). Scores every method's subsample calls against every method's
+# full-data truth (cartesian Step 10). Its output is a small tidy table (Stage B/C do NOT
+# consume it), so — exactly like the figure phase — a failure here is a warning
+# only and must never fail the job or block the model chain. Runs with errexit
+# disabled; stages out ONE tar.
+if [ "$NEED_XS" = true ]; then
+  echo "================ cross-score phase ================"
+  set +e
+  (
+    set +e
+    echo "---- 10_CrossScore_Methods.R ----"
+    run_cart 10_CrossScore_Methods.R cells false
+  )
+  xs_rc=$?
+  [ "$xs_rc" -eq 0 ] || echo "WARN: cross-score phase returned $xs_rc (continuing; primary outputs already staged)" >&2
+
+  mkdir -p "$XS_DIR_RDS"
+  XS_REL="Cartesian_Downsampling/Cross_Score"
+  if [ -d "$LOCAL_DATALINK/$XS_REL" ]; then
+    xs_tmp="$XS_DIR_RDS/.xgb-crossscore-${EPA_XGB_TAG}.$$.partial.tar"
+    if ( cd "$LOCAL_DATALINK" && tar -cf "$xs_tmp" "$XS_REL" ); then
+      mv -f "$xs_tmp" "$XS_FINAL"
+      echo "CROSS-SCORE -> $XS_FINAL"
+    else
+      echo "WARN: cross-score tar creation failed" >&2
+      rm -f "$xs_tmp" 2>/dev/null || true
+    fi
+  else
+    echo "WARN: cross-score produced no $XS_REL — tar not written" >&2
+  fi
+  set -e
+elif [ "$EPA_BUILD_CROSSSCORE" != "true" ]; then
+  echo "EPA_BUILD_CROSSSCORE=$EPA_BUILD_CROSSSCORE — skipping cross-score phase"
+else
+  echo "RESUME: cross-score tar already present — skipping cross-score phase."
+  echo "  $XS_FINAL"
+fi
+
+rm -rf "$LOCAL_DATALINK" 2>/dev/null || true
+echo "================ xgb-aggregate done ================"

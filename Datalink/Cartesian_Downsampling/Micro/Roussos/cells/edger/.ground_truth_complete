@@ -1,0 +1,6 @@
+completed_at: 2026-06-27T12:38:15+0000
+cell_type: Micro
+method: edger
+n_runs: 5
+gt_split: 0.5
+seed_base: 1234

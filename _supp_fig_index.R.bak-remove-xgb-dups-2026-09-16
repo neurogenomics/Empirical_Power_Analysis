@@ -1,0 +1,105 @@
+# =============================================================================
+# _supp_fig_index.R  --  Canonical supplementary-figure ordering
+# -----------------------------------------------------------------------------
+# Single source of truth for supplementary-figure numbers, shared by BOTH
+# `nature_comms_draft.rmd` (main text) and `nature_comms_supplementary.rmd`.
+#
+# WHY: bookdown's \@ref() cross-references cannot cross the document boundary
+# (the supplement knits as its own file), so every main-text reference to a
+# supplementary figure would otherwise be a hand-typed integer. That makes any
+# reshuffle a manual, error-prone sweep across two files. Instead, author with
+# a stable symbolic KEY (e.g. "recall_chrom_stratified") everywhere, and let
+# SF(key) resolve to the current integer at knit time.
+#
+# TO REORDER / ADD / DROP a supplementary figure:
+#   1. Edit the `supp_fig_keys` vector below (reorder / insert / delete a key).
+#   2. Move the corresponding figure block in the supplement to the matching
+#      position (the vector order MUST track the physical figure order).
+#   3. Re-knit. Every number in BOTH documents updates automatically.
+#
+# USAGE in an .Rmd:
+#   ```{r} source("_supp_fig_index.R") ```           # in the setup chunk
+#   ## Supplementary Fig. `r SF("recall_chrom_stratified")`. Title...
+#   ... (Supplementary Fig. `r SF("recall_chrom_stratified")`) ...
+#
+# SF()  -> integer position of a key (errors loudly on an unknown key, so a
+#          typo can never silently ship as a wrong or missing number).
+# =============================================================================
+
+supp_fig_keys <- c(
+  # --- Cohort QC (first main-text mention) -----------------------------------
+  "pca_gallery",                      # PCA gallery, unfiltered + filtered
+
+  # --- Cross-method (truth-method x downsampling-method) grids ---------------
+  "crossmethod_recall_cells",
+  "crossmethod_recall_reads",
+  "crossmethod_precision_cells",
+  "crossmethod_precision_reads",
+
+  # --- Per-method downsampling grids: Astrocytes -----------------------------
+  "bymethod_astro_recall_surface",
+  "bymethod_astro_precision_surface",
+  "bymethod_astro_recall_tiny",
+  "bymethod_astro_precision_tiny",
+  "bymethod_astro_recall_small",
+  "bymethod_astro_precision_small",
+
+  # --- Per-method downsampling grids: Microglia ------------------------------
+  "bymethod_micro_recall_surface",
+  "bymethod_micro_precision_surface",
+  "bymethod_micro_recall_tiny",
+  "bymethod_micro_precision_tiny",
+  "bymethod_micro_recall_small",
+  "bymethod_micro_precision_small",
+
+  # --- Per-method downsampling grids: Oligodendrocytes -----------------------
+  "bymethod_oligo_recall_surface",
+  "bymethod_oligo_precision_surface",
+  "bymethod_oligo_recall_tiny",
+  "bymethod_oligo_precision_tiny",
+  "bymethod_oligo_recall_small",
+  "bymethod_oligo_precision_small",
+
+  # --- Core recall / precision surfaces (method-pooled) ----------------------
+  "recall_continuous_surfaces",       # continuous recall surfaces, cells+counts
+  "precision_heatmaps",               # precision heatmaps, cells+counts
+  "recall_discrete_heatmaps",         # discrete recall heatmaps, cells+counts
+
+  # --- XGBoost power-model interpretation / diagnostics (referenced) ---------
+  "xgb_f1_partitions",                # classifier F1 across partitioning schemes
+  "xgb_shap_dependence",              # SHAP dependence on design covariates
+
+  # --- Not referenced from main text (kept; appended after referenced set) ---
+  "recall_chrom_stratified",          # chromosome-stratified recall heatmaps
+  "deg_chrom_distribution",           # DEG chromosome distribution
+  "xgb_shap_violin",                  # SHAP violin: covariate-effect distribution
+  "xgb_shap_dependence_by_config",    # SHAP dependence across reweighting configs
+  "xgb_calibration",                  # out-of-fold calibration curves
+  "xgb_mean_detection",               # mean observed detection over |LFC| x donors
+  "xgb_shap_importance",              # SHAP importance across models
+  "xgb_mae_configs"                   # bin-balanced MAE across configurations
+)
+
+# Resolve a key to its 1-based supplementary-figure number.
+# Errors loudly on an unknown key so a typo cannot ship as a wrong/blank number.
+SF <- function(key) {
+  idx <- match(key, supp_fig_keys)
+  if (anyNA(idx)) {
+    stop(
+      "SF(): unknown supplementary-figure key(s): ",
+      paste(key[is.na(idx)], collapse = ", "),
+      "\n  Known keys are defined in _supp_fig_index.R (supp_fig_keys).",
+      call. = FALSE
+    )
+  }
+  idx
+}
+
+# Guard against accidental duplicate keys (would make numbering ambiguous).
+if (anyDuplicated(supp_fig_keys)) {
+  stop(
+    "_supp_fig_index.R: duplicate key(s) in supp_fig_keys: ",
+    paste(unique(supp_fig_keys[duplicated(supp_fig_keys)]), collapse = ", "),
+    call. = FALSE
+  )
+}

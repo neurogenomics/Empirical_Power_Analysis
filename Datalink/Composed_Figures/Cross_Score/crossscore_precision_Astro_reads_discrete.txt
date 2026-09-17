@@ -1,0 +1,1 @@
+Cross-method precision for Astrocytes (discrete panels). Rows are the DE method whose downsampled calls are being scored, columns are the DE method providing the full-data truth set. Precision is computed over all called genes irrespective of truth |LFC|. Cyan tile outlines marks the 80% threshold. Diagonal panels (cyan outline) are self-scored. Y axis: Target Reads per Donor.

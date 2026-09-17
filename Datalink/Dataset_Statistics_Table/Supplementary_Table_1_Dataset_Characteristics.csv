@@ -1,0 +1,7 @@
+"Dataset","Brain_Region","Cell_Type","N_Donors","N_Cells","Mean_Cells_Per_Donor","SD_Cells_Per_Donor","Median_Cells_Per_Donor","Mean_UMIs_Per_Cell","SD_UMIs_Per_Cell","Median_UMIs_Per_Cell","Mean_Genes_Per_Cell","SD_Genes_Per_Cell","Median_Genes_Per_Cell"
+"PsychAD","DLPFC","Astro",1293,675930,522.8,342.3,466,9456,5695,8197,3504,1195,3445
+"PsychAD","DLPFC","Micro",1214,253872,209.1,132.7,187,4426,2212,3944,2298,708,2228
+"PsychAD","DLPFC","Oligo",1303,2089233,1603.4,1206.9,1364,5742,2885,5052,2535,741,2436
+"ROSMAP","DLPFC","Astro",447,225327,504.1,186.3,499,5957,3118,5420,2728,896,2709
+"ROSMAP","DLPFC","Micro",445,85452,192,89.5,181,3199,1582,2976,1929,678,1917
+"ROSMAP","DLPFC","Oligo",449,404411,900.7,411.1,860,4140,2576,3628,2141,836,2081

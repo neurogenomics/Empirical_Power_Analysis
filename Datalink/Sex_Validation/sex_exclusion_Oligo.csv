@@ -1,0 +1,3 @@
+"donor_id","cell_type","sex_label","flag","XIST_cpm","P_female_XIST","Y_combined_cpm","P_male_Y","n_cells","total_umi"
+"Donor_1296","Oligo","Male","XIST_present_in_male",1475.3018,0.999489758683889,96.3065,0.997443934706571,3625,14298091
+"Donor_1331","Oligo","Female","Y_present_in_female",790.0571,0.985473167168637,85.4115,0.9915816000771,351,1545458

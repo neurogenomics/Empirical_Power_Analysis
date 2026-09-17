@@ -1,0 +1,61 @@
+# Citation File Format — machine-readable citation metadata
+# Spec: https://citation-file-format.github.io
+# Validate: cffconvert --validate --infile CITATION.cff
+
+cff-version: 1.2.0
+message: "If you use this pipeline or reference the empirical power analysis dataset, please cite both the software and the paper."
+title: "Empirical Power Analysis for Single-Cell RNA-seq Differential Expression"
+version: "1.0.0-dev"
+date-released: "2026-05-01"
+license: MIT
+repository-code: "https://github.com/neurogenomics/Empirical_Power_Analysis"
+url: "https://github.com/neurogenomics/Empirical_Power_Analysis"
+doi: "10.5281/zenodo.TBD"    # mint on first release
+
+type: software
+
+authors:
+  - family-names: Crampton
+    given-names: Chris
+    affiliation: "UK Dementia Research Institute, Imperial College London"
+    orcid: "https://orcid.org/0000-0000-0000-0000"     # TODO: add Chris's ORCID
+  - family-names: Fawad
+    given-names: Salman
+    affiliation: "UK Biobank"
+    orcid: "https://orcid.org/0000-0000-0000-0000"     # TODO
+  - family-names: Dash
+    given-names: Hiranyamaya
+    affiliation: "UK Dementia Research Institute, Imperial College London"
+    orcid: "https://orcid.org/0000-0000-0000-0000"     # TODO
+  - family-names: Skene
+    given-names: Nathan G.
+    email: n.skene@imperial.ac.uk
+    affiliation: "UK Dementia Research Institute, Imperial College London"
+    orcid: "https://orcid.org/0000-0002-6807-3180"
+
+preferred-citation:
+  type: article
+  title: "Current Single-Cell Study Designs Are Systematically Underpowered for Small-Effect Genes: Empirical Power Analysis Across 22 Million Detection Outcomes"
+  authors:
+    - family-names: Crampton
+      given-names: Chris
+    - family-names: Fawad
+      given-names: Salman
+    - family-names: Dash
+      given-names: Hiranyamaya
+    - family-names: Skene
+      given-names: Nathan G.
+  year: 2026
+  journal: "bioRxiv"
+  doi: "10.1101/TBD"     # update on preprint posting
+
+keywords:
+  - single-cell RNA-seq
+  - differential expression
+  - power analysis
+  - pseudobulk
+  - DESeq2
+  - reproducible research
+  - Docker
+  - bioinformatics
+  - neurogenomics

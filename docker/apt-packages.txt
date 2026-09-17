@@ -1,0 +1,35 @@
+# Exact apt package closure added on top of the digest-pinned Bioconductor base.
+# Generated from a base-image dpkg diff after installing the TeX/PBS runtime extras.
+
+ccache=4.9.1-1
+gosu=1.17-1ubuntu0.24.04.3
+jq=1.7.1-3ubuntu0.24.04.2
+libapache-pom-java=29-2
+libcommons-logging-java=1.3.0-1ubuntu1
+libcommons-parent-java=56-1
+libfontbox-java=1:1.8.16-5
+libjq1:amd64=1.7.1-3ubuntu0.24.04.2
+libkpathsea6:amd64=2023.20230311.66589-9build3
+libonig5:amd64=6.9.9-1build1
+libpaper-utils=1.1.29build1
+libpdfbox-java=1:1.8.16-5
+libpotrace0:amd64=1.16-2build1
+libptexenc1:amd64=2023.20230311.66589-9build3
+libsynctex2:amd64=2023.20230311.66589-9build3
+libteckit0:amd64=2.5.12+ds1-1
+libtexlua53-5:amd64=2023.20230311.66589-9build3
+libzzip-0-13t64:amd64=0.13.72+dfsg.1-1.2build1
+t1utils=1.41-4build3
+teckit=2.5.12+ds1-1
+texlive-base=2023.20240207-1
+texlive-binaries=2023.20230311.66589-9build3
+texlive-fonts-recommended=2023.20240207-1
+texlive-latex-base=2023.20240207-1
+texlive-latex-extra=2023.20240207-1
+texlive-latex-recommended=2023.20240207-1
+texlive-pictures=2023.20240207-1
+texlive-plain-generic=2023.20240207-1
+texlive-xetex=2023.20240207-1
+tini=0.19.0-1
+tipa=2:1.3-21
+xdg-utils=1.1.3-4.1ubuntu3
