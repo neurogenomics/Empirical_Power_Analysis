@@ -151,7 +151,6 @@ R/**/output/
 # methods or results, so kept out of the public release.
 # =============================================================================
 blog/
-R/gene_classification/
 
 # =============================================================================
 # Orphaned / personal helper scripts — real code, but not wired into any
@@ -169,3 +168,60 @@ R/figure_data_generation/08_Recall_Precision_Grid.R
 # =============================================================================
 manuscript.rmd
 paper_final_draft.rmd
+
+# =============================================================================
+# PUBLIC-RELEASE CLEANUP (added at repo reset)
+# Keep ONLY paper-cited Datalink artefacts; drop internal/agent docs.
+# =============================================================================
+
+# Agent-facing / internal contributor docs (reference internal tooling and
+# server paths; not for the public repo).
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+
+# Suffixed editor / pipeline backups (the plain *.bak rule above misses these).
+*.bak-*
+
+# --- Datalink: ship ONLY the paper-cited final artefacts --------------------
+# The pipelines regenerate thousands of intermediate per-bin / per-method
+# heatmaps, surfaces, cross-score tables, fitted-model binaries, and completion
+# sentinels under Datalink/. The public repo tracks only the paper-cited figures
+# and source-data files the manuscript renders (see README "Paper asset lookup").
+# git never ignores an ALREADY-TRACKED file, so those committed artefacts stay
+# tracked despite these broad rules; to add a NEW paper figure/table use
+# `git add -f Datalink/<path>`.
+Datalink/**/*.png
+Datalink/**/*.pdf
+Datalink/**/*.svg
+Datalink/**/*.tif
+Datalink/**/*.tiff
+Datalink/**/*.csv
+Datalink/**/*.txt
+Datalink/**/*.md
+Datalink/**/*.ubj
+Datalink/**/*.json
+Datalink/**/*.gmt
+Datalink/**/*.rnk
+# Pipeline completion sentinels (.step*_complete, .ground_truth_complete, ...).
+Datalink/**/.*_complete
+# Symlink to the private shared raw-data tree (must not ship).
+/Datalink/raw_data
+
+# =============================================================================
+# Supplementary Data package (journal / bioRxiv deliverables)
+# EXPLICITLY SHIP the four external Supplementary Data files. The broad
+# Datalink/**/*.csv rule above ignores SD3/SD4, so re-include them here.
+# SD1 (.xlsx) and SD2 (.zip) match no rule but are listed for explicitness.
+# =============================================================================
+!Datalink/Supplementary_Data/Supplementary_Data_1_dataset_summary.xlsx
+!Datalink/Supplementary_Data/Supplementary_Data_2_cartesian_downsampling.zip
+!Datalink/Supplementary_Data/Supplementary_Data_3_truth_gene_characteristics.csv
+!Datalink/Supplementary_Data/Supplementary_Data_4_xgboost_hyperparameters.csv
+
+# Unpacked SD2 staging folder - regenerable from the .zip; never ship the loose .qs.
+Datalink/Supplementary_Data/Supplementary_Data_2_cartesian_downsampling/
+
+# Helper scripts used to BUILD the Supplementary Data - kept for provenance,
+# hidden from the public release.
+Datalink/Supplementary_Data/_scripts/

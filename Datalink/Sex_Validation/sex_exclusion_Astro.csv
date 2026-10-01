@@ -1,3 +1,0 @@
-"donor_id","cell_type","sex_label","flag","XIST_cpm","P_female_XIST","Y_combined_cpm","P_male_Y","n_cells","total_umi"
-"Donor_1296","Astro","Male","XIST_present_in_male",1071.1596,0.999116479204042,71.0695,0.998871785475681,1004,7035366
-"Donor_1331","Astro","Female","Y_present_in_female",450.0592,0.920197835870602,61.9784,0.995543773235933,159,1048751

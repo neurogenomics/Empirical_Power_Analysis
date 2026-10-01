@@ -1,6 +1,5 @@
 ---
 title: "Single-Cell Study Designs Are Systematically Underpowered for Small-Effect Genes"
-#author: "Chris Crampton, Salman Fawad, Toby Clark, Hiru Dash, Nathan Skene"
 date: "`r Sys.Date()`"
 output:
   bookdown::html_document2:
@@ -713,101 +712,101 @@ knitr::kable(
 )
 ```
 
-------------------------------------------------------------------------
+<!-- ------------------------------------------------------------------------ -->
 
-# Supplementary Data (external files)
+<!-- # Supplementary Data (external files) -->
 
-Per Nature Communications requirements, large tabular datasets are provided as separate files rather than embedded in this PDF. Each is listed below with its source path and descriptive caption.
+<!-- Per Nature Communications requirements, large tabular datasets are provided as separate files rather than embedded in this PDF. Each is listed below with its source path and descriptive caption. -->
 
-## Supplementary Data 1. Dataset summary and gene-universe composition
+<!-- ## Supplementary Data 1. Dataset summary and gene-universe composition -->
 
-**File:** `Supplementary_Data_1_dataset_summary.xlsx` (generated from `Datalink/Paper_Source_Data/dataset_statistics.csv` and `Datalink/Full_Ground_Truth/Gene_Audit_Full_Universe_Combined.csv`)
+<!-- **File:** `Supplementary_Data_1_dataset_summary.xlsx` (generated from `Datalink/Paper_Source_Data/dataset_statistics.csv` and `Datalink/Full_Ground_Truth/Gene_Audit_Full_Universe_Combined.csv`) -->
 
-Two linked tables. (1) Dataset characteristics for the PsychAD dataset, including donor counts, cell counts, brain region, covariates, download URL, and mean/median cells-per-donor, UMIs-per-cell, and genes-per-cell after filtering (age $\geq$ 40, $\geq$ 30 cells per donor). (2) Gene-composition audit for the full PsychAD astrocyte gene universe, showing total genes and the breakdown by biotype (protein-coding, lncRNA, pseudogene) and chromosome (X, Y, autosomal, PAR).
+<!-- Two linked tables. (1) Dataset characteristics for the PsychAD dataset, including donor counts, cell counts, brain region, covariates, download URL, and mean/median cells-per-donor, UMIs-per-cell, and genes-per-cell after filtering (age $\geq$ 40, $\geq$ 30 cells per donor). (2) Gene-composition audit for the full PsychAD astrocyte gene universe, showing total genes and the breakdown by biotype (protein-coding, lncRNA, pseudogene) and chromosome (X, Y, autosomal, PAR). -->
 
-```{r suppdata1-preview}
-source_data_1 <- read.csv(
-  here::here("Datalink", "Paper_Source_Data", "dataset_statistics.csv"),
-  stringsAsFactors = FALSE, check.names = FALSE
-)
-source_data_1 <- source_data_1[source_data_1$Dataset == "PsychAD", ]
-source_data_1 <- source_data_1[, c(
-  "Dataset", "Brain_Region", "Cell_Type", "N_Donors", "N_Cells",
-  "Mean_Cells_Per_Donor", "Median_Cells_Per_Donor",
-  "Mean_UMIs_Per_Cell", "Median_UMIs_Per_Cell",
-  "Mean_Genes_Per_Cell", "Median_Genes_Per_Cell"
-)]
+<!-- ```{r suppdata1-preview} -->
+<!-- source_data_1 <- read.csv( -->
+<!--   here::here("Datalink", "Paper_Source_Data", "dataset_statistics.csv"), -->
+<!--   stringsAsFactors = FALSE, check.names = FALSE -->
+<!-- ) -->
+<!-- source_data_1 <- source_data_1[source_data_1$Dataset == "PsychAD", ] -->
+<!-- source_data_1 <- source_data_1[, c( -->
+<!--   "Dataset", "Brain_Region", "Cell_Type", "N_Donors", "N_Cells", -->
+<!--   "Mean_Cells_Per_Donor", "Median_Cells_Per_Donor", -->
+<!--   "Mean_UMIs_Per_Cell", "Median_UMIs_Per_Cell", -->
+<!--   "Mean_Genes_Per_Cell", "Median_Genes_Per_Cell" -->
+<!-- )] -->
 
-knitr::kable(
-  source_data_1,
-  col.names = c("Dataset", "Brain Region", "Cell Type", "N Donors", "N Cells",
-                "Mean Cells/Donor", "Median Cells/Donor", "Mean UMIs/Cell",
-                "Median UMIs/Cell", "Mean Genes/Cell", "Median Genes/Cell"),
-  digits = c(0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0)
-)
+<!-- knitr::kable( -->
+<!--   source_data_1, -->
+<!--   col.names = c("Dataset", "Brain Region", "Cell Type", "N Donors", "N Cells", -->
+<!--                 "Mean Cells/Donor", "Median Cells/Donor", "Mean UMIs/Cell", -->
+<!--                 "Median UMIs/Cell", "Mean Genes/Cell", "Median Genes/Cell"), -->
+<!--   digits = c(0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0) -->
+<!-- ) -->
 
-gene_audit <- read.csv(
-  here::here("Datalink", "Full_Ground_Truth",
-             "Gene_Audit_Full_Universe_Combined.csv"),
-  stringsAsFactors = FALSE, check.names = FALSE
-)
+<!-- gene_audit <- read.csv( -->
+<!--   here::here("Datalink", "Full_Ground_Truth", -->
+<!--              "Gene_Audit_Full_Universe_Combined.csv"), -->
+<!--   stringsAsFactors = FALSE, check.names = FALSE -->
+<!-- ) -->
 
-# Restrict to the PsychAD gene universe (stored under its legacy lab name "Roussos")
-gene_audit <- gene_audit[gene_audit$Dataset == "Roussos", ]
-gene_audit$Dataset <- "PsychAD"
+<!-- # Restrict to the PsychAD gene universe (stored under its legacy lab name "Roussos") -->
+<!-- gene_audit <- gene_audit[gene_audit$Dataset == "Roussos", ] -->
+<!-- gene_audit$Dataset <- "PsychAD" -->
 
-# Pivot to (CellType, Dataset) rows, key biotype/chromosome columns
-gene_audit_display <- gene_audit[, c(
-  "CellType", "Dataset", "Total",
-  "protein_coding", "lncRNA", "pseudogene",
-  "X_chr", "Y_chr", "autosomal", "PAR"
-)]
+<!-- # Pivot to (CellType, Dataset) rows, key biotype/chromosome columns -->
+<!-- gene_audit_display <- gene_audit[, c( -->
+<!--   "CellType", "Dataset", "Total", -->
+<!--   "protein_coding", "lncRNA", "pseudogene", -->
+<!--   "X_chr", "Y_chr", "autosomal", "PAR" -->
+<!-- )] -->
 
-knitr::kable(
-  gene_audit_display,
-  col.names = c("Cell Type", "Dataset", "Total genes",
-                "Protein-coding", "lncRNA", "Pseudogene",
-                "X", "Y", "Autosomal", "PAR"),
-  digits = 0
-)
-```
-```{r sourcedata-table1, echo=FALSE}
-source_data_1 <- read.csv(
-  here::here("Datalink", "Paper_Source_Data", "dataset_statistics.csv"),
-  stringsAsFactors = FALSE,
-  check.names = FALSE
-)
-source_data_1 <- source_data_1[source_data_1$Dataset == "PsychAD", ]
+<!-- knitr::kable( -->
+<!--   gene_audit_display, -->
+<!--   col.names = c("Cell Type", "Dataset", "Total genes", -->
+<!--                 "Protein-coding", "lncRNA", "Pseudogene", -->
+<!--                 "X", "Y", "Autosomal", "PAR"), -->
+<!--   digits = 0 -->
+<!-- ) -->
+<!-- ``` -->
+<!-- ```{r sourcedata-table1, echo=FALSE} -->
+<!-- source_data_1 <- read.csv( -->
+<!--   here::here("Datalink", "Paper_Source_Data", "dataset_statistics.csv"), -->
+<!--   stringsAsFactors = FALSE, -->
+<!--   check.names = FALSE -->
+<!-- ) -->
+<!-- source_data_1 <- source_data_1[source_data_1$Dataset == "PsychAD", ] -->
 
-# Preserve the paper's reduced column set (drop the SD columns the CSV carries)
-source_data_1 <- source_data_1[, c(
-  "Dataset", "Brain_Region", "Cell_Type", "N_Donors", "N_Cells",
-  "Mean_Cells_Per_Donor", "Median_Cells_Per_Donor",
-  "Mean_UMIs_Per_Cell", "Median_UMIs_Per_Cell",
-  "Mean_Genes_Per_Cell", "Median_Genes_Per_Cell"
-)]
+<!-- # Preserve the paper's reduced column set (drop the SD columns the CSV carries) -->
+<!-- source_data_1 <- source_data_1[, c( -->
+<!--   "Dataset", "Brain_Region", "Cell_Type", "N_Donors", "N_Cells", -->
+<!--   "Mean_Cells_Per_Donor", "Median_Cells_Per_Donor", -->
+<!--   "Mean_UMIs_Per_Cell", "Median_UMIs_Per_Cell", -->
+<!--   "Mean_Genes_Per_Cell", "Median_Genes_Per_Cell" -->
+<!-- )] -->
 
-knitr::kable(
-  source_data_1,
-  caption = "Dataset characteristics for PsychAD, the primary power analysis dataset (single-nucleus RNA-seq, Dorsolateral Prefrontal Cortex). Mean and median cells per donor, UMIs per cell, and genes per cell computed after filtering (age ≥40 years, cells ≥30 per donor).",
-  col.names = c("Dataset", "Brain Region", "Cell Type", "N Donors", "N Cells",
-                "Mean Cells/Donor", "Median Cells/Donor", "Mean UMIs/Cell",
-                "Median UMIs/Cell", "Mean Genes/Cell", "Median Genes/Cell"),
-  digits = c(0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0)
-)
+<!-- knitr::kable( -->
+<!--   source_data_1, -->
+<!--   caption = "Dataset characteristics for PsychAD, the primary power analysis dataset (single-nucleus RNA-seq, Dorsolateral Prefrontal Cortex). Mean and median cells per donor, UMIs per cell, and genes per cell computed after filtering (age ≥40 years, cells ≥30 per donor).", -->
+<!--   col.names = c("Dataset", "Brain Region", "Cell Type", "N Donors", "N Cells", -->
+<!--                 "Mean Cells/Donor", "Median Cells/Donor", "Mean UMIs/Cell", -->
+<!--                 "Median UMIs/Cell", "Mean Genes/Cell", "Median Genes/Cell"), -->
+<!--   digits = c(0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0) -->
+<!-- ) -->
 
-fig1_source_data_1 <- data.frame(
-  Dataset = "PsychAD",
-  Type = "snRNA-seq",
-  `Brain Region` = "Dorsolateral Prefrontal Cortex",
-  `Num Donors` = paste0(val("n_donors_micro", big = TRUE), "-", val("n_donors_oligo", big = TRUE)),
-  Covariates = "Source, ethnicity, disease",
-  Availability = "[CELLxGENE](https://cellxgene.cziscience.com/collections/84ce6837-548d-4a1f-919f-0bc0d9a3952f)",
-  check.names = FALSE
-)
+<!-- fig1_source_data_1 <- data.frame( -->
+<!--   Dataset = "PsychAD", -->
+<!--   Type = "snRNA-seq", -->
+<!--   `Brain Region` = "Dorsolateral Prefrontal Cortex", -->
+<!--   `Num Donors` = paste0(val("n_donors_micro", big = TRUE), "-", val("n_donors_oligo", big = TRUE)), -->
+<!--   Covariates = "Source, ethnicity, disease", -->
+<!--   Availability = "[CELLxGENE](https://cellxgene.cziscience.com/collections/84ce6837-548d-4a1f-919f-0bc0d9a3952f)", -->
+<!--   check.names = FALSE -->
+<!-- ) -->
 
-knitr::kable(fig1_source_data_1)
-```
+<!-- knitr::kable(fig1_source_data_1) -->
+<!-- ``` -->
 
 <!-- COMMENTED OUT 2026-09-04: cross-dataset universe-controlled IoU matrices removed from the paper.
 ## Supplementary Data (cross-dataset). Universe-controlled IoU matrices
@@ -842,73 +841,73 @@ knitr::kable(
 # ```
 -->
 
-## Supplementary Data 2. Cartesian downsampling results (per grid point)
+<!-- ## Supplementary Data 2. Cartesian downsampling results (per grid point) -->
 
-**Files:**
-- `Datalink/Cartesian_Downsampling/{Astro,Micro,Oligo}/Roussos/cells/Plots/Aggregated_Summary_Data.qs`
-- `Datalink/Cartesian_Downsampling/{Astro,Micro,Oligo}/Roussos/reads/Plots/Aggregated_Summary_Data.qs`
+<!-- **Files:** -->
+<!-- - `Datalink/Cartesian_Downsampling/{Astro,Micro,Oligo}/Roussos/cells/Plots/Aggregated_Summary_Data.qs` -->
+<!-- - `Datalink/Cartesian_Downsampling/{Astro,Micro,Oligo}/Roussos/reads/Plots/Aggregated_Summary_Data.qs` -->
 
-Aggregated precision and recall for all 12 $\times$ 14 grid points across ten robustness runs, stratified by LFC magnitude bin (Tiny 0.2-1.0, Small 1.0-2.0, Medium 2.0-3.0, Large >3.0) and chromosome type. Serialized R objects (qs format). Load with `qs::qread()`. Columns: `n_donors`, `n_cells`, `run_id`, `iteration_id`, `mean_recall`, `mean_precision`, and stratified metrics by LFC bin and chromosome type.
+<!-- Aggregated precision and recall for all 12 $\times$ 14 grid points across ten robustness runs, stratified by LFC magnitude bin (Tiny 0.2-1.0, Small 1.0-2.0, Medium 2.0-3.0, Large >3.0) and chromosome type. Serialized R objects (qs format). Load with `qs::qread()`. Columns: `n_donors`, `n_cells`, `run_id`, `iteration_id`, `mean_recall`, `mean_precision`, and stratified metrics by LFC bin and chromosome type. -->
 
-## Supplementary Data 3. Truth-set gene characteristics
+<!-- ## Supplementary Data 3. Truth-set gene characteristics -->
 
-**File:** `Datalink/DE_Diagnostics/Shared_Gene_Diagnostics/Full_Truth_Set_Summary.csv`
+<!-- **File:** `Datalink/DE_Diagnostics/Shared_Gene_Diagnostics/Full_Truth_Set_Summary.csv` -->
 
-Gene-level characteristics of truth sets across cell types at |LFC| > 1 threshold, giving both median (robust) and mean (skew-reflective) values for |LFC|, baseMean, dispersion, and signal-to-noise ratio (|LFC|/SE).
+<!-- Gene-level characteristics of truth sets across cell types at |LFC| > 1 threshold, giving both median (robust) and mean (skew-reflective) values for |LFC|, baseMean, dispersion, and signal-to-noise ratio (|LFC|/SE). -->
 
-```{r suppdata7-preview-median}
-truth_chars <- read.csv(
-  here::here("Datalink", "Paper_Source_Data", "truth_gene_characteristics.csv")
-)
-truth_chars_median <- truth_chars[, c(
-  "Cell_Type", "N_Genes",
-  "Median_LFC", "Median_SNR", "Median_BaseMean", "Median_Dispersion"
-)]
-knitr::kable(truth_chars_median,
-             caption = "Preview: median truth-gene characteristics by cell type. LFC = log~2~ fold change, SNR = signal-to-noise ratio (|LFC|/SE). Full data provided as Supplementary Data 3.",
-             col.names = c("Cell Type", "N Genes", "Median |LFC|", "Median SNR",
-                           "Median BaseMean", "Median Dispersion"),
-             escape = FALSE,
-             digits = c(0, 0, 3, 2, 2, 3))
-```
+<!-- ```{r suppdata7-preview-median} -->
+<!-- truth_chars <- read.csv( -->
+<!--   here::here("Datalink", "Paper_Source_Data", "truth_gene_characteristics.csv") -->
+<!-- ) -->
+<!-- truth_chars_median <- truth_chars[, c( -->
+<!--   "Cell_Type", "N_Genes", -->
+<!--   "Median_LFC", "Median_SNR", "Median_BaseMean", "Median_Dispersion" -->
+<!-- )] -->
+<!-- knitr::kable(truth_chars_median, -->
+<!--              caption = "Preview: median truth-gene characteristics by cell type. LFC = log~2~ fold change, SNR = signal-to-noise ratio (|LFC|/SE). Full data provided as Supplementary Data 3.", -->
+<!--              col.names = c("Cell Type", "N Genes", "Median |LFC|", "Median SNR", -->
+<!--                            "Median BaseMean", "Median Dispersion"), -->
+<!--              escape = FALSE, -->
+<!--              digits = c(0, 0, 3, 2, 2, 3)) -->
+<!-- ``` -->
 
-```{r suppdata7-preview-mean}
-truth_chars_mean <- truth_chars[, c(
-  "Cell_Type", "N_Genes",
-  "Mean_LFC", "Mean_SNR", "Mean_BaseMean", "Mean_Dispersion"
-)]
-knitr::kable(truth_chars_mean,
-             caption = "Preview: mean truth-gene characteristics by cell type. Means reflect the right-skewed distribution of expression levels.",
-             col.names = c("Cell Type", "N Genes", "Mean |LFC|", "Mean SNR",
-                           "Mean BaseMean", "Mean Dispersion"),
-             escape = FALSE,
-             digits = c(0, 0, 3, 2, 2, 3))
-```
+<!-- ```{r suppdata7-preview-mean} -->
+<!-- truth_chars_mean <- truth_chars[, c( -->
+<!--   "Cell_Type", "N_Genes", -->
+<!--   "Mean_LFC", "Mean_SNR", "Mean_BaseMean", "Mean_Dispersion" -->
+<!-- )] -->
+<!-- knitr::kable(truth_chars_mean, -->
+<!--              caption = "Preview: mean truth-gene characteristics by cell type. Means reflect the right-skewed distribution of expression levels.", -->
+<!--              col.names = c("Cell Type", "N Genes", "Mean |LFC|", "Mean SNR", -->
+<!--                            "Mean BaseMean", "Mean Dispersion"), -->
+<!--              escape = FALSE, -->
+<!--              digits = c(0, 0, 3, 2, 2, 3)) -->
+<!-- ``` -->
 
-## Supplementary Data 4. XGBoost hyperparameter configuration ranking
+<!-- ## Supplementary Data 4. XGBoost hyperparameter configuration ranking -->
 
-**File:** `Datalink/Power_Curve_Fitting/Models/xgboost/realistic/model_selection.csv`
+<!-- **File:** `Datalink/Power_Curve_Fitting/Models/xgboost/realistic/model_selection.csv` -->
 
-Out-of-fold performance for all 36 gradient-boosted-tree (XGBoost) configurations of the production (realistic, $n_{\text{cells}} \geq 100$) power model: every combination of loss-reweighting exponent ($\alpha \in \{0, 0.5, 1\}$), maximum tree depth, learning rate, and minimum child weight, ranked by out-of-fold bin-balanced mean absolute error (MAE). The promoted production configuration is the top-ranked row.
+<!-- Out-of-fold performance for all 36 gradient-boosted-tree (XGBoost) configurations of the production (realistic, $n_{\text{cells}} \geq 100$) power model: every combination of loss-reweighting exponent ($\alpha \in \{0, 0.5, 1\}$), maximum tree depth, learning rate, and minimum child weight, ranked by out-of-fold bin-balanced mean absolute error (MAE). The promoted production configuration is the top-ranked row. -->
 
-```{r suppdata4-configs}
-config_ranking <- read.csv(
-  here::here("Datalink", "Power_Curve_Fitting", "Models", "xgboost",
-             "realistic", "model_selection.csv"),
-  stringsAsFactors = FALSE, check.names = FALSE
-)
-config_ranking <- config_ranking[order(config_ranking$bin_balanced_MAE), ]
+<!-- ```{r suppdata4-configs} -->
+<!-- config_ranking <- read.csv( -->
+<!--   here::here("Datalink", "Power_Curve_Fitting", "Models", "xgboost", -->
+<!--              "realistic", "model_selection.csv"), -->
+<!--   stringsAsFactors = FALSE, check.names = FALSE -->
+<!-- ) -->
+<!-- config_ranking <- config_ranking[order(config_ranking$bin_balanced_MAE), ] -->
 
-knitr::kable(
-  config_ranking,
-  caption = "All 36 XGBoost hyperparameter configurations for the realistic power model, ranked by out-of-fold bin-balanced MAE (best first). The top row is the promoted production model. Columns: reweighting exponent (alpha), maximum tree depth, learning rate (eta), minimum child weight, row- and column-subsample fractions, selected number of boosting rounds, cross-validated log loss, bin-balanced MAE, and its 90th-percentile absolute error.",
-  col.names = c("Config", "$\\alpha$", "Max depth", "$\\eta$", "Min child weight",
-                "Subsample", "Colsample", "Best nrounds", "CV logloss",
-                "Bin-balanced MAE", "Bin-balanced p90 err"),
-  row.names = FALSE,
-  digits = c(0, 1, 0, 2, 0, 1, 1, 0, 4, 4, 4)
-)
-```
+<!-- knitr::kable( -->
+<!--   config_ranking, -->
+<!--   caption = "All 36 XGBoost hyperparameter configurations for the realistic power model, ranked by out-of-fold bin-balanced MAE (best first). The top row is the promoted production model. Columns: reweighting exponent (alpha), maximum tree depth, learning rate (eta), minimum child weight, row- and column-subsample fractions, selected number of boosting rounds, cross-validated log loss, bin-balanced MAE, and its 90th-percentile absolute error.", -->
+<!--   col.names = c("Config", "$\\alpha$", "Max depth", "$\\eta$", "Min child weight", -->
+<!--                 "Subsample", "Colsample", "Best nrounds", "CV logloss", -->
+<!--                 "Bin-balanced MAE", "Bin-balanced p90 err"), -->
+<!--   row.names = FALSE, -->
+<!--   digits = c(0, 1, 0, 2, 0, 1, 1, 0, 4, 4, 4) -->
+<!-- ) -->
+<!-- ``` -->
 
 ------------------------------------------------------------------------
 

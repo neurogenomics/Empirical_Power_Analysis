@@ -1,6 +1,0 @@
-completed_at: 2026-06-27T11:54:12+0000
-cell_type: Astro
-method: limma
-n_runs: 5
-gt_split: 0.5
-seed_base: 1234

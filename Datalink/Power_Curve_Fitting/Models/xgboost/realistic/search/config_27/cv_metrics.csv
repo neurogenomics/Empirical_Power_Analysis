@@ -1,2 +1,0 @@
-"config_index","max_depth","eta","min_child_weight","subsample","colsample_bytree","alpha","best_nrounds","cv_logloss"
-27,6,0.03,10,0.8,0.8,1,1185,0.54011737758391

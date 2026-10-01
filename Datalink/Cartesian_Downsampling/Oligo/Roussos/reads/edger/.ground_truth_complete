@@ -1,6 +1,0 @@
-completed_at: 2026-06-27T15:59:00+0000
-cell_type: Oligo
-method: edger
-n_runs: 5
-gt_split: 0.5
-seed_base: 1234

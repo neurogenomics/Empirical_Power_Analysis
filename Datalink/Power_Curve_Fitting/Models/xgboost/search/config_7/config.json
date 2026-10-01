@@ -1,1 +1,0 @@
-{"config_index":7,"max_depth":3,"eta":0.03,"min_child_weight":10,"subsample":0.8,"colsample_bytree":0.8,"best_nrounds":3531,"cv_logloss":0.077784}

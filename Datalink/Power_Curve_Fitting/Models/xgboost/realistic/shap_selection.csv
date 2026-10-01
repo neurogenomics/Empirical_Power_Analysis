@@ -1,6 +1,0 @@
-"config_index","alpha","max_depth","eta","min_child_weight","subsample","colsample_bytree","best_nrounds","cv_logloss","bin_balanced_MAE","bin_balanced_p90_err","selection_reason","tag"
-25,0,6,0.03,10,0.8,0.8,1383,0.100058394669022,0.164579052789714,0.298877556381747,"winner_alpha_0","winner_alpha_0"
-26,0.5,6,0.03,10,0.8,0.8,1368,0.300313040769272,0.16988336439846,0.292655826047529,"winner_alpha_0.5","winner_alpha_0.5"
-27,1,6,0.03,10,0.8,0.8,1185,0.54011737758391,0.189149403856847,0.303602536961436,"winner_alpha_1","winner_alpha_1"
-5,0.5,4,0.03,1,0.8,0.8,2028,0.302518718676181,0.172938352631133,0.297756809860468,"overall_median","median"
-3,1,3,0.03,1,0.8,0.8,2697,0.545712590928355,0.196716254175304,0.310264539927244,"overall_worst","worst"

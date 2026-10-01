@@ -1,4 +1,4 @@
-# Empirical Power Analysis for Sex-Biased Differential Expression in Brain snRNA-seq
+# Single-Cell Study Designs Are Systematically Underpowered for Small-Effect Genes
 
 ![Study overview](Figure1_Diagram.png)
 
@@ -6,17 +6,18 @@
 
 Code and paper-ready figures accompanying:
 
-> **Current Single-Cell Study Designs Are Systematically Underpowered for Small-Effect Genes: Empirical Power Analysis Across 22 Million Detection Outcomes**
-> Chris Crampton, Salman Fawad, Hiru Dash, Nathan Skene
+> **Single-Cell Study Designs Are Systematically Underpowered for Small-Effect Genes**
+> Chris Crampton, Salman Fawad, Toby Clark, Hiru Dash, Bence Kövér, Garry Cotton, Donghoon Lee,  Eugene Duff, Leonardo Bottolo, Paul Matthews, Nathan Skene
 
 ## Overview
 
-This repository contains the complete analysis pipeline used to empirically measure detection power for pseudobulk differential expression in human brain single-nucleus RNA-seq. The PsychAD cohort (≈1,200 donors) is systematically downsampled across a two-dimensional grid of donor count × cell count (and separately, donor count × reads per cell), producing over 22 million per-gene detection outcomes. Sex-biased expression is used as a reproducible case-control variable with a biologically grounded ground truth.
+This repository contains the complete analysis pipeline used to empirically measure detection power for pseudobulk differential expression in human brain single-nucleus RNA-seq. The PsychAD cohort is systematically downsampled across a two-dimensional grid of donor count × cell count (and separately, donor count × reads per cell), producing over 22 million per-gene detection outcomes. Sex-biased expression is used as a reproducible case-control variable with a biologically grounded ground truth.
 
 Outputs include:
 
 - Continuous recall and precision surfaces across the experimental design space for three glial cell types (astrocytes, microglia, oligodendrocytes).
 - Cross-dataset validation against four independent snRNA-seq cohorts (Allen/SEA-AD, DeJager/ROSMAP, Rexach, Johansen) and a GTEx v8 bulk RNA-seq reference.
+- A gradient-boosted (XGBoost) per-gene power model with a dependency-light `predict_power()` wrapper for study design.
 
 ## Repository layout
 
@@ -25,15 +26,16 @@ Outputs include:
 ├── R/                                   # Analysis pipelines
 │   ├── sharding/                        #   Donor-level shard generation from raw h5ad / qs inputs
 │   ├── eda_roussos/                     #   PCA gallery, read-depth summary, DE filtering summary
-│   ├── full_ground_truth/               #   DESeq2 DE across all datasets + cross-dataset diagnostics
+│   ├── full_ground_truth/               #   Ground-truth DE (DESeq2 / edgeR / limma-voom) + cross-dataset diagnostics
 │   ├── de_diagnostics/                  #   Chromosome grid + shared-gene diagnostics
 │   ├── cartesian_downsampling/          #   Core empirical power pipeline (cells-based and reads-based)
 │   ├── depth_equalization/              #   Multinomial downsampling of astrocyte shards for sensitivity analysis
-│   ├── power_curve_fitting/             #   Power-model fitting, cross-validation, and export
+│   ├── power_curve_fitting/             #   XGBoost power-model fitting, selection, SHAP, and export
 │   ├── bulk_deg_processing/             #   GTEx v8 bulk DEG processing and bulk-vs-scRNA concordance
 │   ├── figure_data_generation/          #   Emits canonical CSVs consumed by the paper
 │   ├── figure_composition/              #   Composes multi-panel paper figures from Datalink/ inputs
 │   ├── glial_characteristics/           #   Cross-dataset cell-type comparison
+│   ├── gene_classification/             #   Per-gene power classification by TF family / protein class (Figure 6)
 │   └── shared/                          #   Utility helpers used across pipelines
 ├── Datalink/                            # Paper-cited figures and source data (final artifacts only)
 │   ├── raw_data/                        #   Placeholder — raw inputs are not distributed (see README)
@@ -47,6 +49,7 @@ Outputs include:
 ├── render_pdf.R                         # Renders the manuscript to PDF
 ├── nature_comms_draft.rmd               # Manuscript source
 ├── nature_comms_supplementary.rmd       # Supplementary source
+├── _supp_fig_index.R                    # Canonical supplementary-figure ordering (shared by both .rmd files)
 ├── references.bib                       # Bibliography
 ├── renv.lock / .Rprofile                # Pinned R dependency set (renv)
 ├── Reproducibility/                     # Frozen environment snapshot (R packages, session info, server specs)
@@ -58,71 +61,50 @@ Outputs include:
 
 ## Paper asset lookup
 
-Every figure, table, and source-data file rendered in the published manuscript is present in this repository. Paths below are relative to the repo root.
+Every figure, table, and source-data file rendered in the published manuscript is present in this repository. Paths below are relative to the repo root. The `{Astro,Micro,Oligo}` brace notation expands to one file per cell type; `{cells,reads}` to the cell-count and reads-per-cell downsampling modes.
 
 ### Main-text figures
 
 | Figure | Chunk label | File |
 | --- | --- | --- |
-| Figure 1 — Overview | `FigOverview` | `Figure1_Diagram.png` |
-| Figure 2 — Oligodendrocyte continuous recall surface | `FigRecall` | `Datalink/Cartesian_Downsampling/Oligo/Roussos/cells/Continuous_Viz_Log/Mean_Recall_Total_Continuous_SemiLog.png` |
-| Figure 3 — Power curves (top panel) | `FigPower` (img1) | `Datalink/Power_Curve_Fitting/Plots/with_shallow/full_per_iteration/Power_Curve_Overlay.png` |
-| Figure 3 — Cell-type sensitivity (bottom panel) | `FigPower` (img2) | `Datalink/Power_Curve_Fitting/Plots/with_shallow/full_per_iteration/CellType_Sensitivity_Simple.png` |
+| Figure 1 — Study overview | `FigOverview` | `Figure1_Diagram.png` |
+| Figure 2 — Oligodendrocyte recall (continuous + discrete) | `FigRecall` | `Datalink/Composed_Figures/figure_cartesian_oligo_recall.png` |
+| Figure 3 — Recall by adjusted-p-value quartile and expression | `FigRecallPanels` | `Datalink/Composed_Figures/figure_recall_panels_oligo_cells.png` |
+| Figure 4 — Oligodendrocyte precision (continuous + discrete) | `FigPrecision` | `Datalink/Composed_Figures/figure_cartesian_oligo_precision.png` |
+| Figure 5 — XGBoost power model (calibration, SHAP, F1) | `FigXGB` | `Datalink/Power_Curve_Fitting/Models/xgboost/figure_xgb_composed.png` |
+| Figure 6 — Per-gene power by TF family / protein class | `FigGeneGroups` | `Datalink/Gene_Classification/oligo_paper_expr_disp_panels.png` |
 
-### Figure 1 supplements
+### Supplementary figures
 
-| Supplement | Files |
+Supplementary figures are numbered by `_supp_fig_index.R`, the single source of truth shared by the main text and the supplement (`nature_comms_supplementary.rmd`); re-knitting renumbers both documents automatically. The families below cover every supplementary figure the manuscript renders, in canonical order.
+
+| Supplement family | Symbolic key(s) | Files / glob |
+| --- | --- | --- |
+| PCA gallery (unfiltered + filtered Roussos cohort, 6 covariates × 3 cell types) | `pca_gallery` | `Datalink/Exploratory_Analysis/{Astro,Micro,Oligo}/{Roussos_Full,Roussos}/PCA/PCA_{FullCohort,FilteredCohort}_{Log2_Cells,sex,Age_Years,Source,disease,self_reported_ethnicity}_scaled.png` |
+| Cross-method (truth-method × downsampling-method) recall/precision grids | `crossmethod_{recall,precision}_{cells,reads}` | `Datalink/Composed_Figures/Cross_Score/crossscore_{recall,precision}_mega_{Astro,Micro,Oligo}_{cells,reads}_discrete_raw.png` |
+| Per-method downsampling grids (recall + precision; surface, tiny-effect, small-effect) | `bymethod_{astro,micro,oligo}_{recall,precision}_{surface,tiny,small}` | `Datalink/Composed_Figures/Supplementary/supp_{astro,micro,oligo}_{recall,precision}_{surface,tiny,small}_bymethod_{cells,reads}.png` |
+| Method-pooled continuous recall surfaces | `recall_continuous_surfaces` | `Datalink/Cartesian_Downsampling/{Astro,Micro,Oligo}/Roussos/{cells,reads}/all_methods/Continuous_Viz_Log/Mean_Recall_Total_Continuous_SemiLog.png` |
+| Method-pooled precision heatmaps | `precision_heatmaps` | `Datalink/Cartesian_Downsampling/{Astro,Micro,Oligo}/Roussos/{cells,reads}/all_methods/Plots/Mean_Precision_Total.png` |
+| Method-pooled discrete recall heatmaps | `recall_discrete_heatmaps` | `Datalink/Cartesian_Downsampling/{Astro,Micro,Oligo}/Roussos/{cells,reads}/all_methods/Plots/Mean_Recall_Total.png` |
+| Chromosome-stratified recall (autosomal vs sex-chromosome) | `recall_chrom_stratified` | `Datalink/Cartesian_Downsampling/{Astro,Micro,Oligo}/Roussos/cells/all_methods/Plots/Mean_Recall_{Autosomal,SexChr}.png` |
+| DEG chromosome-distribution grid | `deg_chrom_distribution` | `Datalink/DE_Diagnostics/Chromosome_Grid/DEG_Chr_Grid_Combined.png` |
+| XGBoost SHAP dependence / violin (winner + reweighting configs) | `xgb_shap_dependence`, `xgb_shap_violin`, `xgb_shap_dependence_by_config` | `Datalink/Power_Curve_Fitting/Models/xgboost/realistic/shap_figures/{median,winner_alpha_0,winner_alpha_0.5,winner_alpha_1}/shap_{dependence,violin}.png` |
+| Cross-dataset agreement (sign + LFC) matrices | — | `Datalink/Full_Ground_Truth/{Astro,Micro,Oligo}/Diagnostic_Results/{Sign,LFC}_Agreement_Matrix_Roussos_Sig_Genes.png` |
+| GTEx bulk volcano, bulk-vs-single-cell concordance, and gene recovery | — | `Datalink/Bulk_Analysis/Bulk_Results/Bulk_Volcano_Plot.png`, `Datalink/Bulk_Analysis/{Astro,Micro,Oligo}/{Compare_Correlation_BulkAnchored,Compare_Correlation_BulkAnchored_NoXIST,Recovery_Stats_Stratified}.png` |
+
+### Source-data tables
+
+| Paper element | File |
 | --- | --- |
-| S1. Universe-controlled IoU matrices | `Datalink/Full_Ground_Truth/{Astro,Micro,Oligo}/Diagnostic_Results/Expanded_IoU_Matrix_Universe_Controlled.png` |
-| S2. PCA gallery — unfiltered Roussos cohort (6 covariates × 3 cell types) | `Datalink/Exploratory_Analysis/{Astro,Micro,Oligo}/Roussos_Full/PCA/PCA_FullCohort_{Log2_Cells,sex,Age_Years,Source,disease,self_reported_ethnicity}_scaled.png` |
-| S2. PCA gallery — filtered Roussos cohort (6 covariates × 3 cell types) | `Datalink/Exploratory_Analysis/{Astro,Micro,Oligo}/Roussos/PCA/PCA_FilteredCohort_{Log2_Cells,sex,Age_Years,Source,disease,self_reported_ethnicity}_scaled.png` |
-| S3. Sign agreement matrices | `Datalink/Full_Ground_Truth/{Astro,Micro,Oligo}/Diagnostic_Results/Sign_Agreement_Matrix_Roussos_Sig_Genes.png` |
-| S4. LFC agreement matrices | `Datalink/Full_Ground_Truth/{Astro,Micro,Oligo}/Diagnostic_Results/LFC_Agreement_Matrix_Roussos_Sig_Genes.png` |
-| S5. DEG chromosome grid | `Datalink/DE_Diagnostics/Chromosome_Grid/DEG_Chr_Grid_Combined.png` |
-| S6. Raw IoU matrices (non-universe-controlled) | `Datalink/Full_Ground_Truth/{Astro,Micro,Oligo}/Diagnostic_Results/Expanded_IoU_Matrix.png` |
-| S8. FDP heatmap | `Datalink/Full_Ground_Truth/FDP_Heatmap.png` |
-| S9. GTEx bulk volcano | `Datalink/Bulk_Analysis/Bulk_Results/Bulk_Volcano_Plot.png` |
-| S10. Bulk vs single-cell LFC concordance | `Datalink/Bulk_Analysis/{Astro,Micro,Oligo}/Compare_Correlation_BulkAnchored.png` |
-| S11. Bulk-reference gene recovery | `Datalink/Bulk_Analysis/{Astro,Micro,Oligo}/Recovery_Stats_Stratified.png` |
+| Dataset statistics | `Datalink/Paper_Source_Data/dataset_statistics.csv` |
+| Supplementary Table 1 — dataset characteristics | `Datalink/Dataset_Statistics_Table/Supplementary_Table_1_Dataset_Characteristics.csv` |
+| Full-universe gene audit | `Datalink/Full_Ground_Truth/Gene_Audit_Full_Universe_Combined.csv` |
+| Universe-controlled IoU matrices | `Datalink/Full_Ground_Truth/{Astro,Micro,Oligo}/Diagnostic_Results/Expanded_IoU_Matrix_Universe_Controlled.csv` |
+| False-discovery-proportion summary | `Datalink/Full_Ground_Truth/FDP_Summary.csv` |
+| Full truth-set summary (per-gene ground-truth characteristics) | `Datalink/DE_Diagnostics/Shared_Gene_Diagnostics/Full_Truth_Set_Summary.csv` |
+| XGBoost model-selection ranking (36 configurations) | `Datalink/Power_Curve_Fitting/Models/xgboost/realistic/model_selection.csv` |
 
-### Figure 2 (FigRecall) supplements
-
-| Supplement | Files |
-| --- | --- |
-| S1. Astrocyte + microglia continuous recall surfaces (cells-based) | `Datalink/Cartesian_Downsampling/{Astro,Micro}/Roussos/cells/Continuous_Viz_Log/Mean_Recall_Total_Continuous_SemiLog.png` |
-| S1. Astrocyte + microglia continuous recall surfaces (reads-based) | `Datalink/Cartesian_Downsampling/{Astro,Micro}/Roussos/reads/Continuous_Viz_Log/Mean_Recall_Total_Continuous_SemiLog.png` |
-| S2. Discrete recall heatmaps (cells-based) | `Datalink/Cartesian_Downsampling/{Astro,Micro,Oligo}/Roussos/cells/Plots/Mean_Recall_Total.png` |
-| S2. Discrete recall heatmaps (reads-based) | `Datalink/Cartesian_Downsampling/{Astro,Micro,Oligo}/Roussos/reads/Plots/Mean_Recall_Total.png` |
-| S3. Autosomal-only recall heatmaps | `Datalink/Cartesian_Downsampling/{Astro,Micro,Oligo}/Roussos/cells/Plots/Mean_Recall_Autosomal.png` |
-| S3. Sex-chromosome-only recall heatmaps | `Datalink/Cartesian_Downsampling/{Astro,Micro,Oligo}/Roussos/cells/Plots/Mean_Recall_SexChr.png` |
-| S4. Precision heatmaps (cells-based) | `Datalink/Cartesian_Downsampling/{Astro,Micro,Oligo}/Roussos/cells/Plots/Mean_Precision_Total.png` |
-| S4. Precision heatmaps (reads-based) | `Datalink/Cartesian_Downsampling/{Astro,Micro,Oligo}/Roussos/reads/Plots/Mean_Precision_Total.png` |
-
-### Figure 3 (FigPower) supplements
-
-| Supplement | File |
-| --- | --- |
-| S1. Depth decomposition | `Datalink/Power_Curve_Fitting/Plots/full_per_iteration/Depth_Decomposition.png` |
-| S2. Forest plot of all coefficients | `Datalink/Power_Curve_Fitting/Plots/with_shallow/full_per_iteration/Forest_All_Coefficients.png` |
-| S3. Per-cell-type model cross-validation | `Datalink/Power_Curve_Fitting/Plots/Cross_Validation/Combined_vs_PerCT.png` |
-| S4. Cell-type sensitivity grid | `Datalink/Power_Curve_Fitting/Plots/full_per_iteration/CellType_Sensitivity_Grid.png` |
-
-### Source-data tables (rendered inline in the paper)
-
-| Paper table | File |
-| --- | --- |
-| Figure 1 — Source Data 1 (dataset statistics) | `Datalink/Paper_Source_Data/dataset_statistics.csv` |
-| Figure 1 — Source Data 2 (universe-controlled IoU) | `Datalink/Full_Ground_Truth/{Astro,Micro,Oligo}/Diagnostic_Results/Expanded_IoU_Matrix_Universe_Controlled.csv` |
-| Figure 1 — Source Data 3 (FDP summary, rendered) | `Datalink/Paper_Source_Data/fdp_summary.csv` |
-| Figure 1 — Source Data 3 (FDP summary, raw) | `Datalink/Full_Ground_Truth/FDP_Summary.csv` |
-| Figure 2 — Autosomal vs sex-chromosome recall summary | `Datalink/_scratch_autosomal_vs_sexchr_summary.csv` |
-| Figure 2 — Gene audit (full universe) | `Datalink/Full_Ground_Truth/Gene_Audit_Full_Universe_Combined.csv` |
-| Figure 3 — Source Data 1 (model coefficients, rendered) | `Datalink/Paper_Source_Data/model_coefficients.csv` |
-| Figure 3 — Source Data 3 (truth gene characteristics) | `Datalink/Paper_Source_Data/truth_gene_characteristics.csv` |
-| Figure 3 — Source Data 3 (full truth set summary, raw) | `Datalink/DE_Diagnostics/Shared_Gene_Diagnostics/Full_Truth_Set_Summary.csv` |
-| Figure 3 — Source Data 5 (model summary / donors for 80% power) | `Datalink/Paper_Source_Data/model_summary.csv` |
-| Figure 3 — Source Data 5 (pipeline summary, raw) | `Datalink/Power_Curve_Fitting/Summary/pipeline_summary.csv` |
-| Supplementary Table 1 — Dataset characteristics | `Datalink/Dataset_Statistics_Table/Supplementary_Table_1_Dataset_Characteristics.csv` |
+Additional canonical source CSVs consumed by the pipeline live in `Datalink/Paper_Source_Data/`.
 
 ## Scientific scope
 
@@ -130,8 +112,8 @@ Every figure, table, and source-data file rendered in the published manuscript i
 - **Validation datasets:** SEA-AD (Allen), ROSMAP (DeJager), Rexach, Johansen — used for cross-dataset IoU, sign, and LFC agreement.
 - **Bulk reference:** GTEx v8 (838 donors across 44 tissues) for external LFC calibration.
 - **Case-control variable:** Sex. Chosen because (i) sex is close to 50:50 in all brain cohorts; (ii) a well-characterised set of sex-biased genes (principally on the sex chromosomes) provides a reproducible ground truth; (iii) sex-biased DE generalises across independent cohorts.
-- **DE method:** DESeq2 with pseudobulk aggregation and apeglm shrinkage.
-- **Power model:** Logistic regression on log-transformed donors, cells per donor, reads per cell, |LFC|, base mean, and dispersion.
+- **DE methods:** DESeq2, edgeR, and limma-voom, each run on pseudobulk aggregates. The paper's primary recall/precision grids pool detection outcomes across all three methods (`all_methods/`); per-method grids are provided in the supplement. DESeq2 additionally applies apeglm LFC shrinkage.
+- **Power model:** Gradient-boosted decision-tree ensemble (XGBoost), trained on the realistic design regime (≥ 100 cells per donor). It predicts each gene's detection probability from |LFC|, base mean, dispersion, donor count, cells per donor, reads per cell, DE method, and cell type. A dependency-light `predict_power()` wrapper, the fitted model binary (`power_model_bundle.rds`), and an example power curve are exported under `Datalink/Power_Curve_Fitting/Exports/`, so the wrapper runs without refitting.
 
 ## Key findings
 
@@ -147,7 +129,7 @@ Every figure, table, and source-data file rendered in the published manuscript i
 - **R** ≥ 4.2
 
 **Bioconductor packages:**
-`DESeq2`, `apeglm`, `SingleCellExperiment`, `SummarizedExperiment`,
+`DESeq2`, `edgeR`, `limma`, `apeglm`, `SingleCellExperiment`, `SummarizedExperiment`,
 `BiocParallel`, `biomaRt`, `AnnotationDbi`, `org.Hs.eg.db`, `rhdf5`,
 `zellkonverter`.
 
@@ -155,7 +137,7 @@ Every figure, table, and source-data file rendered in the published manuscript i
 `here`, `qs`, `Matrix`, `dplyr`, `tidyr`, `stringr`, `ggplot2`, `patchwork`,
 `scales`, `RColorBrewer`, `viridis`, `UpSetR`, `ggnewscale`, `ggrepel`,
 `pheatmap`, `cowplot`, `shadowtext`, `akima`, `data.table`, `future`,
-`future.apply`, `reticulate`, `testthat`, `knitr`.
+`future.apply`, `reticulate`, `xgboost`, `testthat`, `knitr`.
 
 Install everything in two calls:
 
@@ -164,10 +146,10 @@ install.packages(c(
   "here", "qs", "Matrix", "dplyr", "tidyr", "stringr", "ggplot2", "patchwork",
   "scales", "RColorBrewer", "viridis", "UpSetR", "ggnewscale", "ggrepel",
   "pheatmap", "cowplot", "shadowtext", "akima", "data.table", "future",
-  "future.apply", "reticulate", "testthat", "knitr", "BiocManager"
+  "future.apply", "reticulate", "xgboost", "testthat", "knitr", "BiocManager"
 ))
 BiocManager::install(c(
-  "DESeq2", "apeglm", "SingleCellExperiment", "SummarizedExperiment",
+  "DESeq2", "edgeR", "limma", "apeglm", "SingleCellExperiment", "SummarizedExperiment",
   "BiocParallel", "biomaRt", "AnnotationDbi", "org.Hs.eg.db", "rhdf5",
   "zellkonverter"
 ))
@@ -186,7 +168,7 @@ export POWER_ANALYSIS_ROOT=/path/to/this/repo
 
 ### Data prerequisites
 
-This repository ships **final figures and paper source data only**. Raw inputs (h5ad / h5Seurat files) and all intermediate artefacts (donor shards, DESeq2 checkpoints, BioMart caches, GT_DDS objects) are not distributed here owing to size and dataset-specific access terms. Every intermediate is regenerable from the raw data — each pipeline's scripts create their required output subdirectories on first run.
+This repository ships **final figures and paper source data only**. Raw inputs (h5ad / h5Seurat files) and most intermediate artefacts (donor shards, DE checkpoints, BioMart caches) are not distributed here owing to size and dataset-specific access terms. The fitted power-model bundle (`Datalink/Power_Curve_Fitting/Exports/xgboost/realistic/power_model_bundle.rds`) is the one exception: it is shipped so that `predict_power()` runs out of the box without refitting. Every intermediate is regenerable from the raw data — each pipeline's scripts create their required output subdirectories on first run.
 
 Download the raw datasets from the public sources listed in `Datalink/Dataset_Statistics_Table/Supplementary_Table_1_Dataset_Characteristics.csv` and place them under `Datalink/raw_data/`. One of the validation datasets is not publicly available and must be obtained directly from the upstream authors under their access terms; the pipeline will skip it gracefully if absent.
 
@@ -199,10 +181,10 @@ Pipelines form a DAG rooted at sharding. To reproduce from raw data end-to-end:
 ```
 1. R/sharding/                  # Raw data → donor-level shards under Datalink/Shards/
 2. R/eda_roussos/               # PCA gallery, read-depth summary, filtering summary
-3. R/full_ground_truth/         # DESeq2 DE per dataset + cross-dataset diagnostics
+3. R/full_ground_truth/         # Ground-truth DE (DESeq2 / edgeR / limma-voom) per dataset + cross-dataset diagnostics
 4. R/cartesian_downsampling/    # 22M detection outcomes across the donor × cell grid
 5. R/depth_equalization/        # Depth-equalised astrocyte downsampling (optional sensitivity analysis)
-6. R/power_curve_fitting/       # Power-model fitting, cross-validation, and export
+6. R/power_curve_fitting/       # XGBoost power-model fitting, selection, SHAP, and export
 7. R/de_diagnostics/            # Chromosome grid + shared-gene diagnostics
 8. R/bulk_deg_processing/       # GTEx bulk processing + bulk-vs-scRNA concordance
 9. R/figure_data_generation/    # Canonical CSVs consumed by the paper
