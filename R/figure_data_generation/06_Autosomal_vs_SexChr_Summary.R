@@ -48,7 +48,9 @@ biomart_cache  <- project_path("Datalink", "Full_Ground_Truth", "gene_audit_biom
 out_path       <- project_path("Datalink", "_scratch_autosomal_vs_sexchr_summary.csv")
 
 cell_types <- CELL_TYPES
-runs       <- 1:6
+# Every robustness run's truth half (the paper's 10 runs; the April 2026 table
+# used the 6 that existed then). Override with N_ROBUSTNESS_RUNS.
+runs       <- seq_len(as.integer(Sys.getenv("N_ROBUSTNESS_RUNS", "10")))
 
 # ==============================================================================
 # Helpers
@@ -124,7 +126,7 @@ for (ct in cell_types) {
   de$chr_group[is.na(de$chr_group)] <- "Unannotated"
   de$bin <- bin_lfc(de$log2FoldChange)
 
-  # Pool dispersions across all 6 runs (median per gene for stability).
+  # Pool dispersions across all runs (median per gene for stability).
   disp_list <- list()
   for (r in runs) {
     dds_path <- file.path(gt_dds_base, ct, sprintf("GT_DDS_Run_%d.qs", r))

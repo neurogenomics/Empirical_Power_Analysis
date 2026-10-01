@@ -1,3 +1,8 @@
+> **Superseded (2026-10-01).** This guide describes the earlier single-host
+> route (DESeq2 only, logistic power model, five cohorts). It does not
+> reproduce the current paper. For that, use the one-command cluster pipeline
+> in [`pipeline/README.md`](../pipeline/README.md).
+
 # Cold-Start Reproduction Guide
 
 This document walks through reproducing every paper artefact in this

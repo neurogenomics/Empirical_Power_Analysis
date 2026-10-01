@@ -41,7 +41,22 @@ class_label_map <- c(
   q1_low         = "Lowest",
   q2_low_mid     = "Low-mid",
   q3_high_mid    = "High-mid",
-  q4_high        = "Highest"
+  q4_high        = "Highest",
+  # class labels written by the current 09_Trinary_Classification.R
+  "Not Powered"         = "Unpowered",
+  "Definitely Not"      = "Unpowered",
+  "Underpowered"        = "Unpowered",
+  "Likely Underpowered" = "Probably not",
+  "Contested"           = "Contested",
+  "Maybe"               = "Contested",
+  "Likely Powered"      = "Probably yes",
+  "Powered"             = "Powered",
+  "Yes"                 = "Powered",
+  "Well Powered"        = "Powered",
+  "Q1: Lowest"          = "Lowest",
+  "Q2: Low-Mid"         = "Low-mid",
+  "Q3: High-Mid"        = "High-mid",
+  "Q4: Highest"         = "Highest"
 )
 # global low -> high order that renders every facet correctly under free_x
 class_levels <- c("Unpowered", "Probably not", "Contested", "Probably yes",

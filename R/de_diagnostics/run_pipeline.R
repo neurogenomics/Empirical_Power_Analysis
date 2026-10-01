@@ -14,7 +14,6 @@ suppressPackageStartupMessages({
 # 1. SETUP LOGGING
 # ==============================================================================
 
-LOGGING_SCRIPT <- file.path(PROJECT_ROOT,
 # Load config - use tryCatch for Rscript compatibility
 script_path <- tryCatch({
   dirname(sys.frame(1)$ofile)
@@ -41,7 +40,7 @@ message(sprintf("Started: %s", Sys.time()))
 args <- commandArgs(trailingOnly = TRUE)
 
 if (length(args) > 0) {
-  steps_to_run <- as.integer(strsplit(args[1], " ")[[1]])
+  steps_to_run <- as.integer(strsplit(trimws(args[1]), "[, ]+")[[1]])
   message(sprintf("Running steps: %s", paste(steps_to_run, collapse = ", ")))
 } else {
   steps_to_run <- c(4, 5)

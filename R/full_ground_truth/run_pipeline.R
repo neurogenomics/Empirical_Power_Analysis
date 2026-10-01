@@ -280,3 +280,5 @@ if (exists("finalize_logging") && is.function(finalize_logging)) {
     steps_ok = n_success
   )
 }
+
+if (n_failed > 0) quit(status = 1, save = "no")

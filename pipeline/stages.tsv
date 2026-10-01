@@ -1,0 +1,31 @@
+# =============================================================================
+# pipeline/stages.tsv -- the stage graph, in submission (topological) order.
+# Columns (TAB-separated): name  deps  ncpus  mem  walltime  kind
+#   deps : comma-separated upstream stages, or -
+#   kind : single | array:grid (2 x EPA_GRID_CHUNKS tasks) | array:<N>
+# Each stage is implemented in pipeline/stages/<name>.sh. Resource figures are
+# sized from observed CX3 runs with roughly 2-4x headroom; override any of them
+# per run with EPA_RES_<name>="ncpus mem walltime" in WORKDIR/epa.env.
+# =============================================================================
+shard	-	24	200gb	24:00:00	single
+eda	shard	12	200gb	12:00:00	single
+fgt	shard	24	200gb	12:00:00	single
+deg_loss	shard	24	200gb	24:00:00	single
+gt_manifest	shard	8	200gb	24:00:00	single
+grid	shard,gt_manifest	24	200gb	24:00:00	array:grid
+cartesian_cells	grid	24	200gb	24:00:00	single
+cartesian_reads	grid	24	200gb	24:00:00	single
+crossscore	grid	24	200gb	24:00:00	single
+pcf_aggregate	shard,grid	24	200gb	36:00:00	single
+xgb_base_search	pcf_aggregate	8	64gb	06:00:00	array:12
+xgb_base_select	pcf_aggregate,xgb_base_search	8	64gb	12:00:00	single
+xgb_real_search	pcf_aggregate	8	64gb	03:00:00	array:36
+xgb_real_select	pcf_aggregate,xgb_real_search	8	64gb	12:00:00	single
+xgb_real_shap	pcf_aggregate,xgb_real_select	8	64gb	06:00:00	single
+xgb_post	pcf_aggregate,xgb_base_select,xgb_real_select	8	64gb	12:00:00	single
+gene_class	shard,xgb_post	12	96gb	12:00:00	single
+tables	fgt,pcf_aggregate,cartesian_cells,cartesian_reads	8	64gb	04:00:00	single
+compose	cartesian_cells,cartesian_reads,crossscore	4	32gb	04:00:00	single
+supp_data	eda,fgt,tables,cartesian_cells,cartesian_reads,xgb_real_select	2	32gb	02:00:00	single
+knit	eda,fgt,deg_loss,cartesian_cells,cartesian_reads,compose,xgb_real_select,xgb_real_shap,xgb_post,gene_class,tables,supp_data	4	32gb	04:00:00	single
+finalise	knit	1	4gb	01:00:00	single
