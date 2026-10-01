@@ -164,6 +164,14 @@ get_biotype_annotations <- function(gene_ids, cache_path) {
 #' @return data.frame with ensembl_gene_id and gene_biotype columns, or NULL
 query_biomart <- function(gene_ids) {
 
+  # BIOMART_OFFLINE=true: use the shipped annotation cache only (cluster
+  # compute nodes have no internet; the reproduction pipeline sets this).
+  if (tolower(Sys.getenv("BIOMART_OFFLINE", "false")) %in% c("true", "1", "yes")) {
+    log_info("  BIOMART_OFFLINE=true: not querying BioMart for %d genes", length(gene_ids))
+    return(NULL)
+  }
+
+
   if (!requireNamespace("biomaRt", quietly = TRUE)) {
     log_warn("biomaRt package not available")
     return(NULL)
@@ -603,6 +611,14 @@ get_chromosome_annotations <- function(gene_ids, cache_path) {
 #' @param gene_ids Character vector of Ensembl gene IDs
 #' @return data.frame with ensembl_gene_id, gene_biotype, chromosome_name
 query_biomart_with_chr <- function(gene_ids) {
+
+  # BIOMART_OFFLINE=true: use the shipped annotation cache only (cluster
+  # compute nodes have no internet; the reproduction pipeline sets this).
+  if (tolower(Sys.getenv("BIOMART_OFFLINE", "false")) %in% c("true", "1", "yes")) {
+    log_info("  BIOMART_OFFLINE=true: not querying BioMart for %d genes", length(gene_ids))
+    return(NULL)
+  }
+
 
   if (!requireNamespace("biomaRt", quietly = TRUE)) {
     log_warn("biomaRt package not available")

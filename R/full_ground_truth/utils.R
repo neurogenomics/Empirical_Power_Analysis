@@ -1100,6 +1100,14 @@ get_audit_annotations <- function(gene_ids, cache_path) {
 #' @return data.frame with ensembl_gene_id, chromosome_name, gene_biotype, band
 query_biomart_audit <- function(gene_ids) {
 
+  # BIOMART_OFFLINE=true: use the shipped annotation cache only (cluster
+  # compute nodes have no internet; the reproduction pipeline sets this).
+  if (tolower(Sys.getenv("BIOMART_OFFLINE", "false")) %in% c("true", "1", "yes")) {
+    log_info("  BIOMART_OFFLINE=true: not querying BioMart for %d genes", length(gene_ids))
+    return(NULL)
+  }
+
+
   if (!requireNamespace("biomaRt", quietly = TRUE)) {
     log_warn("biomaRt package not available")
     return(NULL)

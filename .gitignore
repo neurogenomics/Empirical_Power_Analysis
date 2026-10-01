@@ -161,7 +161,6 @@ _render_pdf_draft.R
 sendStuff.sh
 R/cartesian_downsampling/_render_cells_allmethods.R
 R/cartesian_downsampling/_render_reads_allmethods.R
-R/figure_data_generation/08_Recall_Precision_Grid.R
 
 # =============================================================================
 # Superseded drafts — clutter for a clean release.

@@ -124,6 +124,22 @@ Additional canonical source CSVs consumed by the pipeline live in `Datalink/Pape
 
 ## Reproducing the analysis
 
+### Full reproduction from raw data (recommended)
+
+`pipeline/` rebuilds every figure, table, quoted number and supplementary data
+file, and knits the manuscript, from the raw PsychAD files in one command on a
+PBS Pro cluster (written for Imperial CX3). All of it runs inside the pinned
+container. See **[`pipeline/README.md`](pipeline/README.md)**.
+
+```bash
+pipeline/reference/fetch_reference.sh $WORK/reference   # offline annotation bundle
+pipeline/run.sh $WORK                                    # submits the whole chain
+pipeline/run.sh $WORK --status
+pipeline/unpack_results.sh $WORK/results /path/to/checkout   # afterwards, anywhere
+```
+
+The sections below describe running individual pipelines by hand.
+
 ### Requirements
 
 - **R** ≥ 4.2
@@ -226,29 +242,14 @@ nohup ./docker/docker-all.sh --pipeline all --max-cores 24 > nohup.docker-all.ou
 
 The individual wrappers (`docker/docker-build.sh`, `docker/docker-smoke.sh`, `docker/docker-run.sh`) can be called separately; `docker/docker-all.sh` chains them with `--skip-build` / `--skip-smoke` / `--skip-run` flags.
 
-**On HPC (no root):** the same `Dockerfile` runs under Apptainer/Singularity. Build a `.sif` from the image and pass it to the PBS scripts via `EPA_SIF` (see below). This is how the full 3-method downsampling grid was produced.
+**On HPC (no root):** the same image runs under Apptainer. Build the `.sif` with `./docker/build-sif.sh` (from a local Docker image, or `--from-registry` for a published one) and give it to `pipeline/run.sh`.
 
 ### HPC (Imperial CX3, PBS Pro)
 
-The most expensive step — the full donor × cell / donor × reads downsampling grid across three DE methods — is run as a PBS job array on Imperial's CX3 cluster. All scripts live in `hpc/` and follow a strict tar-staging discipline (stage a few big tars to node-local scratch, compute there, stage out a single result tar per chunk). See `hpc/README.md` for the authoritative guide.
-
-```bash
-cd /path/to/EPA/on/rds
-
-# 1. Ground truth + per-mode job manifests (one job):
-qsub -v EPA_N_CHUNKS=40,EPA_SIF=$PWD/epa.sif,EPA_DATALINK=$PWD/Datalink \
-     hpc/cx3-gt-manifest.pbs
-
-# 2. Grid array (reads chunks 1..40, then cells chunks 41..80):
-qsub -J 1-80%20 \
-     -v EPA_N_CHUNKS=40,EPA_SIF=$PWD/epa.sif,EPA_DATALINK=$PWD/Datalink \
-     hpc/cx3-grid.pbs
-
-# 3. Harvest result tars into Datalink/ in one bulk unpack (login node, never a compute node):
-bash hpc/harvest-grid-results.sh $PWD/Datalink
-```
-
-Key knobs: `EPA_RUN_START` / `EPA_RUN_END` select which robustness runs to compute (seeds are deterministic, so runs can be extended incrementally without invalidating banked ones), and `EPA_GRID_TAG` isolates independent grids. The XGBoost power-model fitting/selection/SHAP stages have their own `hpc/cx3-xgb-*.pbs` scripts, and `hpc/submit-xgb-realistic-chain.sh` chains them unattended via PBS `-W depend`. Transfers between the analysis server and CX3 RDS use Globus.
+Use `pipeline/` (above). It submits every stage as a dependency-chained PBS job,
+stages data through node-local scratch as a few large tars, and resumes from
+wherever a previous attempt stopped. The older hand-driven scripts in `hpc/`
+are kept for reference only.
 
 ### Reproducibility snapshot
 

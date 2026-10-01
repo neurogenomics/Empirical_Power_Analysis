@@ -154,7 +154,8 @@ RUN R -e ' \
     pkgs <- c("DESeq2","apeglm","glmGamPoi","edgeR","limma","SingleCellExperiment","biomaRt", \
               "zellkonverter","reticulate","basilisk","qs", \
               "Rcpp","RcppArmadillo","RcppEigen", \
-              "future.apply","rmarkdown","ggplot2","dplyr","Matrix"); \
+              "future.apply","rmarkdown","bookdown","ggplot2","dplyr","Matrix", \
+              "xgboost","writexl","patchwork","png"); \
     bad <- character(); \
     for (p in pkgs) { \
         ok <- tryCatch({ suppressMessages(library(p, character.only = TRUE)); TRUE }, \
@@ -162,6 +163,12 @@ RUN R -e ' \
         if (ok) cat(sprintf("OK   %s %s\n", p, packageVersion(p))) else bad <- c(bad, p); \
     }; \
     if (length(bad) > 0) stop(sprintf("Critical packages failed to load: %s", paste(bad, collapse=", ")))'
+
+# The figure composers (compose_figures.py, compose_supplementary.py) run on the
+# venv Python and need Pillow, matplotlib and the DejaVu TrueType fonts; fail the
+# build here rather than silently producing bitmap-font panels at runtime.
+RUN /opt/python-env/bin/python -c "import PIL, matplotlib, numpy, pandas; print(\"PIL\", PIL.__version__, \"matplotlib\", matplotlib.__version__)" \
+ && test -f /usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf
 
 # -----------------------------------------------------------------------------
 #  Runtime layout.

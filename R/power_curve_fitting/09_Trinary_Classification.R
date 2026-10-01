@@ -34,7 +34,8 @@
 # TWO MODES (env var XGB_TRINARY_MODE):
 #   insample (default) -- apply saved booster.ubj to aggregated training data.
 #                         Fast; overstates performance. Good for exploration.
-#   oof                -- refit winner in 5-fold gene-grouped CV.
+#   oof                -- refit winner in 5-fold gene-grouped CV; the baseline
+#                         uses its 08b out-of-fold predictions (run 08b first).
 #                         ~1.5-2h for winner on iclneuro; honest for paper.
 #
 # WHICH MODELS (env var XGB_TRINARY_CONFIGS):
@@ -309,9 +310,32 @@ get_predictions <- function(spec) {
     xgboost::xgb.attr(booster, "nthread") <- as.character(XGB_NTHREAD)
     return(predict(booster, newdata = X))
   }
-  # OOF mode: only supported for realistic winner.
+  # OOF mode, baseline: reuse the baseline's own out-of-fold predictions from
+  # 08b_Baseline_OOF.R (gene-grouped 5-fold on the full grid) and evaluate them
+  # on the realistic rows, matched by their design/gene keys.
+  if (spec$label == "baseline") {
+    oof_path <- file.path(model_base_baseline, "oof_predictions.qs")
+    if (!file.exists(oof_path)) {
+      stop(sprintf("OOF mode needs the baseline OOF predictions (%s); run 08b_Baseline_OOF.R first.",
+                   oof_path))
+    }
+    boof <- qs::qread(oof_path)
+    keys <- intersect(c("gene_id", "cell_type", "de_method", "n_donors", "n_cells",
+                        "reads_per_cell", "abs_gt_lfc", "gt_basemean", "gt_dispersion"),
+                      intersect(colnames(boof), colnames(dat)))
+    key_of <- function(df, obs) do.call(paste, c(lapply(df[, keys, drop = FALSE], as.character),
+                                                list(sprintf("%.12g", obs), sep = "|")))
+    bkey <- key_of(boof, boof$obs)
+    if (anyDuplicated(bkey)) stop("baseline OOF rows are not uniquely keyed by: ", paste(keys, collapse = ", "))
+    idx <- match(key_of(dat, y), bkey)
+    if (anyNA(idx)) {
+      stop(sprintf("%d realistic rows have no baseline OOF prediction", sum(is.na(idx))))
+    }
+    log_info("Baseline OOF: matched %d realistic rows on %s", length(idx), paste(keys, collapse = ", "))
+    return(boof$pred[idx])
+  }
   if (spec$label != "realistic_winner") {
-    log_warning("OOF mode only for realistic_winner; skipping %s", spec$label)
+    log_warning("OOF mode only for realistic_winner and baseline; skipping %s", spec$label)
     return(NULL)
   }
   sel_path <- file.path(model_base_realistic, "model_selection.csv")

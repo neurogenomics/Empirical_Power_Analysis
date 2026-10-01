@@ -53,7 +53,7 @@ GLIAL_BASE <- project_path("Datalink", "Glial_Characteristics")
 OUTPUT_BASE <- project_path("Datalink", "Paper_Source_Data")
 
 # ==============================================================================
-# 4. DATASET CONFIGURATION (all 5 datasets)
+# 4. DATASET CONFIGURATION (PsychAD only; the other cohorts were dropped from the paper)
 # ==============================================================================
 
 DATASETS <- list(
@@ -61,38 +61,6 @@ DATASETS <- list(
     label = "PsychAD",
     brain_region = "DLPFC",
     shard_dir_suffix = "Roussos",
-    donor_id_col = "donor_id",
-    sex_col = "sex",
-    sex_encoding = c(male = "male", female = "female")
-  ),
-  DeJager = list(
-    label = "ROSMAP",
-    brain_region = "DLPFC",
-    shard_dir_suffix = "DeJager",
-    donor_id_col = "donor_id",
-    sex_col = "msex",
-    sex_encoding = c(male = "1", female = "0")
-  ),
-  Allen = list(
-    label = "SEA-AD",
-    brain_region = "MTG",
-    shard_dir_suffix = "Allen",
-    donor_id_col = "donor_id",
-    sex_col = "sex",
-    sex_encoding = c(male = "male", female = "female")
-  ),
-  Johansen = list(
-    label = "Johansen",
-    brain_region = "Cerebral Cortex",
-    shard_dir_suffix = "Johansen",
-    donor_id_col = "donor_id",
-    sex_col = "sex",
-    sex_encoding = c(male = "male", female = "female")
-  ),
-  Rexach = list(
-    label = "Rexach",
-    brain_region = "Insular Cortex",
-    shard_dir_suffix = "Rexach",
     donor_id_col = "donor_id",
     sex_col = "sex",
     sex_encoding = c(male = "male", female = "female")

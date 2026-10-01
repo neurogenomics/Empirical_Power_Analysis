@@ -57,7 +57,7 @@ if (!exists("PROJECT_ROOT")) stop("Could not load config.R")
 steps <- list(
   list(id = 1, name = "Dataset Statistics",
        script = file.path(SCRIPT_DIR, "01_Dataset_Statistics.R"),
-       desc = "Compute N_Donors, N_Cells, UMIs/cell, genes/cell from shards (all 5 datasets)"),
+       desc = "Compute N_Donors, N_Cells, UMIs/cell, genes/cell from shards (PsychAD)"),
   list(id = 2, name = "Truth Gene Characteristics",
        script = file.path(SCRIPT_DIR, "02_Truth_Gene_Characteristics.R"),
        desc = "Extract truth gene LFC, baseMean, dispersion from Roussos GT results"),
@@ -75,7 +75,10 @@ steps <- list(
        desc = "Build _scratch_autosomal_vs_sexchr_summary.csv for paper Table (line 589)"),
   list(id = 7, name = "Depth-Eq Truth Set Summary",
        script = file.path(SCRIPT_DIR, "07_Depth_Eq_Truth_Summary.R"),
-       desc = "Mean truth gene counts by LFC bin for Astro, Astro_Shallow, Astro_Shallow_Fewer")
+       desc = "Mean truth gene counts by LFC bin for Astro, Astro_Shallow, Astro_Shallow_Fewer"),
+  list(id = 8, name = "Recall / Precision Grid",
+       script = file.path(SCRIPT_DIR, "08_Recall_Precision_Grid.R"),
+       desc = "Tidy long-format recall_precision_grid.csv (source of _paper_values.R grid numbers)")
 )
 
 # ==============================================================================
@@ -136,3 +139,5 @@ n_ok <- sum(sapply(results, function(r) grepl("^SUCCESS", r$status)))
 message(sprintf("\n  %d/%d steps completed successfully.", n_ok, length(results)))
 message(sprintf("  Output: %s", OUTPUT_BASE))
 message("\n[COMPLETE]")
+
+if (n_ok < length(results)) quit(status = 1, save = "no")

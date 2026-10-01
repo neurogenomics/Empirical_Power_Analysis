@@ -83,7 +83,7 @@ for (cell_type in CELL_TYPES) {
 
   full_gene_lists[[cell_type]] <- list()
 
-  for (d_name in names(DATASET_CONFIG)) {
+  for (d_name in RUN_DATASETS) {
     shard_dir <- get_shard_dir(cell_type, d_name)
 
     if (!dir.exists(shard_dir)) {
@@ -194,7 +194,7 @@ for (cell_type in CELL_TYPES) {
 
   sig_gene_lists <- list()
 
-  for (d_name in names(DATASET_CONFIG)) {
+  for (d_name in RUN_DATASETS) {
     # Load DE results CSV
     de_path <- file.path(OUTPUT_BASE, cell_type,
                          paste0(d_name, "_DE_results.csv"))
@@ -345,7 +345,7 @@ if (length(all_sig_matrices) > 0) {
 log_section("CROSS-CELL-TYPE GENE SET COMPARISON")
 
 # Check whether gene sets differ across cell types within each dataset
-for (d_name in names(DATASET_CONFIG)) {
+for (d_name in RUN_DATASETS) {
   ct_gene_sets <- list()
 
   for (cell_type in CELL_TYPES) {

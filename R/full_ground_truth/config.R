@@ -108,61 +108,8 @@ DATASET_CONFIG <- list(
     numeric_covariates = c("pmi"),
     sex_values = list(male = "male", female = "female"),
     age_parser = parse_verbose_age
-  ),
-
-  "Allen" = list(
-    cols = list(
-      donor = "donor_id",
-      sex   = "sex",
-      age   = "age"
-    ),
-    covariates = c("ethnicity", "disease"),
-    numeric_covariates = c("PMI"),
-    sex_values = list(male = "male", female = "female"),
-    age_parser = parse_simple_numeric
-  ),
-
-  "Rexach" = list(
-    cols = list(
-      donor = "donor_id",
-      sex   = "sex",
-      age   = "development_stage"
-    ),
-    covariates = c("self_reported_ethnicity", "disease"),
-    numeric_covariates = c(),
-    sex_values = list(male = "male", female = "female"),
-    age_parser = parse_verbose_age
-  ),
-
-  # FIX: batch_vendor_name removed — 14 levels across 22 Astro donors caused
-  # rank-deficient model matrix (confirmed DESeq2 error, log 2026-02-10).
-  # library_prep_set had 1 level across all cell types (auto-filtered by pipeline).
-  # medical_conditions retained (3–4 levels, no rank issues in any cell type).
-  "Johansen" = list(
-    cols = list(
-      donor = "donor_name",
-      sex   = "sex",
-      age   = "age_numeric"
-    ),
-    covariates = c("medical_conditions"),
-    numeric_covariates = c(),
-    sex_values = list(male = "M", female = "F"),
-    age_parser = parse_simple_numeric
-  ),
-
-  # DeJager metadata (age_death, msex, pmi, etc.) is now baked into shards
-  # via Run_Shard_DeJager.R (joined from DeJagerMeta.csv at sharding time)
-  "DeJager" = list(
-    cols = list(
-      donor = "individualID",
-      sex   = "msex",
-      age   = "age_death"
-    ),
-    covariates = c("study"),
-    numeric_covariates = c("pmi"),
-    sex_values = list(male = "1", female = "0"),
-    age_parser = parse_simple_numeric
   )
+
 )
 
 # Which datasets to process (all by default)
