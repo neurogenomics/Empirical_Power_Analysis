@@ -71,7 +71,7 @@ registry, a reproducer needs neither Docker nor a build:
 ## How it works
 
 - **Stages.** `pipeline/stages.tsv` defines 22 stages, their dependencies and
-  their resources. Each stage is one PBS job (two of them are job arrays) and
+  their resources. Each stage is one PBS job (three of them, `grid`, `xgb_base_search` and `xgb_real_search`, are job arrays) and
   is implemented in `pipeline/stages/<stage>.sh`, which calls the analysis code
   in `R/`.
 - **One command.** `run.sh` submits every stage up front, chained with

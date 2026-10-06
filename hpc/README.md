@@ -1,13 +1,18 @@
 # EPA HPC scripts (Imperial CX3)
 
+> **Reference only (superseded 2026-10-01).** These hand-driven PBS scripts were
+> used for the earlier HPC runs. To reproduce the paper, use the one-command
+> pipeline in [`pipeline/README.md`](../pipeline/README.md), which implements the
+> same tar-staging design for every stage.
+
 > **REBUILT 2026-06-29.** The original `hpc/` scripts were lost (deleted on
-> iclneuro during a move; Syncthing mirrored the deletion back to CBERT; never
-> committed to git, so unrecoverable). These are a faithful reconstruction of the
+> the analysis server during a move and were never committed to git, so they
+> were unrecoverable). These are a faithful reconstruction of the
 > agreed tar-staging design, not byte-recovered originals. Run a `MINI_RUN` smoke
 > test before trusting a full submit, and confirm the PBS resource directives
 > (`ncpus`/`mem`) against your allocation.
 
-## Golden rule (see `data/workspace/skills/hpc.md`)
+## Golden rule
 
 Tar everything, move big, compute on node-local `$TMPDIR`. RDS only ever sees
 big files. Never detar onto RDS, never read loose shards off RDS, never write
@@ -37,7 +42,7 @@ cd /rds/general/user/cjc20/home/EPA
 qsub -v EPA_N_CHUNKS=40,EPA_SIF=$PWD/epa-cx3-2026-07-19.sif,EPA_DATALINK=$PWD/Datalink \
      hpc/cx3-gt-manifest.pbs
 
-# 2. grid array — split mode (default): reads first (1..40), then cells (41..80).
+# 2. grid array: split mode (default): reads first (1..40), then cells (41..80).
 #    -J upper bound MUST equal 2 * EPA_N_CHUNKS in split mode.
 qsub -J 1-80%20 \
      -v EPA_N_CHUNKS=40,EPA_SIF=$PWD/epa-cx3-2026-07-19.sif,EPA_DATALINK=$PWD/Datalink \
@@ -119,7 +124,7 @@ Scoping env vars (all optional; defaults reproduce the full grid):
 | `EPA_XSCORE_CELLTYPES` | `Astro,Micro,Oligo` | R-side `XSCORE_CELLTYPES`. |
 | `EPA_XSCORE_MODES` | `cells,reads` | R-side `XSCORE_MODES`. |
 | `EPA_XSCORE_RUNS` | `1,2,3,4,5,6,7,8,9,10` | R-side `XSCORE_RUNS`. Missing runs are skipped silently. |
-| `EPA_XSCORE_MAX_ITERS` | *(unset)* | R-side `XSCORE_MAX_ITERS` — per-grid-point iteration cap for cheap probes. |
+| `EPA_XSCORE_MAX_ITERS` | *(unset)* | R-side `XSCORE_MAX_ITERS`: per-grid-point iteration cap for cheap probes. |
 | `EPA_XSCORE_RUNS15_TAR` | `Datalink/HPC_XGB_Input/cartesian_runs01-05.tar` | Consolidated runs 1-5 cartesian input tar. |
 | `EPA_XSCORE_RUNS610_TAG` | `deseq2-edger-limma_runs06-10` | Tag for the runs 6-10 chunk tars and control tar. |
 | `EPA_XSCORE_RUNS610_CONTROL_TAR` | `Datalink/HPC_Control_Tar/epa-control-<runs610_tag>.tar` | Matching control tar for runs 6-10 truth files. |

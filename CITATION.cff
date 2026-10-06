@@ -1,53 +1,94 @@
-# Citation File Format — machine-readable citation metadata
+# Citation File Format: machine-readable citation metadata
 # Spec: https://citation-file-format.github.io
 # Validate: cffconvert --validate --infile CITATION.cff
 
 cff-version: 1.2.0
-message: "If you use this pipeline or reference the empirical power analysis dataset, please cite both the software and the paper."
+message: "If you use this pipeline, the empirical power dataset or the fitted power model, please cite the paper."
 title: "Empirical Power Analysis for Single-Cell RNA-seq Differential Expression"
 version: "1.0.0-dev"
-date-released: "2026-05-01"
 license: MIT
 repository-code: "https://github.com/neurogenomics/Empirical_Power_Analysis"
 url: "https://github.com/neurogenomics/Empirical_Power_Analysis"
-doi: "10.5281/zenodo.TBD"    # mint on first release
+# doi and date-released: add when the first release is archived
 
 type: software
 
 authors:
-  - family-names: Crampton
-    given-names: Chris
+  - family-names: "Crampton"
+    given-names: "Chris"
     affiliation: "UK Dementia Research Institute, Imperial College London"
-    orcid: "https://orcid.org/0000-0000-0000-0000"     # TODO: add Chris's ORCID
-  - family-names: Fawad
-    given-names: Salman
-    affiliation: "UK Biobank"
-    orcid: "https://orcid.org/0000-0000-0000-0000"     # TODO
-  - family-names: Dash
-    given-names: Hiranyamaya
+    orcid: "https://orcid.org/0009-0002-5542-0566"
+  - family-names: "Fawad"
+    given-names: "Salman"
     affiliation: "UK Dementia Research Institute, Imperial College London"
-    orcid: "https://orcid.org/0000-0000-0000-0000"     # TODO
-  - family-names: Skene
-    given-names: Nathan G.
+    orcid: "https://orcid.org/0009-0004-6541-8907"
+  - family-names: "Clark"
+    given-names: "Toby"
+    affiliation: "UK Dementia Research Institute, Imperial College London"
+    orcid: "https://orcid.org/0009-0006-7119-4094"
+  - family-names: "Dash"
+    given-names: "Hiranyamaya"
+    affiliation: "UK Dementia Research Institute, Imperial College London"
+    orcid: "https://orcid.org/0009-0005-5514-505X"
+  - family-names: "Kövér"
+    given-names: "Bence"
+    affiliation: "Centre for Craniofacial and Regenerative Biology, King's College London"
+    orcid: "https://orcid.org/0009-0004-5406-375X"
+  - family-names: "Cotton"
+    given-names: "Garry"
+    affiliation: "Department of Computer Science, Imperial College London"
+    orcid: "https://orcid.org/0009-0009-0356-4649"
+  - family-names: "Lee"
+    given-names: "Donghoon"
+    affiliation: "Center for Disease Neurogenomics, Icahn School of Medicine at Mount Sinai"
+    orcid: "https://orcid.org/0000-0003-0453-6059"
+  - family-names: "Duff"
+    given-names: "Eugene"
+    affiliation: "UK Dementia Research Institute, Imperial College London"
+    orcid: "https://orcid.org/0000-0001-8795-5472"
+  - family-names: "Bottolo"
+    given-names: "Leonardo"
+    affiliation: "Department of Genomic Medicine, University of Cambridge"
+    orcid: "https://orcid.org/0000-0002-6381-2327"
+  - family-names: "Matthews"
+    given-names: "Paul M."
+    affiliation: "UK Dementia Research Institute, Imperial College London"
+    orcid: "https://orcid.org/0000-0002-1619-8328"
+  - family-names: "Skene"
+    given-names: "Nathan G."
     email: n.skene@imperial.ac.uk
     affiliation: "UK Dementia Research Institute, Imperial College London"
     orcid: "https://orcid.org/0000-0002-6807-3180"
 
 preferred-citation:
   type: article
-  title: "Current Single-Cell Study Designs Are Systematically Underpowered for Small-Effect Genes: Empirical Power Analysis Across 22 Million Detection Outcomes"
+  status: in-preparation
+  title: "Single-Cell Study Designs Are Systematically Underpowered for Small-Effect Genes"
   authors:
-    - family-names: Crampton
-      given-names: Chris
-    - family-names: Fawad
-      given-names: Salman
-    - family-names: Dash
-      given-names: Hiranyamaya
-    - family-names: Skene
-      given-names: Nathan G.
+    - family-names: "Crampton"
+      given-names: "Chris"
+    - family-names: "Fawad"
+      given-names: "Salman"
+    - family-names: "Clark"
+      given-names: "Toby"
+    - family-names: "Dash"
+      given-names: "Hiranyamaya"
+    - family-names: "Kövér"
+      given-names: "Bence"
+    - family-names: "Cotton"
+      given-names: "Garry"
+    - family-names: "Lee"
+      given-names: "Donghoon"
+    - family-names: "Duff"
+      given-names: "Eugene"
+    - family-names: "Bottolo"
+      given-names: "Leonardo"
+    - family-names: "Matthews"
+      given-names: "Paul M."
+    - family-names: "Skene"
+      given-names: "Nathan G."
   year: 2026
-  journal: "bioRxiv"
-  doi: "10.1101/TBD"     # update on preprint posting
+  # journal and doi: add on publication
 
 keywords:
   - single-cell RNA-seq
@@ -55,7 +96,9 @@ keywords:
   - power analysis
   - pseudobulk
   - DESeq2
+  - edgeR
+  - limma-voom
+  - XGBoost
+  - PsychAD
   - reproducible research
-  - Docker
-  - bioinformatics
   - neurogenomics

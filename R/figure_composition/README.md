@@ -1,45 +1,66 @@
 # Figure composition pipeline
 
-Non-destructive image compositor that stitches existing paper PNGs into
-Nature Comms-style faceted panels (A / B / C / D).
+Composers that assemble the multi-panel main-text and supplementary figures
+from outputs of the cartesian downsampling and power curve fitting pipelines.
+No source PNG is modified: composers read from `Datalink/` (or rebuild panels
+from checkpoints), stage under `R/figure_composition/output*/`, and publish the
+paper copy to `Datalink/Composed_Figures/`.
 
-**Status:** trial — three style variants produced so Chris can pick one. Nothing
-in the paper draft or in `Datalink/` has been modified.
+## Use in the Reproduction Pipeline
 
-## Run
+The canonical end-to-end route is `pipeline/` (see `pipeline/README.md`).
+
+Stage `compose` runs:
 
 ```bash
-cd /home/cramptc/cbert/data/workspace/packages/Power_Analysis_Paper
-python3 R/figure_composition/compose_figures.py
+python3 R/figure_composition/compose_figures.py --only figure_cartesian_oligo
+Rscript R/figure_composition/compose_recall_panels.R --cell Oligo --mode cells
+# for mode in cells, reads:
+Rscript R/figure_composition/compose_crossscore.R --mode <mode> --figset mega --style discrete
+python3 R/figure_composition/compose_supplementary.py --mode <mode>
 ```
 
-Requires Python 3 + Pillow (already present on CBERT).
+Stage `xgb_post` runs `Rscript R/figure_composition/compose_xgb_panels.R`.
 
-## Outputs
+## Scripts and the figures they produce
 
-`R/figure_composition/output/<variant>/<figure>.png`
+| Script | Output (paper copy) | Paper figure |
+|--------|---------------------|--------------|
+| `compose_figures.py --only figure_cartesian_oligo` | `Composed_Figures/figure_cartesian_oligo_recall.png`, `figure_cartesian_oligo_precision.png` | Fig. 2 (`FigRecall`), Fig. 4 (`FigPrecision`): Oligo continuous surface (A) + discrete grid (B) |
+| `compose_recall_panels.R` | `Composed_Figures/figure_recall_panels_oligo_cells.png` | Fig. 3 (`FigRecallPanels`): recall by padj quartile (A) and by mean expression for tiny (B) and small (C) effect bins |
+| `compose_xgb_panels.R` | `Power_Curve_Fitting/Models/xgboost/figure_xgb_composed.png` | Fig. 5 (`FigXGB`), panels A-E |
+| `compose_crossscore.R` | `Composed_Figures/Cross_Score/crossscore_{recall,precision}_mega_{Astro,Micro,Oligo}_{cells,reads}_discrete_raw.png` | Supplementary cross-method grids |
+| `compose_supplementary.py` | `Composed_Figures/Supplementary/supp_*_bymethod_{cells,reads}.png` (36 files) | Supplementary per-method surfaces and tiny/small panels |
+| `interp_helpers.R` | (helper) | Local copy of the interpolation helpers from `R/cartesian_downsampling/07_Visualise_Continuous_Grid.R`, sourced by `compose_crossscore.R` |
+| `compose_crossscore.py` | (wrapper) | Compatibility wrapper around `compose_crossscore.R` |
+| `compose_precision_panels.R` | `Composed_Figures/figure_precision_panels_<cell>_<mode>.png` | Not used for the paper (precision counterpart of the recall panels) |
+| `figure1_panel_a.py` | (none in the pipeline) | Not used by the pipeline. Fig. 1 (`FigOverview`) uses the static `Figure1_Diagram.png` at the repository root |
 
-Variants:
-- `v1_tight` — minimal padding, inline bold letters in each panel corner.
-- `v2_spaced` — Nature-style: larger bold letters in a dedicated strip above each panel, generous gaps.
-- `v3_bordered` — hairline panel borders + inline letters, for visual grouping.
+Fig. 6 (`FigGeneGroups`) is produced by `R/gene_classification/`, not here.
 
-Figures:
-- `figure_cartesian_oligo.png` — oligo precision/recall continuous surfaces (A, B) + discrete recall grid (C) + discrete precision grid (D).
-- `figure_bulk_validation.png` — stratified recovery bar charts for all three cell types (A, full width) + bulk-anchored LFC correlations for Astro/Micro/Oligo (B, C, D as thirds).
+`compose_figures.py` also defines `figure_cartesian_oligo` (4-panel combined),
+`figure_bulk_validation`, `figure_reproducibility_column` and
+`figure_powercurve`. These are obsolete (not used for the paper): the bulk
+validation and cross-dataset reproducibility figures were removed with the
+GTEx and cross-dataset analyses. The `--only figure_cartesian_oligo` filter
+(substring match) builds only the oligo cartesian figures.
+
+## Style variants (`compose_figures.py`)
+
+Each figure is rendered in three styles under
+`R/figure_composition/output/<variant>/`; `v2_spaced` is copied to
+`Datalink/Composed_Figures/`.
+
+- `v1_tight`: minimal padding, inline bold letters in each panel corner.
+- `v2_spaced`: Nature-style, larger bold letters in a strip above each panel (published).
+- `v3_bordered`: hairline panel borders + inline letters.
 
 ## Design notes
 
-- No source PNGs are modified. The pipeline reads from `Datalink/` and writes only under `R/figure_composition/output/`.
-- Working canvas width is 3200 px at lossless PNG. Aspect ratios of each panel are preserved via letterboxing — nothing is stretched.
-- Panel A of Figure 2 (the "bulk bar chart") currently tiles the three per-cell-type stratified recovery bar charts (Astro | Micro | Oligo) horizontally into a single full-width strip. If you want a single combined bar chart instead, point me at which PNG (or generate a new one from `R/bulk_deg_processing/`) and I'll swap the source.
-- To change a source image, edit `FIG1_SOURCES` / `FIG2_SOURCES_*` at the top of `compose_figures.py`. To change layout proportions, edit `build_fig1` / `build_fig2`.
+- Working canvas width is 3200 px at lossless PNG; panel aspect ratios are preserved by letterboxing.
+- `compose_recall_panels.R` rebuilds its panels from the cartesian checkpoints rather than tiling PNGs, so facet annotations and subtitles can be dropped.
+- To change a source image for `compose_figures.py`, edit the `FIG1_SOURCES` dictionary at the top of the script; layout lives in `build_fig1*`.
+- Python dependencies (Pillow etc.) are pinned in `docker/python-requirements.txt`.
 
-## What to do once a variant is picked
-
-See `FIGURE_TRACKING.md` for:
-- The exact source PNGs feeding each panel.
-- Which supplementary figure each source is currently used in.
-- Suggested main-text reference edits.
-- Suggested caption text for the new composites.
-- A checklist for removing the absorbed panels from the supplementary file and renumbering.
+`FIGURE_TRACKING.md` is a historical handover note from the original
+compositing trial and does not describe the current figure set.

@@ -2,11 +2,20 @@
 
 ## Pipeline Purpose
 
-Performs sex-biased differential expression analysis across 5 datasets (Roussos/PsychAD, Allen/SEA-AD, DeJager/ROSMAP, Johansen, Rexach) and 3 cell types (Astro, Micro, Oligo) using pseudobulk aggregation and DESeq2 with ALL donors per dataset. Then performs cross-dataset comparison diagnostics including UpSet plots, **IoU (Intersection over Union) matrices**, LFC correlation analyses, concordance metrics, forest plots, and gene overlap heatmaps.
+Performs sex-biased differential expression on the full PsychAD cohort (`Roussos` in code and paths) for 3 cell types (Astro, Micro, Oligo), using pseudobulk aggregation and DESeq2 with all filtered donors. It also builds a gene annotation audit (chromosome, biotype, PAR status) of the tested gene universe, which feeds Supplementary Data 1.
 
-**Note:** IoU has been elevated to the primary reproducibility metric (replacing Pearson correlation as the main figure) because it directly measures whether the same genes are called significant across datasets, providing a more interpretable assessment of gene set reproducibility.
+`DATASET_CONFIG` in `config.R` now contains only `Roussos`. The pipeline was originally written for five datasets (PsychAD, SEA-AD/Allen, ROSMAP/DeJager, Johansen, Rexach) with cross-dataset IoU, LFC and sign-agreement diagnostics. That cross-dataset analysis has been removed from the paper; the scripts that implement it are kept in the directory but are obsolete (not used for the paper).
 
-This pipeline merges the former "Full Ground Truth" DE analysis and "Cross-Set Analysis" diagnostics into a single unified three-stage validated pipeline.
+## Use in the Reproduction Pipeline
+
+The canonical end-to-end route is `pipeline/` (see `pipeline/README.md`). Stage `fgt` runs:
+
+```bash
+Rscript R/full_ground_truth/run_pipeline.R 1,4 <n_cores_agg> <n_cores_de>
+Rscript R/de_diagnostics/run_pipeline.R 4
+```
+
+with `BIOMART_OFFLINE=true`, using the shipped biomaRt caches (`gene_audit_biomart_cache.csv`). Steps 2, 3 and 5 are not run.
 
 ## Quick Start
 
@@ -14,94 +23,79 @@ This pipeline merges the former "Full Ground Truth" DE analysis and "Cross-Set A
 # Run unit tests (Stage 1)
 Rscript R/full_ground_truth/tests/test_full_ground_truth.R
 
-# Run toy integration test (Stage 2)
-Rscript R/full_ground_truth/toy/run_toy_test.R
+# Run the steps used for the paper (DE and gene audit)
+Rscript R/full_ground_truth/run_pipeline.R 1,4
 
-# Run full pipeline (Stage 3)
-Rscript R/full_ground_truth/run_pipeline.R
-
-# Run specific steps
-Rscript R/full_ground_truth/run_pipeline.R 1,2    # Steps 1 and 2 only
-Rscript R/full_ground_truth/run_pipeline.R 2       # Step 2 only (diagnostics)
-Rscript R/full_ground_truth/run_pipeline.R all 8 8 # All steps, 8 cores each
+# Run with explicit core counts
+Rscript R/full_ground_truth/run_pipeline.R 1,4 12 12
 ```
+
+`run_pipeline.R` with no arguments runs steps 1-5, including the obsolete cross-dataset steps.
 
 ## Pipeline Steps
 
-| Step | Script | Description |
-|------|--------|-------------|
-| 1 | `01_Run_DE_All_Datasets.R` | Pseudobulk aggregation + DESeq2 for all 7 datasets x 3 cell types |
-| 2 | `02_Cross_Dataset_Diagnostics.R` | UpSet plots, correlation matrices, concordance, forest plots |
-| 3 | `03_Visualise_Summary.R` | Cross-cell-type summary tables and overview figures |
+| Step | Script | Status | Description |
+|------|--------|--------|-------------|
+| 1 | `01_Run_DE_All_Datasets.R` | Paper | Pseudobulk aggregation + DESeq2 per cell type (PsychAD only) |
+| 2 | `02_Cross_Dataset_Diagnostics.R` | Obsolete (not used for the paper) | UpSet plots, IoU, LFC/sign agreement, concordance, forest plots, FDP |
+| 3 | `03_Visualise_Summary.R` | Obsolete (not used for the paper) | Cross-dataset summary tables and overview figures |
+| 4 | `04_Gene_Audit_Matrix.R` | Paper | Gene universe audit by chromosome, biotype and PAR status |
+| 5 | `02b_Regenerate_Heatmaps.R` | Obsolete (not used for the paper) | Re-renders IoU and FDP heatmaps from cached CSVs |
+
+## DE Model
+
+- Pseudobulk counts summed per donor; genes with fewer than `MIN_GENE_COUNT` (10) total counts removed.
+- Design: `~ Source + self_reported_ethnicity + disease + pmi_scaled + internal_age_scaled + sex` (sex last). PMI is annotated onto the shards by `R/sharding/Annotate_Roussos_PMI.R`; age is parsed from `development_stage` and standardised.
+- Covariates with a single level or zero variance are dropped with a warning.
+- LFCs are shrunk with `DESeq2::lfcShrink(type = "ashr")`.
 
 ## File Structure
 
 ```
 R/full_ground_truth/
-  config.R                          # All configuration (paths, datasets, thresholds)
+  config.R                          # Configuration (paths, DATASET_CONFIG, thresholds)
   utils.R                           # Shared utility functions
-  run_pipeline.R                    # Master runner (executes steps 1-3)
+  run_pipeline.R                    # Master runner (steps 1-5)
   01_Run_DE_All_Datasets.R          # Step 1: DE analysis
-  02_Cross_Dataset_Diagnostics.R    # Step 2: Cross-dataset diagnostics
-  03_Visualise_Summary.R            # Step 3: Summary visualisations
+  02_Cross_Dataset_Diagnostics.R    # Step 2: cross-dataset diagnostics (obsolete)
+  02b_Regenerate_Heatmaps.R         # Step 5: heatmap re-render (obsolete)
+  03_Visualise_Summary.R            # Step 3: summary visualisations (obsolete)
+  04_Gene_Audit_Matrix.R            # Step 4: gene audit
+  _run_step2.R, _run_step2_shared_datalink.R   # Helper wrappers for step 2 (obsolete)
   tests/
-    test_full_ground_truth.R        # Stage 1: Unit tests (24 tests)
+    test_full_ground_truth.R        # Stage 1: unit tests
   toy/
-    run_toy_test.R                  # Stage 2: Integration test (Micro, 2 datasets, 5 donors)
+    run_toy_test.R                  # Stage 2: integration test (Roussos + Allen; see below)
   README.md                         # This file
 ```
 
 ## Inputs Expected
 
 ### Source Data
-- **Location:** `Datalink/Shards/{CellType}/{Dataset}/`
-- **Format:** Individual donor shard files (`donor_*.qs`) containing SingleCellExperiment objects
-- **Structure Required:**
-  - `counts` assay: Sparse integer matrix (genes x cells)
-  - Metadata columns vary by dataset (see DATASET_CONFIG in config.R)
-
-### Manifests
-- **Location:** `Datalink/Shards/{CellType}/{Dataset}/00_MASTER_MANIFEST.qs`
-
-### External Metadata (DeJager only)
-- **Location:** `Datalink/raw_data/DeJagerMeta.csv`
+- **Location:** `Datalink/Shards/{CellType}/Roussos/`
+- **Format:** Individual donor shard files (`donor_*.qs`) containing SingleCellExperiment objects with a `counts` assay
+- **Manifest:** `Datalink/Shards/{CellType}/Roussos/00_MASTER_MANIFEST.qs`
 
 ### Prerequisites
-- Sharding pipeline must have completed successfully
-- All donor shards must be valid SingleCellExperiment objects with integer counts
+- Sharding pipeline (stage `shard`) completed, including PMI annotation
+- For step 4 offline: `Datalink/Full_Ground_Truth/gene_audit_biomart_cache.csv`
 
 ## Outputs Produced
 
-### Per Dataset x Cell Type (Step 1)
+### Per Cell Type (Step 1)
 - **Location:** `Datalink/Full_Ground_Truth/{CellType}/`
-- `{Dataset}_DE_results.csv` — Full DE results table
-- `{Dataset}_Full_DESeq2_Results.qs` — Complete DESeqResults object
-- `{Dataset}_dds_checkpoint.qs` — DESeqDataSet object
-- `{Dataset}_pb_checkpoint.qs` — Pseudobulk SingleCellExperiment
+- `Roussos_DE_results.csv`: full DE results table
+- `Roussos_Full_DESeq2_Results.qs`: DESeqResults object
+- `Roussos_dds_checkpoint.qs`: DESeqDataSet object
+- `Roussos_pb_checkpoint.qs`: pseudobulk SingleCellExperiment
 
-### Per Cell Type Diagnostics (Step 2)
-- **Location:** `Datalink/Full_Ground_Truth/{CellType}/Diagnostic_Results/`
-- `Diagnostic_UpSet_Plot.png` — Gene overlap UpSet plot
-- `UpSet_Male_Biased_Genes.png` — Male-biased gene overlaps
-- `UpSet_Female_Biased_Genes.png` — Female-biased gene overlaps
-- `Diagnostic_Overlap_Heatmap.png` — Pairwise overlap heatmap
-- `Expanded_IoU_Matrix.png` — **IoU matrix (primary reproducibility metric)**
-- `Expanded_IoU_Matrix.csv` — Raw IoU values
-- `IoU_Summary_Statistics.csv` — Per-pair IoU statistics
-- `LFC_Correlation_Top100.png` — LFC correlation for top 100 genes (supplementary)
-- `LFC_Correlation_Matrix.csv` — Pairwise LFC correlation matrix
-- `LFC_Agreement_Matrix_Roussos_Sig_Genes.png` — Pearson LFC agreement (supplementary)
-- `Sign_Agreement_Matrix_Roussos_Sig_Genes.png` — Direction agreement
-- `Forest_Plot_Top20_Genes.png` — Cross-dataset forest plots
-- `Concordance_Analysis_vs_Roussos.csv` — Concordance metrics
-- `XIST_Detection_Summary.csv` — XIST sanity check
-- `Significant_Gene_Counts.csv` — Per-dataset sig gene counts
+### Gene Audit (Step 4)
+- `Datalink/Full_Ground_Truth/{CellType}/Gene_Audit_Full_Universe.csv` and `Gene_Audit_Significant.csv`
+- `Datalink/Full_Ground_Truth/Gene_Audit_Full_Universe_Combined.csv` (used for Supplementary Data 1, gene universe composition)
+- `Datalink/Full_Ground_Truth/Gene_Audit_Significant_Combined.csv`
 
-### Cross-Cell-Type Summary (Step 3)
-- **Location:** `Datalink/Full_Ground_Truth/`
-- `Summary_All_CellTypes.csv` — Master summary table
-- `Summary_SigGene_Heatmap.png` — Sig gene count heatmap
-- `Summary_XIST_Across_Datasets.png` — XIST LFC bar plot
+### Obsolete outputs (steps 2, 3, 5)
+`{CellType}/Diagnostic_Results/` (IoU, LFC/sign agreement, UpSet, forest plots), `FDP_Summary.csv`, `FDP_Heatmap.png` and the `Summary_*` files. These are not referenced by the paper.
 
 ## Configuration
 
@@ -109,70 +103,48 @@ All configuration is in `config.R`. Key settings:
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `RUN_DATASETS` | All 7 | Which datasets to process |
-| `CELL_TYPES` | Astro, Micro, Oligo | Which cell types |
-| `N_CORES_AGG` | 12 | Cores for pseudobulk aggregation |
-| `N_CORES_DE` | 12 | Cores for DESeq2 |
+| `RUN_DATASETS` | `Roussos` | Datasets to process (all of `DATASET_CONFIG`) |
+| `CELL_TYPES` | Astro, Micro, Oligo | Cell types |
+| `N_CORES_AGG` | 4 | Cores for pseudobulk aggregation (overridden by argument 2) |
+| `N_CORES_DE` | 4 | Cores for DESeq2 (overridden by argument 3) |
+| `MIN_GENE_COUNT` | 10 | Minimum total counts per gene |
 | `FDR_THRESHOLD` | 0.05 | Significance threshold |
-| `LFC_THRESHOLD` | 1 | Effect size threshold (|LFC| > 1.0) |
-| `FORCE_RECALC` | FALSE | Skip existing results |
-| `REFERENCE_DATASET` | Roussos | Reference for concordance |
+| `LFC_THRESHOLD` | 1 | Legacy \|LFC\| > 1 cut-off, used only by the obsolete diagnostics and `Gene_Audit_Significant*.csv`; the paper truth set uses \|LFC\| > 0.2 (`GT_LFC_THRESHOLD` in `R/power_curve_fitting/config.R`) |
+| `FORCE_RECALC` | TRUE | Recompute even if outputs exist (`POWER_ANALYSIS_FORCE_RECALC`) |
 
 ## Tests Implemented
 
-### Stage 1 — Unit Tests (`tests/test_full_ground_truth.R`)
+### Stage 1: Unit Tests (`tests/test_full_ground_truth.R`)
 
-| Test Group | Tests | What's Validated |
-|------------|-------|-----------------|
-| `test_age_parsers` | 8 | parse_verbose_age(), parse_simple_numeric() |
-| `test_pseudobulk_aggregation` | 4 | aggregate_shards_parallel() with mock shards |
-| `test_deseq2_setup` | 3 | run_deseq_for_dataset() with mock data |
-| `test_output_structure` | 5+ | clean_gene_ids(), extract_significant_genes(), build_overlap_matrix(), compute_concordance() |
-| `test_no_silent_failures` | 3 | Error propagation (not silent NA returns) |
+| Test Group | What's Validated |
+|------------|-----------------|
+| Age parsers | `parse_verbose_age()`, `parse_simple_numeric()` |
+| Pseudobulk aggregation | `aggregate_shards_parallel()` with mock shards, metadata preservation, manifest skipping |
+| DESeq2 setup | `run_deseq_for_dataset()` with mock data |
+| Output structure | `clean_gene_ids()`, `extract_significant_genes()`, `build_overlap_matrix()`, `compute_concordance()` |
+| No silent failures | Error propagation (not silent NA returns) |
 
-### Stage 2 — Toy Integration Test (`toy/run_toy_test.R`)
+### Stage 2: Toy Integration Test (`toy/run_toy_test.R`)
 
-**Configuration:** Micro only, Roussos + Allen, 5 donors each, 4 cores
+Configured for Micro, Roussos + Allen, 5 donors each. Allen is no longer in `DATASET_CONFIG` and its shards are not produced by the reproduction pipeline, so this test is obsolete in its current form.
 
-**Validation Checklist:**
-- [ ] DE results CSV files created for both datasets
-- [ ] Pseudobulk SCE objects saved
-- [ ] DESeq2 dds objects saved
-- [ ] UpSet plot generated
-- [ ] Correlation plot generated
-- [ ] Non-NA padj and log2FoldChange values present
-- [ ] XIST detected with expected sex bias
-- [ ] Significant gene counts reasonable
+### Stage 3: Full Production Run
 
-### Stage 3 — Full Production Run
-
-**Configuration:** 3 cell types, 7 datasets, full donor pools, 12 cores
+Stage `fgt` of `pipeline/`: 3 cell types, PsychAD, full filtered donor pool, steps 1 and 4.
 
 ## What Is NOT Tested
 
-1. **Shard Integrity** — Assumes sharding pipeline validated counts
-2. **Gene Annotation Consistency** — Assumes Ensembl IDs consistent across datasets
-3. **Biological Replicability** — Correlation plots provide qualitative check only
-4. **Metadata Completeness** — XIST analysis provides indirect sex label validation
-5. **Covariate Selection** — Domain knowledge decision, not testable programmatically
-6. **Statistical Power** — Separate pipeline (cartesian_downsampling) handles this
-7. **Multiple Testing Correction** — Assumes BH FDR appropriate
-8. **Cross-Platform Batch Effects** — Correlation analyses provide indirect assessment
-9. **Outlier Detection** — Would require PCA-based outlier detection
-10. **Reproducibility Across R Versions** — Would require CI/CD infrastructure
+1. **Shard Integrity**: assumes the sharding pipeline validated counts
+2. **Covariate Selection**: domain knowledge decision, not testable programmatically
+3. **Statistical Power**: handled by `cartesian_downsampling`
+4. **Multiple Testing Correction**: assumes BH FDR is appropriate
+5. **Outlier Detection**: would require PCA-based outlier detection
+6. **Reproducibility Across R Versions**: the pinned `renv.lock` / Docker image is the control
 
 ## History
 
-This pipeline merges two previously separate analyses:
-- **Full Ground Truth DE** (archived: `R/_archived/RoussosHalfnHalf/Run_All_Dataset_Full_Ground_Truths_Updated.R`)
-- **Cross-Set Analysis** (archived: `R/_archived/Cross_Set_Analysis/Run_Correlation_Matrix.R`)
-
-Previous output location: `Datalink/Cross-Dataset-Analysis/Full_Set_Outputs/`
-Current output location: `Datalink/Full_Ground_Truth/`
+This pipeline merged two earlier analyses (full ground truth DE and a cross-set correlation analysis; the original scripts are not part of this repository). The cross-dataset component was dropped from the paper in 2026; the code remains for reference.
 
 ---
 
-**Last Updated:** 2026-02-10
-**Framework Version:** Three-Stage Pipeline Validation v1.0
-**Pipeline Version:** 1.0.0
-**Status:** Active
+**Last Updated:** 2026-10-06
