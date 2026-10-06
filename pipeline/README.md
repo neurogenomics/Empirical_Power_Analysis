@@ -70,8 +70,8 @@ registry, a reproducer needs neither Docker nor a build:
 
 ## How it works
 
-- **Stages.** `pipeline/stages.tsv` defines 22 stages, their dependencies and
-  their resources. Each stage is one PBS job (two of them are job arrays) and
+- **Stages.** `pipeline/stages.tsv` defines 28 stages, their dependencies and
+  their resources. Each stage is one PBS job (three of them are job arrays) and
   is implemented in `pipeline/stages/<stage>.sh`, which calls the analysis code
   in `R/`.
 - **One command.** `run.sh` submits every stage up front, chained with
@@ -111,8 +111,12 @@ delete its `results/<stage>/` directory. Downstream stages are not
 invalidated automatically, so delete those too.
 
 **Grid chunking.** Grid chunking doesn't affect results: a design point's seed
-depends only on (run, donors, mode, depth, iteration). `EPA_GRID_CHUNKS` only
-trades task length against task count.
+depends only on (run, donors, mode, depth, iteration). `EPA_GRID_CHUNKS` and
+`EPA_AD_GRID_CHUNKS` only trade task length against task count.
+
+**Dates in outputs.** Jobs set `SOURCE_DATE_EPOCH` to the commit time of the
+code snapshot, so files that record an export date (the `predict_power` bundle,
+its README) are byte-identical across reruns of the same commit.
 
 ## Stages and what they produce
 
@@ -121,47 +125,63 @@ trades task length against task count.
 | `shard` | - | donor shards, filtered cohort (age >= 40, >= 30 cells) and full cohort, PMI annotated | 4 h |
 | `eda` | shard | PCA gallery (Supp. Fig.), sex-label validation (Supp. Table 4), cohort statistics (donor counts; Supp. Data 1) | < 1 h |
 | `fgt` | shard | full-cohort sex DE, gene-universe audit (Supp. Data 1), DEG chromosome grid (Supp. Fig.) | 1-2 h |
-| `deg_loss` | shard | depth / cell-count equalisation DEG loss (Supp. Table 3) | 2 h |
+| `deg_loss` | shard | depth / cell-count equalisation towards microglia, astrocytes and oligodendrocytes (Supp. Table 3) | 4-5 h |
 | `gt_manifest` | shard | ground truth for 10 runs, grid job manifests | 4-8 h |
 | `grid` (array, 2 x 40) | shard, gt_manifest | per-iteration DE results for the whole design grid | ~6.5 h per task |
 | `cartesian_cells`, `cartesian_reads` | grid | aggregated recall/precision, all grid and surface figures | 2-6 h each |
 | `crossscore` | grid | cross-method scoring | ~10 h |
 | `pcf_aggregate` | shard, grid | power-model training tables; truth-half DESeq2 checkpoints | ~16 h |
-| `xgb_base_search` (array 12), `xgb_base_select` | pcf_aggregate | baseline XGBoost (Fig. 5 comparator) | 1 h per task; ~6 h |
-| `xgb_real_search` (array 36), `xgb_real_select` | pcf_aggregate | production XGBoost model, config ranking (Supp. Data 4), CV metrics quoted in text | 1 h per task; ~6 h |
-| `xgb_real_shap` | xgb_real_select | SHAP figures (Supp. Figs.) | 2-4 h |
-| `xgb_post` | xgb selects | Figure 5, exported `predict_power` bundle | ~3 h |
+| `xgb_search` (array 108) | pcf_aggregate | hyperparameter search of the power model (n_cells >= 100 rows): 4 depths x 3 learning rates x 3 min_child_weights x 3 reweighting exponents, early stopping up to 20,000 rounds | 0.5-6 h per task |
+| `xgb_select` | xgb_search | the power model, config ranking with per-fold MAE (Supp. Data 4), CV metrics quoted in text, 5 SHAP refits | ~6 h |
+| `xgb_shap` | xgb_select | SHAP figures (Supp. Figs.) | 2-4 h |
+| `xgb_post` | xgb_select | Figure 5 (incl. hyperparameter bracketing, per-class precision/recall/F1), exported `predict_power` bundle | ~2 h |
 | `gene_class` | shard, xgb_post | Figure 6 | ~2 h |
 | `tables` | fgt, pcf_aggregate, cartesian_* | Supp. Table 2, recall grid CSV (numbers in text), Supp. Data 3 | < 1 h |
 | `compose` | cartesian_*, crossscore | Figures 2-4, cross-method and per-method Supp. Figs. | < 1 h |
 | `supp_data` | several | Supplementary Data 1-4 (+ SD2 zip) | < 1 h |
 | `knit` | all of the above | `Manuscript/nature_comms_{draft,supplementary}.html` | < 1 h |
-| `finalise` | knit | `MANIFEST.sha256`, `PROVENANCE.txt` | minutes |
+| `ad_shard` | shard | AD vs control donor shards: AD as the only diagnosis vs no diagnosis | < 1 h |
+| `ad_gt_manifest`, `ad_grid` (array, `EPA_AD_GRID_CHUNKS`, cells mode) | ad_shard | the AD vs control grid, 10 runs x 3 methods, same seeds | ~5 h per task |
+| `ad_cartesian` | ad_grid | AD recall/precision grids and surfaces (method-pooled), p-value-quartile and expression panels | 2-4 h |
+| `ad_pcf` | ad_grid | AD detection outcomes in the power model's training layout (external test set) | ~8 h |
+| `ad_de` | shard, ad_shard | full-cohort DE for both contrasts; AD vs autosomal sex-biased DEG |LFC| and expression distributions | 1-2 h |
+| `ad_validate` | ad_pcf, xgb_post | the sex-trained power model tested on AD: skewed-trinary precision/recall/F1, calibration, feature shift | < 1 h |
+| `finalise` | knit, AD stages | `MANIFEST.sha256`, `PROVENANCE.txt` | minutes |
 
-**Critical path.** `shard`, then `gt_manifest`, `grid`, `pcf_aggregate`, the
-realistic search and select, `xgb_post`, `gene_class` and finally `knit`. That
-is about 3 days of compute plus queueing. With 20 grid tasks at a time, the
-grid itself takes about a day.
+**Critical path.** `shard`, then `gt_manifest`, `grid`, `pcf_aggregate`,
+`xgb_search` and `xgb_select`, `xgb_post`, `gene_class` and finally `knit`.
+That is about 3-4 days of compute plus queueing. With 20 grid tasks at a time,
+the grid itself takes about a day. The AD vs control stages run alongside.
 
 **Space on the cluster filesystem.**
 - Shards: 11 GB.
-- Grid tars: ~310 GB.
+- Grid tars: ~310 GB (sex) plus ~100 GB (AD vs control).
 - All other results: about 10 GB.
 - Peak node-local scratch is ~330 GB, in the stages that unpack the whole grid
   (`crossscore`, `pcf_aggregate`).
 
 ## What differs from the figures in the preprint
 
-These differences are intentional, decided on 2026-10-01, and listed so that
-nobody mistakes them for reproduction failures:
+These differences are intentional, decided on 2026-10-01 and 2026-10-06, and
+listed so that nobody mistakes them for reproduction failures:
 - **All figures use all 10 robustness runs.** Before this pipeline, the
   cross-method figures and some cells-mode surfaces had been redrawn from runs
   1-5, while the reads-mode figures used runs 1-10.
-- **Figure 5 panel C (class F1) is out-of-fold**, not in-sample. The baseline
-  uses its own out-of-fold predictions (`08b`).
+- **There is one power model.** The former "baseline" (all grid rows) model is
+  gone; the model is trained on the n_cells >= 100 rows and no longer called
+  "realistic". Its outputs live in `Models/xgboost/` and `Exports/xgboost/`.
+- **The hyperparameter grid is wider** (108 configurations instead of 36): one
+  more value beyond the best-performing end of each tree hyperparameter
+  (depth 10, learning rate 0.01, min_child_weight 25), so the search brackets
+  its optimum. Figure 5 panel B shows that bracketing (best MAE per value, with
+  fold-to-fold standard errors) instead of the 36-bar chart.
+- **Figure 5 panel C is out-of-fold** and shows precision, recall and F1 of the
+  model per class (it previously compared in-sample F1 with the baseline).
 - **Figure 5 panels A and D** use the current panel code (10-90% bands, renamed
-  features). The earlier composite had been built from older copies of the
-  panels.
+  features), without the baseline facet.
+- **Supplementary Table 3** has oligodendrocyte rows as well as astrocyte rows.
+- **The AD vs control analysis is new** (`Datalink/AD_vs_Control/`); where it
+  goes in the manuscript is not decided.
 - **Supplementary Table 2** pools all 10 truth halves. The earlier version used
   the 6 that existed in April.
 - **Figure 6 scripts were reconstructed**, because the originals were lost. The

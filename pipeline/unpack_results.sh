@@ -8,8 +8,11 @@
 #
 #   RESULTS_DIR  WORKDIR/results (or a copy of it)
 #   DEST         directory to create Datalink/ in (e.g. a clone of the repository)
-#   --with-grid  also unpack the raw per-iteration grid results (~310 GB, about
-#                a million small files); not needed for any figure or table
+#   --with-grid  also unpack the raw per-iteration grid results of the sex and
+#                AD grids (~400 GB, over a million small files); not needed for
+#                any figure or table
+# The per-task XGBoost search tars (xgb_search/) are never unpacked: the same
+# files ship in xgb_select/search.tar.
 #   --no-verify  skip the sha256 check against RESULTS_DIR/MANIFEST.sha256
 #
 # Tars are unpacked in stage order; no two stages write the same file, so the
@@ -34,13 +37,13 @@ mkdir -p "$DEST/Datalink"
 if $VERIFY; then
   echo "verifying checksums ..."
   ( cd "$RES" && if $WITH_GRID; then sha256sum -c --quiet MANIFEST.sha256;
-                 else grep -v ' grid/' MANIFEST.sha256 | sha256sum -c --quiet; fi )
+                 else grep -vE ' (grid|ad_grid|xgb_search)/' MANIFEST.sha256 | sha256sum -c --quiet; fi )
 fi
 
 order="shard eda fgt deg_loss gt_manifest cartesian_cells cartesian_reads crossscore pcf_aggregate
-       xgb_base_search xgb_base_select xgb_real_search xgb_real_select xgb_real_shap xgb_post
-       gene_class tables compose supp_data knit"
-$WITH_GRID && order="$order grid"
+       xgb_select xgb_shap xgb_post gene_class tables compose supp_data knit
+       ad_shard ad_gt_manifest ad_cartesian ad_pcf ad_de ad_validate"
+$WITH_GRID && order="$order grid ad_grid"
 for s in $order; do
   for t in "$RES/$s"/*.tar; do
     [ -e "$t" ] || continue

@@ -1,48 +1,54 @@
 # ==============================================================================
-# UTILITY (preview only): regenerate the two XGBoost paper panels from the
-# already-committed CSVs -- no model refit, so the numbers stay identical to
-# what the draft already cites. Reads:
-#   trinary_classification/per_class_metrics.csv   -> F1 grid (reordered, relabelled)
-#   comparison/unified_calibration_table.csv       -> calibration grid (2x3)
-#   shap_selection.csv                             -> calibration model set + labels
-# Writes previews into comparison/_panel_preview/. Titles/subtitles stripped.
-# Once approved, this label/order logic gets folded into 08_ and 09_.
+# SCRIPT: Figure 5 panels for the XGBoost power model
+# PURPOSE: Draw the paper-styled panels from the CSV / OOF outputs of
+#          03_Select_XGBoost.R, 08_Compare_Reweighted.R and
+#          09_Trinary_Classification.R. No model refit. Reads:
+#   trinary_classification/per_class_metrics.csv     -> precision / recall / F1 bars
+#   shap_selection.csv + search/config_<k>/oof_predictions.qs -> calibration grid
+#   comparison/shap_importance_across_models.csv     -> SHAP heatmap
+#   model_selection.csv, model_selection_folds.csv   -> hyperparameter bracketing
+# Writes into Models/xgboost/comparison/_panel_preview/ (no titles; the
+# composite figure is assembled by R/figure_composition/compose_xgb_panels.R).
+#
+# Project root: $POWER_ANALYSIS_ROOT, else two levels up from the working
+# directory (the script used to be run from R/power_curve_fitting/).
 # ==============================================================================
 
 suppressPackageStartupMessages({
   library(qs)
   library(dplyr)
+  library(tidyr)
   library(ggplot2)
 })
 
-# Paths are relative to this script's directory (R/power_curve_fitting/).
-DL      <- "../../Datalink/Power_Curve_Fitting/Models/xgboost/realistic"
-per_class_path <- file.path(DL, "trinary_classification", "per_class_metrics.csv")
-unified_path   <- file.path(DL, "comparison", "unified_calibration_table.csv")
-shap_path      <- file.path(DL, "shap_selection.csv")
-out_dir        <- file.path(DL, "comparison", "_panel_preview")
+ROOT    <- Sys.getenv("POWER_ANALYSIS_ROOT", "../..")
+DL      <- file.path(ROOT, "Datalink", "Power_Curve_Fitting", "Models", "xgboost")
+out_dir <- file.path(DL, "comparison", "_panel_preview")
 dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
 
-# ------------------------------------------------------------------------------
-# PANEL: F1 grid (winner vs baseline), reordered + pretty labels, no underscores
-# ------------------------------------------------------------------------------
-pc <- read.csv(per_class_path, stringsAsFactors = FALSE)
+shap_sel <- read.csv(file.path(DL, "shap_selection.csv"), stringsAsFactors = FALSE)
 
-# data class value -> pretty label (many-to-one; distinct across schemes)
+# Pretty labels for the 5 SHAP models, built from the selection itself so they
+# stay right whichever configurations the search picks.
+tag_pretty <- function(tag, alpha) {
+  base <- c(median = "Median config", worst = "Worst config")
+  ifelse(startsWith(tag, "winner_alpha_"),
+         sprintf("Winner (α = %g)", alpha),
+         sprintf("%s (α = %g)", base[tag], alpha))
+}
+shap_sel$pretty <- tag_pretty(shap_sel$tag, shap_sel$alpha)
+tag_order <- c(sort(grep("^winner_alpha_", shap_sel$tag, value = TRUE)), "median", "worst")
+shap_sel <- shap_sel[order(match(shap_sel$tag, tag_order)), ]
+
+# ------------------------------------------------------------------------------
+# PANEL C: precision / recall / F1 per class for the winning model, one facet
+# per partition scheme.
+# ------------------------------------------------------------------------------
+pc <- read.csv(file.path(DL, "trinary_classification", "per_class_metrics.csv"),
+               stringsAsFactors = FALSE)
+
+# class label written by 09_Trinary_Classification.R -> paper label
 class_label_map <- c(
-  unpowered      = "Unpowered",
-  definitely_not = "Unpowered",
-  probably_not   = "Probably not",
-  contested      = "Contested",
-  maybe          = "Contested",
-  probably_yes   = "Probably yes",
-  powered        = "Powered",
-  yes            = "Powered",
-  q1_low         = "Lowest",
-  q2_low_mid     = "Low-mid",
-  q3_high_mid    = "High-mid",
-  q4_high        = "Highest",
-  # class labels written by the current 09_Trinary_Classification.R
   "Not Powered"         = "Unpowered",
   "Definitely Not"      = "Unpowered",
   "Underpowered"        = "Unpowered",
@@ -65,63 +71,55 @@ class_levels <- c("Unpowered", "Probably not", "Contested", "Probably yes",
 scheme_order <- c("binary", "trinary_01_09", "trinary_02_08",
                   "trinary_04_08", "quartile", "four_class")
 scheme_label_map <- c(
-  binary        = "Binary\n[0\u20130.5] [0.5\u20131]",
-  trinary_01_09 = "Trinary strict\n[0\u20130.1] [0.1\u20130.9] [0.9\u20131]",
-  trinary_02_08 = "Trinary standard\n[0\u20130.2] [0.2\u20130.8] [0.8\u20131]",
-  trinary_04_08 = "Trinary skewed\n[0\u20130.4] [0.4\u20130.8] [0.8\u20131]",
-  quartile      = "Quartiles\n[0\u20130.25] [0.25\u20130.5] [0.5\u20130.75] [0.75\u20131]",
-  four_class    = "Four-class\n[0\u20130.2] [0.2\u20130.5] [0.5\u20130.8] [0.8\u20131]"
+  binary        = "Binary\n[0–0.5] [0.5–1]",
+  trinary_01_09 = "Trinary strict\n[0–0.1] [0.1–0.9] [0.9–1]",
+  trinary_02_08 = "Trinary standard\n[0–0.2] [0.2–0.8] [0.8–1]",
+  trinary_04_08 = "Trinary skewed\n[0–0.4] [0.4–0.8] [0.8–1]",
+  quartile      = "Quartiles\n[0–0.25] [0.25–0.5] [0.5–0.75] [0.75–1]",
+  four_class    = "Four-class\n[0–0.2] [0.2–0.5] [0.5–0.8] [0.8–1]"
 )
 
-plot_df <- pc %>%
-  filter(role %in% c("winner", "baseline")) %>%
+unmapped <- setdiff(unique(pc$class), names(class_label_map))
+if (length(unmapped)) stop("Unmapped class labels in per_class_metrics.csv: ",
+                           paste(unmapped, collapse = ", "))
+
+prf_df <- pc %>%
+  filter(role == "winner") %>%
+  pivot_longer(c(precision, recall, f1), names_to = "metric", values_to = "value") %>%
   mutate(
-    class_lbl   = factor(class_label_map[class], levels = class_levels),
-    scheme      = factor(scheme, levels = scheme_order),
-    scheme_lbl  = factor(scheme_label_map[as.character(scheme)],
-                         levels = scheme_label_map[scheme_order]),
-    model       = factor(model, levels = c("realistic_winner", "baseline"),
-                         labels = c("Realistic winner", "Baseline"))
+    class_lbl  = factor(class_label_map[class], levels = class_levels),
+    scheme_lbl = factor(scheme_label_map[scheme], levels = scheme_label_map[scheme_order]),
+    metric     = factor(metric, levels = c("precision", "recall", "f1"),
+                        labels = c("Precision", "Recall", "F1"))
   )
 
-p_f1 <- ggplot(plot_df, aes(x = class_lbl, y = f1, fill = model)) +
-  geom_col(position = position_dodge(width = 0.7), width = 0.6, na.rm = TRUE) +
-  geom_text(aes(label = sprintf("%.2f", f1)),
-            position = position_dodge(width = 0.7), vjust = -0.3,
-            size = 3.2, colour = "black", na.rm = TRUE) +
+p_prf <- ggplot(prf_df, aes(x = class_lbl, y = value, fill = metric)) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.75, na.rm = TRUE) +
+  geom_text(aes(label = sprintf("%.2f", value)),
+            position = position_dodge(width = 0.8), vjust = -0.3,
+            size = 2.6, colour = "black", na.rm = TRUE) +
   facet_wrap(~ scheme_lbl, scales = "free_x", ncol = 2) +
   scale_y_continuous(limits = c(0, 1.08), breaks = seq(0, 1, 0.2)) +
-  scale_fill_manual(values = c("Realistic winner" = "#F8766D",
-                               "Baseline" = "#00BFC4")) +
-  labs(x = NULL, y = "F1 score", fill = NULL) +
+  scale_fill_manual(values = c(Precision = "#0072B2", Recall = "#E69F00", F1 = "#009E73")) +
+  labs(x = NULL, y = "Score", fill = NULL) +
   theme_bw(base_size = 14) +
   theme(legend.position  = "top",
         legend.text      = element_text(size = 13, colour = "black"),
         panel.grid.minor = element_blank(),
         axis.title.y     = element_text(size = 14, colour = "black"),
         axis.text.y      = element_text(size = 12, colour = "black"),
-        axis.text.x      = element_text(angle = 25, hjust = 1, size = 11,
-                                        colour = "black"),
-        strip.text       = element_text(size = 11, colour = "black",
-                                        lineheight = 0.9))
+        axis.text.x      = element_text(angle = 25, hjust = 1, size = 11, colour = "black"),
+        strip.text       = element_text(size = 11, colour = "black", lineheight = 0.9))
 
-ggsave(file.path(out_dir, "class_f1_grid_v2.png"),
-       p_f1, width = 7.2, height = 10, dpi = 150)
-cat("Wrote class_f1_grid_v2.png\n")
+ggsave(file.path(out_dir, "class_prf_grid.png"), p_prf, width = 8.5, height = 10, dpi = 150)
+cat("Wrote class_prf_grid.png\n")
 
 # ------------------------------------------------------------------------------
-# PANEL: calibration curves, 2x3 (ncol=2), pretty facet labels, no title.
-# Each point (per predicted bin) carries a vertical error bar spanning the
-# trial-weighted 10-90th percentile of the OBSERVED detection rate within that
-# bin -- wide in the middle (mid-power outcomes are intrinsically volatile),
-# narrow at the extremes (near 0/1 the outcome is near-deterministic). This is
-# the spread the mean-only point conceals. Bands are computed from the per-row
-# OOF predictions (search/config_<k>/oof_predictions.qs for the 5 configs;
-# Models/xgboost/oof_predictions.qs for the baseline, regenerated by
-# 08b_Baseline_OOF.R). Weighting = n_trials, matching mean_obs.
+# PANEL A: OOF calibration curves for the 5 SHAP models. Each point (per
+# predicted bin) carries a bar spanning the trial-weighted 10-90th percentile
+# of the OBSERVED detection rate within that bin: wide in the middle (mid-power
+# outcomes are intrinsically volatile), narrow at the extremes.
 # ------------------------------------------------------------------------------
-shap_sel <- read.csv(shap_path, stringsAsFactors = FALSE)
-
 wtd_quantile <- function(x, w, probs) {
   ok <- is.finite(x) & is.finite(w) & w > 0
   x <- x[ok]; w <- w[ok]
@@ -146,31 +144,13 @@ bin_oof <- function(oof) {
     filter(is.finite(mean_pred), is.finite(mean_obs))
 }
 
-chosen <- c("baseline",
-            sprintf("realistic_c%d_a%g", shap_sel$config_index, shap_sel$alpha))
-
-pretty_map <- c(baseline = "Baseline (full grid)")
-tag_pretty <- c(winner_alpha_0 = "Winner (\u03b1 = 0)",
-                winner_alpha_0.5 = "Winner (\u03b1 = 0.5)",
-                winner_alpha_1 = "Winner (\u03b1 = 1)",
-                median = "Median config (\u03b1 = 0.5)",
-                worst  = "Worst config (\u03b1 = 1)")
-oof_map <- c(baseline = file.path(DL, "..", "oof_predictions.qs"))
-for (i in seq_len(nrow(shap_sel))) {
-  key <- sprintf("realistic_c%d_a%g", shap_sel$config_index[i], shap_sel$alpha[i])
-  pretty_map[key] <- tag_pretty[[shap_sel$tag[i]]]
-  oof_map[key] <- file.path(DL, "search",
-                            sprintf("config_%d", shap_sel$config_index[i]),
-                            "oof_predictions.qs")
-}
-
-cal <- bind_rows(lapply(chosen, function(key) {
-  f <- oof_map[key]
-  if (!file.exists(f)) { cat(sprintf("WARN: OOF missing for %s (%s)\n", key, f)); return(NULL) }
-  cc <- bin_oof(qs::qread(f)); cc$model <- key; cc
+cal <- bind_rows(lapply(seq_len(nrow(shap_sel)), function(i) {
+  f <- file.path(DL, "search", sprintf("config_%d", shap_sel$config_index[i]),
+                 "oof_predictions.qs")
+  if (!file.exists(f)) stop("OOF predictions missing: ", f)
+  cc <- bin_oof(qs::qread(f)); cc$model <- shap_sel$pretty[i]; cc
 }))
-present <- chosen[chosen %in% unique(cal$model)]
-cal$model <- factor(cal$model, levels = present, labels = pretty_map[present])
+cal$model <- factor(cal$model, levels = shap_sel$pretty)
 
 p_cal <- ggplot(cal, aes(x = mean_pred, y = mean_obs)) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", colour = "grey50") +
@@ -193,11 +173,10 @@ ggsave(file.path(out_dir, "calibration_curves_2x3.png"),
 cat("Wrote calibration_curves_2x3.png\n")
 
 # ------------------------------------------------------------------------------
-# PANEL: SHAP importance heatmap across 5 models, pretty labels, no underscores,
-# no title/subtitle. Reads comparison/shap_importance_across_models.csv.
+# PANEL B: SHAP importance heatmap across the 5 models.
 # ------------------------------------------------------------------------------
-shap_across_path <- file.path(DL, "comparison", "shap_importance_across_models.csv")
-sha <- read.csv(shap_across_path, stringsAsFactors = FALSE)
+sha <- read.csv(file.path(DL, "comparison", "shap_importance_across_models.csv"),
+                stringsAsFactors = FALSE)
 
 feature_label_map <- c(
   abs_gt_lfc         = "|LFC|",
@@ -213,17 +192,8 @@ feature_label_map <- c(
   `cell_type=Micro`  = "Cell type: Micro",
   `cell_type=Oligo`  = "Cell type: Oligo"
 )
-tag_order <- c("winner_alpha_0", "winner_alpha_0.5", "winner_alpha_1",
-               "median", "worst")
-tag_label_map <- c(
-  winner_alpha_0   = "Winner (\u03b1 = 0)",
-  winner_alpha_0.5 = "Winner (\u03b1 = 0.5)",
-  winner_alpha_1   = "Winner (\u03b1 = 1)",
-  median           = "Median",
-  worst            = "Worst"
-)
+heat_tag_label <- setNames(sub("^(Median|Worst) config", "\\1", shap_sel$pretty), shap_sel$tag)
 
-# feature order: ascending average rank (most important at top)
 feat_order <- sha %>%
   group_by(feature) %>%
   summarise(avg_rank = mean(rank), .groups = "drop") %>%
@@ -234,8 +204,7 @@ sha2 <- sha %>%
   mutate(
     feat_lbl = factor(feature_label_map[feature],
                       levels = rev(feature_label_map[feat_order])),
-    tag_lbl  = factor(tag_label_map[tag],
-                      levels = tag_label_map[tag_order])
+    tag_lbl  = factor(heat_tag_label[tag], levels = heat_tag_label[shap_sel$tag])
   )
 
 p_shap <- ggplot(sha2, aes(x = tag_lbl, y = feat_lbl, fill = mean_abs_shap)) +
@@ -258,43 +227,61 @@ ggsave(file.path(out_dir, "shap_importance_pretty.png"),
 cat("Wrote shap_importance_pretty.png\n")
 
 # ------------------------------------------------------------------------------
-# PANEL: bin-balanced MAE across 12 configs x 3 alpha, no title/subtitle.
-# Reads model_selection.csv. Config labels already underscore-free.
+# PANEL B: hyperparameter bracketing. For each value of each searched
+# hyperparameter, the best bin-balanced MAE among configurations with that
+# value (minimum over every other axis). Every configuration is scored on the
+# same gene-grouped CV folds, so the error bar is the standard error of the
+# fold-PAIRED difference from the selected configuration (the selected value
+# itself has none). If the best value sits strictly inside the searched range,
+# the grid brackets the optimum on that axis.
 # ------------------------------------------------------------------------------
-ms <- read.csv(file.path(DL, "model_selection.csv"), stringsAsFactors = FALSE)
+ms    <- read.csv(file.path(DL, "model_selection.csv"), stringsAsFactors = FALSE)
+folds <- read.csv(file.path(DL, "model_selection_folds.csv"), stringsAsFactors = FALSE)
+win   <- ms[which.min(ms$bin_balanced_MAE), ]
+win_f <- folds[folds$config_index == win$config_index, c("fold", "bin_balanced_MAE")]
+paired_se <- function(cfg) {
+  f <- merge(folds[folds$config_index == cfg, c("fold", "bin_balanced_MAE")], win_f,
+             by = "fold", suffixes = c("", "_win"))
+  d <- f$bin_balanced_MAE - f$bin_balanced_MAE_win
+  if (cfg == win$config_index) 0 else sd(d) / sqrt(nrow(f))
+}
 
-ms2 <- ms %>%
-  mutate(
-    cfg_lbl = sprintf("depth %d\nlr %g \u00b7 mcw %d", max_depth, eta, min_child_weight),
-    alpha_lbl = factor(alpha, levels = c(0, 0.5, 1),
-                       labels = c("0  (no reweighting)",
-                                  "0.5  (inverse \u221an)",
-                                  "1  (inverse n)"))
-  )
-# order configs by the alpha=0 MAE (best first), matching the existing figure
-cfg_levels <- ms2 %>%
-  filter(alpha == 0) %>%
-  arrange(bin_balanced_MAE) %>%
-  pull(cfg_lbl)
-ms2 <- ms2 %>% mutate(cfg_lbl = factor(cfg_lbl, levels = cfg_levels))
+hp_cols <- c(max_depth = "Max tree depth", eta = "Learning rate",
+             min_child_weight = "Min child weight", alpha = "Bin-weight exponent \u03b1")
+bracket <- bind_rows(lapply(names(hp_cols), function(h) {
+  ms %>%
+    group_by(value = .data[[h]]) %>%
+    slice_min(bin_balanced_MAE, n = 1, with_ties = FALSE) %>%
+    ungroup() %>%
+    transmute(hp = hp_cols[[h]], value, config_index, bin_balanced_MAE,
+              selected = value == win[[h]])
+})) %>%
+  mutate(se = vapply(config_index, paired_se, numeric(1)),
+         hp = factor(hp, levels = hp_cols))
+bracket$value_lbl <- factor(format(bracket$value, drop0trailing = TRUE, trim = TRUE),
+                            levels = unique(format(sort(unique(bracket$value)),
+                                                   drop0trailing = TRUE, trim = TRUE)))
 
-p_mae <- ggplot(ms2, aes(x = cfg_lbl, y = bin_balanced_MAE, fill = alpha_lbl)) +
-  geom_col(position = position_dodge(width = 0.8), width = 0.75) +
-  scale_fill_viridis_d(name = "bin-weight exponent  \u03b1", end = 0.9) +
-  coord_cartesian(ylim = c(0.16, 0.20)) +
-  labs(x = NULL, y = "Bin-balanced MAE") +
+p_br <- ggplot(bracket, aes(x = value_lbl, y = bin_balanced_MAE, group = 1)) +
+  geom_line(colour = "grey50") +
+  geom_errorbar(data = function(d) d[d$se > 0, ],
+                aes(ymin = bin_balanced_MAE - se, ymax = bin_balanced_MAE + se),
+                width = 0.15, colour = "grey30") +
+  geom_point(aes(fill = selected), shape = 21, size = 3.2, colour = "black") +
+  scale_fill_manual(values = c(`TRUE` = "#D55E00", `FALSE` = "white"),
+                    labels = c(`TRUE` = "Selected", `FALSE` = "Other values"),
+                    breaks = c("TRUE", "FALSE"), name = NULL) +
+  facet_wrap(~ hp, nrow = 1, scales = "free_x") +
+  labs(x = NULL, y = "Best bin-balanced MAE") +
   theme_bw(base_size = 14) +
   theme(legend.position = "top",
-        legend.title = element_text(size = 13, colour = "black"),
         legend.text = element_text(size = 12, colour = "black"),
         panel.grid.minor = element_blank(),
-        panel.grid.major.x = element_blank(),
         axis.title.y = element_text(size = 14, colour = "black"),
-        axis.text.y = element_text(size = 12, colour = "black"),
-        axis.text.x = element_text(size = 10, colour = "black",
-                                   lineheight = 0.9))
+        axis.text = element_text(size = 12, colour = "black"),
+        strip.text = element_text(size = 12, colour = "black"))
 
-ggsave(file.path(out_dir, "bin_balanced_MAE_pretty.png"),
-       p_mae, width = 14, height = 5, dpi = 150)
-cat("Wrote bin_balanced_MAE_pretty.png\n")
+ggsave(file.path(out_dir, "hyperparameter_bracketing.png"),
+       p_br, width = 14, height = 5, dpi = 150)
+cat("Wrote hyperparameter_bracketing.png\n")
 cat("DONE\n")

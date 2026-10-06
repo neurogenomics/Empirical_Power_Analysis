@@ -10,9 +10,14 @@
 #          wrapper that reproduces the exact design-matrix recipe used at fit
 #          time (02_Fit_XGBoost.R / 03_Select_XGBoost.R).
 #
-# MODEL SELECTED (design decision, 2026-08-10): the REALISTIC reweighted model
-#   (trained on the n_cells >= 100 sub-grid via the alpha reweighting sweep),
-#   promoted to Models/xgboost/realistic/. Override with XGB_MODEL_SUBDIR.
+# MODEL: the single power model (trained on the n_cells >= 100 design rows,
+#   selected over the {tree hyperparameters x alpha} search), promoted by
+#   03_Select_XGBoost.R to Models/xgboost/. XGB_MODEL_SUBDIR exports a side
+#   experiment from Models/xgboost/<subdir>/ instead.
+#
+# DETERMINISM: the export date written into the bundle, wrapper and README
+#   comes from SOURCE_DATE_EPOCH when set (the reproduction pipeline sets it
+#   to the code commit time), so re-running the export gives identical files.
 #
 # FEATURE HANDLING (design decision): cell_type, de_method and reads_per_cell
 #   are KEPT in the model (dropping them would silently answer cell-type- and
@@ -58,14 +63,15 @@ if (!exists("PROJECT_ROOT")) {
 
 source(file.path(SCRIPT_DIR, "utils.R"))
 
-# Which promoted model to export. Default = the realistic reweighted model
-# (the production power model, per the 2026-08-10 decision). Set to "" to export
-# the baseline all-rows model in Models/xgboost/ instead.
-XGB_MODEL_SUBDIR <- Sys.getenv("XGB_MODEL_SUBDIR", "realistic")
+XGB_MODEL_SUBDIR <- Sys.getenv("XGB_MODEL_SUBDIR", "")
 XGB_GENE_SET     <- Sys.getenv("XGB_GENE_SET", "full")
+MODEL_LABEL      <- if (nzchar(XGB_MODEL_SUBDIR)) sprintf("XGBoost '%s'", XGB_MODEL_SUBDIR) else "XGBoost power model"
+.sde <- Sys.getenv("SOURCE_DATE_EPOCH", "")
+EXPORT_DATE <- if (nzchar(.sde)) {
+  as.Date(as.POSIXct(as.numeric(.sde), origin = "1970-01-01", tz = "UTC"))
+} else Sys.Date()
 
-log_section(sprintf("STEP 4 (XGBoost): Export portable power model [subdir=%s]",
-                    if (nzchar(XGB_MODEL_SUBDIR)) XGB_MODEL_SUBDIR else "baseline"))
+log_section(sprintf("STEP 4 (XGBoost): Export portable power model [%s]", MODEL_LABEL))
 
 model_base <- if (nzchar(XGB_MODEL_SUBDIR)) {
   file.path(OUTPUT_BASE, "Models", "xgboost", XGB_MODEL_SUBDIR)
@@ -119,10 +125,8 @@ calibration_resid  <- read_csv_if(file.path(model_base, "calibration_residuals.c
 
 fitting_data_name <- if (!is.null(feature_spec$fitting_data)) {
   feature_spec$fitting_data
-} else if (nzchar(XGB_MODEL_SUBDIR)) {
-  "aggregated_fitting_data_realistic.qs"
 } else {
-  "aggregated_fitting_data_all.qs"
+  "aggregated_fitting_data.qs"
 }
 agg_path <- file.path(OUTPUT_BASE, "Fitting_Data", fitting_data_name)
 if (!file.exists(agg_path)) {
@@ -195,7 +199,7 @@ bundle <- list(
     best_params      = feature_spec$best_params,
     alpha            = feature_spec$alpha,
     pipeline_version = PIPELINE_VERSION,
-    exported_on      = as.character(Sys.Date()),
+    exported_on      = as.character(EXPORT_DATE),
     xgboost_version  = as.character(utils::packageVersion("xgboost"))
   )
 )
@@ -217,9 +221,8 @@ wrapper_lines <- c(
   '# predict_power.R -- Standalone XGBoost Power Predictor',
   '# ==============================================================================',
   sprintf('# Exported: %s   Pipeline: v%s   xgboost: %s',
-          Sys.Date(), PIPELINE_VERSION, as.character(utils::packageVersion("xgboost"))),
-  sprintf('# Model: %s (gradient-boosted trees; no closed-form equation).',
-          if (nzchar(XGB_MODEL_SUBDIR)) sprintf("XGBoost '%s'", XGB_MODEL_SUBDIR) else "XGBoost baseline"),
+          EXPORT_DATE, PIPELINE_VERSION, as.character(utils::packageVersion("xgboost"))),
+  sprintf('# Model: %s (gradient-boosted trees; no closed-form equation).', MODEL_LABEL),
   '#',
   '# Requirements: R with the `xgboost` package installed. Nothing else.',
   '#',
@@ -365,8 +368,8 @@ log_info("Wrote worked example -> %s", file.path(export_dir, "example_power_curv
 readme_lines <- c(
   "# Portable XGBoost Power Model",
   "",
-  sprintf("Exported %s from the `%s` model (pipeline v%s, xgboost %s).",
-          Sys.Date(), if (nzchar(XGB_MODEL_SUBDIR)) XGB_MODEL_SUBDIR else "baseline",
+  sprintf("Exported %s from the %s (pipeline v%s, xgboost %s).",
+          EXPORT_DATE, MODEL_LABEL,
           PIPELINE_VERSION, as.character(utils::packageVersion("xgboost"))),
   "",
   "## Files",

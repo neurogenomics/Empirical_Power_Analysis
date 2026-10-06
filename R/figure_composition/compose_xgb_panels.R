@@ -17,8 +17,8 @@
 #            NEW  content                                   source PNG
 #            ---  --------------------------------------    -------------------------------
 #             A   Out-of-fold calibration curves            xgb_supp_calibration.png
-#             B   Bin-balanced MAE across 36 configs        xgb_supp_mae_by_alpha.png
-#             C   F1 of classification schemes              xgb_supp_f1_grid.png
+#             B   Hyperparameter bracketing (search MAE)    xgb_supp_hp_bracketing.png
+#             C   Precision/recall/F1 of class schemes      xgb_supp_prf_grid.png
 #             D   Mean|SHAP| feature importance             xgb_supp_shap.png
 #             E   Mean detection rate over |LFC| x donors   xgb_supp_meanpower_heatmap.png
 #
@@ -27,7 +27,7 @@
 #          off so the panels match.
 #
 # SOURCES: the five clean per-panel PNGs (no baked-in letters) in
-#   Datalink/Power_Curve_Fitting/Models/xgboost/realistic/supp_panels/
+#   Datalink/Power_Curve_Fitting/Models/xgboost/supp_panels/
 #
 # WRITES: the canonical composite the manuscript chunk fig:FigXGB includes:
 #   Datalink/Power_Curve_Fitting/Models/xgboost/figure_xgb_composed.png
@@ -61,7 +61,7 @@ get_arg <- function(flag, default) {
 DATALINK <- get_arg("--datalink", file.path(PROJECT_ROOT, "Datalink"))
 
 PANEL_DIR <- file.path(DATALINK,
-  "Power_Curve_Fitting", "Models", "xgboost", "realistic", "supp_panels")
+  "Power_Curve_Fitting", "Models", "xgboost", "supp_panels")
 OUT_FILE <- file.path(DATALINK,
   "Power_Curve_Fitting", "Models", "xgboost", "figure_xgb_composed.png")
 
@@ -82,10 +82,10 @@ rd <- function(f) {
 
 # Load panels under their NEW letters.
 A <- rd("xgb_supp_calibration.png")       # A  top-left
-C <- rd("xgb_supp_f1_grid.png")           # C  top-right
+C <- rd("xgb_supp_prf_grid.png")          # C  top-right
 D <- rd("xgb_supp_shap.png")              # D  mid-left
 E <- rd("xgb_supp_meanpower_heatmap.png") # E  mid-right
-B <- rd("xgb_supp_mae_by_alpha.png")      # B  bottom, wide
+B <- rd("xgb_supp_hp_bracketing.png")     # B  bottom, wide
 
 # Strip the baked-in title + subtitle off panel E.
 if (nrow(E) > TITLE_STRIP_PX) {

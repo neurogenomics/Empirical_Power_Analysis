@@ -7,7 +7,7 @@ stage_main() {
   epa_in tables
   epa_in cartesian_cells
   epa_in cartesian_reads
-  epa_in xgb_real_select model_realistic
+  epa_in xgb_select model
   epa_R R/supplementary_data/build_supplementary_data.R
   epa_out supp_data Supplementary_Data
   epa_complete

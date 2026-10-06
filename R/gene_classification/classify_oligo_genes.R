@@ -2,7 +2,7 @@
 # SCRIPT: classify_oligo_genes.R
 # PURPOSE: Classify EVERY oligodendrocyte gene (full transcriptome) into a
 #          skewed-trinary detectability call at a FIXED experimental design and a
-#          FIXED effect size, using the realistic XGBoost power model.
+#          FIXED effect size, using the XGBoost power model.
 #
 # DESIGN DECISIONS (locked by Chris, 2026-08-21/22):
 #   Gene universe   : full Oligo/Roussos transcriptome (all donor shards).
@@ -78,7 +78,7 @@ DE_METHODS   <- c("deseq2", "edger", "limma")
 N_CORES_USE  <- as.integer(Sys.getenv("CLASSIFY_CORES", "16"))
 
 bundle_dir <- project_path("Datalink", "Power_Curve_Fitting",
-                           "Exports", "xgboost", "realistic")
+                           "Exports", "xgboost")
 out_dir    <- project_path("Datalink", "Gene_Classification")
 if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 ckpt_file  <- file.path(out_dir, "oligo_gene_features_checkpoint.qs")

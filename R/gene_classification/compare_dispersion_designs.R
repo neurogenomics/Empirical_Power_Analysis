@@ -155,7 +155,7 @@ log_info("Genes with |log2 ratio| > log2(1.5) (>1.5x): %d (%.2f%%)",
          sum(abs(log2ratio) > log2(1.5)), 100*mean(abs(log2ratio) > log2(1.5)))
 
 # --- Propagate to power + trinary class -------------------------------------
-bundle_dir  <- project_path("Datalink", "Power_Curve_Fitting", "Exports", "xgboost", "realistic")
+bundle_dir  <- project_path("Datalink", "Power_Curve_Fitting", "Exports", "xgboost")
 source(file.path(bundle_dir, "predict_power.R"))
 bundle_path <- file.path(bundle_dir, "power_model_bundle.rds")
 

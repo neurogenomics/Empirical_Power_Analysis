@@ -5,7 +5,7 @@
 #   00b  per-donor read-count cache
 #   01   per-iteration detection outcomes, once per DE method
 #   01b  aggregate to detection rate per (gene, design point)  -> aggregated_fitting_data_all.qs
-#   01e  realistic sub-grid (n_cells >= 100)                    -> aggregated_fitting_data_realistic.qs
+#   01e  power-model training rows (n_cells >= 100)            -> aggregated_fitting_data.qs
 # Outputs: fitting_data.tar (the two training tables) and gt_dds.tar (the
 # DESeq2 truth-half checkpoints and the DESeq2 truth-gene set, which the
 # supplementary tables use).
@@ -47,14 +47,14 @@ stage_main() {
   done
   cp -f "$WS/.shared_truth_genes_deseq2.qs" "$fd/shared_truth_genes.qs"
 
-  epa_step "01b: aggregate; 01e: realistic sub-grid"
+  epa_step "01b: aggregate; 01e: n_cells >= 100 training table"
   epa_env CARTESIAN_DE_METHOD deseq2
   epa_R R/power_curve_fitting/01b_Aggregate_Fitting_Data.R
-  epa_R R/power_curve_fitting/01e_Filter_Realistic.R
+  epa_R R/power_curve_fitting/01e_Filter_Design.R
 
   epa_out fitting_data \
     Power_Curve_Fitting/Fitting_Data/aggregated_fitting_data_all.qs \
-    Power_Curve_Fitting/Fitting_Data/aggregated_fitting_data_realistic.qs \
+    Power_Curve_Fitting/Fitting_Data/aggregated_fitting_data.qs \
     "Power_Curve_Fitting/Fitting_Data/filter_*.csv"
   epa_out gt_dds \
     Power_Curve_Fitting/GT_DDS_Checkpoints \

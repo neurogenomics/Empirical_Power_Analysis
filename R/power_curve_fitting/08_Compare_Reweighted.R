@@ -1,23 +1,26 @@
 # ==============================================================================
-# SCRIPT: Compare reweighted XGBoost models vs baseline (M2 -- summary figures)
-# PURPOSE: Consumes the 36-model realistic-grid sweep (03_Select_XGBoost.R in
-#          XGB_MODEL_SUBDIR=realistic mode) alongside the baseline model, and
-#          produces the paper-facing comparison artefacts:
-#            1. Unified bin-wise calibration table (37 models x bins x metrics)
-#            2. Bar chart of bin_balanced_MAE grouped by alpha
-#            3. Side-by-side calibration curves for baseline + 5 SHAP models
-#            4. SHAP importance heatmap across the 5 SHAP models
+# SCRIPT: Compare the XGBoost search configurations (M2 -- summary figures)
+# PURPOSE: Consumes the {tree hyperparameters x alpha} search ranked by
+#          03_Select_XGBoost.R and produces the comparison artefacts:
+#            1. Unified bin-wise calibration table (all configs x bins x metrics)
+#            2. Bar chart of bin_balanced_MAE for every configuration
+#            3. Hyperparameter bracketing: for each value of each
+#               hyperparameter, the best bin_balanced_MAE among configurations
+#               with that value, with its fold-to-fold standard error. Shows
+#               whether the search grid brackets the optimum on every axis.
+#            4. Calibration curves for the 5 SHAP models (10-90% bands)
+#            5. SHAP importance heatmap across the 5 SHAP models
 #
-# INPUT:  Models/xgboost/calibration_residuals.csv                  (baseline)
-#         Models/xgboost/realistic/search/config_*/calibration_residuals.csv
-#         Models/xgboost/realistic/model_selection.csv               (36-row rank)
-#         Models/xgboost/realistic/shap_selection.csv                (5 chosen)
-#         Models/xgboost/realistic/shap_models/<tag>/shap_summary.csv
-# OUTPUT: Models/xgboost/realistic/comparison/
+# INPUT:  Models/xgboost/search/config_*/calibration_residuals.csv
+#         Models/xgboost/model_selection.csv, model_selection_folds.csv
+#         Models/xgboost/shap_selection.csv                (5 chosen)
+#         Models/xgboost/shap_models/<tag>/shap_summary.csv
+# OUTPUT: Models/xgboost/comparison/
 #           unified_calibration_table.csv
-#           bin_balanced_MAE_by_alpha.png
-#           calibration_curves_grid.png
-#           shap_importance_across_models.png
+#           bin_balanced_MAE_all_configs.png
+#           hyperparameter_bracketing.{csv,png}
+#           calibration_curves_grid.png, calibration_curves_bands.csv
+#           shap_importance_across_models.{png,csv}
 # ==============================================================================
 
 suppressPackageStartupMessages({
@@ -52,12 +55,12 @@ if (!exists("PROJECT_ROOT")) {
 
 source(file.path(SCRIPT_DIR, "utils.R"))
 
-log_section("STEP 8: Compare reweighted models vs baseline")
+log_section("STEP 8: Compare XGBoost search configurations")
 
-XGB_MODEL_SUBDIR <- Sys.getenv("XGB_MODEL_SUBDIR", "realistic")
-baseline_base <- file.path(OUTPUT_BASE, "Models", "xgboost")
-realistic_base <- file.path(OUTPUT_BASE, "Models", "xgboost", XGB_MODEL_SUBDIR)
-out_dir <- file.path(realistic_base, "comparison")
+XGB_MODEL_SUBDIR <- Sys.getenv("XGB_MODEL_SUBDIR", "")
+model_base <- do.call(file.path, as.list(c(OUTPUT_BASE, "Models", "xgboost",
+                                           XGB_MODEL_SUBDIR[nzchar(XGB_MODEL_SUBDIR)])))
+out_dir <- file.path(model_base, "comparison")
 safe_mkdir(out_dir)
 
 theme_paper <- function(base_size = 12) {
@@ -77,104 +80,88 @@ theme_paper <- function(base_size = 12) {
 # 2. UNIFIED BIN-WISE CALIBRATION TABLE
 # ==============================================================================
 
-# Baseline: one calibration_residuals.csv at model_base root.
-baseline_cr_path <- file.path(baseline_base, "calibration_residuals.csv")
-if (!file.exists(baseline_cr_path)) {
-  log_warning("Baseline calibration_residuals.csv missing: %s", baseline_cr_path)
-  baseline_cr <- NULL
-} else {
-  baseline_cr <- read.csv(baseline_cr_path, stringsAsFactors = FALSE)
-  baseline_cr$model <- "baseline"
-  baseline_cr$alpha <- NA_real_
-  baseline_cr$config_index <- NA_integer_
-}
-
-# Realistic: one calibration_residuals.csv per config_dir.
-cfg_dirs <- list.files(file.path(realistic_base, "search"),
+# One calibration_residuals.csv per config_dir (written by 03).
+cfg_dirs <- list.files(file.path(model_base, "search"),
                        pattern = "^config_[0-9]+$", full.names = TRUE)
-sel <- read.csv(file.path(realistic_base, "model_selection.csv"),
+sel <- read.csv(file.path(model_base, "model_selection.csv"),
                 stringsAsFactors = FALSE)
 sel_lookup <- sel[, c("config_index", "alpha")]
 
-realistic_cr_list <- lapply(cfg_dirs, function(d) {
+cr_list <- lapply(cfg_dirs, function(d) {
   f <- file.path(d, "calibration_residuals.csv")
   if (!file.exists(f)) return(NULL)
   cr <- read.csv(f, stringsAsFactors = FALSE)
   ci <- as.integer(sub(".*config_", "", d))
   cr$config_index <- ci
   cr$alpha <- sel_lookup$alpha[match(ci, sel_lookup$config_index)]
-  cr$model <- sprintf("realistic_c%d_a%g", ci, cr$alpha)
+  cr$model <- sprintf("c%d_a%g", ci, cr$alpha)
   cr
 })
-realistic_cr <- bind_rows(realistic_cr_list)
-
-unified <- bind_rows(baseline_cr, realistic_cr)
+unified <- bind_rows(cr_list)
 write.csv(unified, file.path(out_dir, "unified_calibration_table.csv"), row.names = FALSE)
 log_info("Unified calibration table: %d model x bin rows -> %s",
          nrow(unified), out_dir)
 
 # ==============================================================================
-# 3. GROUPED BAR CHART: bin_balanced_MAE, 12 HP configs x 3 alpha
+# 3. BIN-BALANCED MAE: every configuration, and hyperparameter bracketing
 # ==============================================================================
-# bin_balanced_MAE was computed in 03_Select_XGBoost.R (realistic mode) and
-# lives in model_selection.csv. One GROUP per hyperparameter config; within each
-# group three dodged bars for the bin-weight exponent alpha. This collapses the
-# old 3-panel facet into a single compact panel (one x-axis of 12 configs, one
-# alpha legend). subsample and colsample_bytree are constant (0.8) across the
-# whole sweep, so they are omitted from the labels.
+# bin_balanced_MAE (and its per-fold values) come from 03_Select_XGBoost.R.
+# subsample and colsample_bytree are constant (0.8) across the whole search,
+# so they are omitted from the labels.
 
 alpha_levels <- sort(unique(sel$alpha))
 alpha_pal    <- setNames(viridis(length(alpha_levels), option = "D", end = 0.88),
                          as.character(alpha_levels))
-# Human-readable legend entries; fall back to the bare value for unknown alphas.
-alpha_desc_map <- c("0"   = "0  (no reweighting)",
-                    "0.5" = "0.5  (inverse \u221an)",
-                    "1"   = "1  (inverse n)")
-alpha_labels <- ifelse(as.character(alpha_levels) %in% names(alpha_desc_map),
-                       alpha_desc_map[as.character(alpha_levels)],
-                       sprintf("%g", alpha_levels))
 
 bar_df <- sel %>%
-  mutate(
-    hp_key    = sprintf("depth %d\nlr %g \u00b7 mcw %g",
-                        max_depth, eta, min_child_weight),
-    alpha_lbl = factor(as.character(alpha), levels = as.character(alpha_levels))
-  )
+  arrange(bin_balanced_MAE) %>%
+  mutate(cfg_lbl = factor(sprintf("d%d lr%g mcw%g \u03b1%g", max_depth, eta,
+                                  min_child_weight, alpha),
+                          levels = sprintf("d%d lr%g mcw%g \u03b1%g", max_depth, eta,
+                                           min_child_weight, alpha)),
+         alpha_lbl = factor(as.character(alpha), levels = as.character(alpha_levels)))
+p_bar <- ggplot(bar_df, aes(x = cfg_lbl, y = bin_balanced_MAE, fill = alpha_lbl)) +
+  geom_col(width = 0.8) +
+  scale_fill_manual(values = alpha_pal, name = expression(alpha)) +
+  coord_cartesian(ylim = range(bar_df$bin_balanced_MAE) + c(-0.002, 0.002)) +
+  labs(x = "Configuration (ranked)", y = "Bin-balanced MAE") +
+  theme_paper(10) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = rel(0.55)),
+        panel.grid.major.x = element_blank(), legend.position = "top")
+ggsave(file.path(out_dir, "bin_balanced_MAE_all_configs.png"),
+       p_bar, width = 16, height = 5.5, dpi = PLOT_DPI)
 
-# Order the 12 groups left -> right by their best (usually alpha = 0) MAE, so the
-# panel reads best-to-worst config.
-grp_order <- bar_df %>%
-  group_by(hp_key) %>%
-  summarise(best_mae = min(bin_balanced_MAE), .groups = "drop") %>%
-  arrange(best_mae) %>% pull(hp_key)
-bar_df$hp_key <- factor(bar_df$hp_key, levels = grp_order)
-
-# Zoom the y-axis to the data band (values sit in a narrow ~0.16-0.20 window),
-# so the alpha effect within each group is legible.
-y_lo <- floor(min(bar_df$bin_balanced_MAE) * 100) / 100
-y_hi <- ceiling(max(bar_df$bin_balanced_MAE) * 100) / 100
-
-p_bar <- ggplot(bar_df,
-                aes(x = hp_key, y = bin_balanced_MAE, fill = alpha_lbl)) +
-  geom_col(position = position_dodge(width = 0.8), width = 0.74,
-           colour = "grey25", linewidth = 0.2) +
-  scale_fill_manual(values = alpha_pal, labels = alpha_labels,
-                    name = expression(paste("bin-weight exponent  ", alpha))) +
-  coord_cartesian(ylim = c(y_lo, y_hi)) +
-  labs(x = NULL, y = "Bin-balanced MAE",
-       title = "Calibration error across 12 hyperparameter configs \u00d7 3 reweighting strengths") +
-  theme_paper(11) +
-  theme(legend.position = "top",
-        legend.key.size  = unit(0.9, "lines"),
-        axis.text.x      = element_text(size = rel(0.78), lineheight = 0.95),
-        panel.grid.major.x = element_blank())
-ggsave(file.path(out_dir, "bin_balanced_MAE_by_alpha.png"),
-       p_bar, width = 13, height = 5.2, dpi = PLOT_DPI)
-log_info("Wrote bin_balanced_MAE_by_alpha.png (grouped: 12 configs x %d alpha)",
-         length(alpha_levels))
+# Bracketing: profile of the best configuration at each value of each
+# hyperparameter (minimum over all other axes). All configurations share the
+# gene-grouped CV folds, so each is compared with the selected configuration
+# fold by fold: mean_diff, its standard error se_paired, and the number of
+# folds in which it is worse.
+folds <- read.csv(file.path(model_base, "model_selection_folds.csv"), stringsAsFactors = FALSE)
+win   <- sel[which.min(sel$bin_balanced_MAE), ]
+win_f <- folds[folds$config_index == win$config_index, c("fold", "bin_balanced_MAE")]
+paired <- function(cfg) {
+  f <- merge(folds[folds$config_index == cfg, c("fold", "bin_balanced_MAE")], win_f,
+             by = "fold", suffixes = c("", "_win"))
+  d <- f$bin_balanced_MAE - f$bin_balanced_MAE_win
+  c(mean_diff = mean(d), se_paired = if (cfg == win$config_index) 0 else sd(d) / sqrt(length(d)),
+    n_folds_worse = sum(d > 0), n_folds = length(d))
+}
+hp_cols <- c(max_depth = "Max depth", eta = "Learning rate",
+             min_child_weight = "Min child weight", alpha = "Bin-weight exponent \u03b1")
+bracket <- bind_rows(lapply(names(hp_cols), function(h) {
+  sel %>%
+    group_by(value = .data[[h]]) %>%
+    slice_min(bin_balanced_MAE, n = 1, with_ties = FALSE) %>%
+    ungroup() %>%
+    transmute(hyperparameter = h, value, config_index, bin_balanced_MAE,
+              selected = value == win[[h]])
+}))
+bracket <- cbind(bracket, do.call(rbind, lapply(bracket$config_index, paired)))
+write.csv(bracket, file.path(out_dir, "hyperparameter_bracketing.csv"), row.names = FALSE)
+log_info("Hyperparameter bracketing written (%d rows)", nrow(bracket))
 
 # ==============================================================================
-# 4. CALIBRATION CURVES: baseline + 5 SHAP models (with observed 10-90 bands)
+# 4. CALIBRATION CURVES: 5 SHAP models (with observed 10-90 bands)
 # ==============================================================================
 # Each panel plots mean observed detection rate against mean predicted rate,
 # per predicted-power bin, with y = x reference. Well-calibrated => hugs the
@@ -189,15 +176,12 @@ log_info("Wrote bin_balanced_MAE_by_alpha.png (grouped: 12 configs x %d alpha)",
 # narrow at the extremes (near 0 and 1 the outcome is nearly deterministic),
 # which is the shape the mean alone conceals.
 #
-# The band is computed from the per-row OOF predictions, not the binned summary:
-#   * 5 realistic-grid SHAP configs -> search/config_<k>/oof_predictions.qs
-#   * baseline (full grid)          -> Models/xgboost/oof_predictions.qs
-#     (regenerated by 08b_Baseline_OOF.R; the full-search baseline persisted only
-#      its binned summary, so 08b reproduces the per-row OOF identically).
+# The band is computed from the per-row OOF predictions
+# (search/config_<k>/oof_predictions.qs), not the binned summary.
 # Weighting uses n_trials (w_trials), matching the mean_obs calibration weight
 # in 02_Fit_XGBoost.R so the point and its band are on the same footing.
 
-shap_sel <- read.csv(file.path(realistic_base, "shap_selection.csv"),
+shap_sel <- read.csv(file.path(model_base, "shap_selection.csv"),
                      stringsAsFactors = FALSE)
 
 #' Trial-weighted quantiles of a vector (continuity-corrected weighted ECDF).
@@ -229,18 +213,16 @@ bin_oof <- function(oof) {
     filter(is.finite(mean_pred), is.finite(mean_obs))
 }
 
-# Model registry: key -> (pretty label, OOF path). Baseline first, then the 5
-# chosen configs in shap_selection order.
-model_keys <- c("baseline",
-                sprintf("realistic_c%d_a%g", shap_sel$config_index, shap_sel$alpha))
-model_pretty <- c(baseline = "Baseline (full grid)")
-oof_paths <- c(baseline = file.path(baseline_base, "oof_predictions.qs"))
+# Model registry: key -> (pretty label, OOF path), in shap_selection order.
+model_keys <- sprintf("c%d_a%g", shap_sel$config_index, shap_sel$alpha)
+model_pretty <- character(0)
+oof_paths <- character(0)
 for (i in seq_len(nrow(shap_sel))) {
-  key <- sprintf("realistic_c%d_a%g", shap_sel$config_index[i], shap_sel$alpha[i])
+  key <- model_keys[i]
   model_pretty[key] <- sprintf("%s (config %d, alpha=%g)",
                                shap_sel$tag[i], shap_sel$config_index[i],
                                shap_sel$alpha[i])
-  oof_paths[key] <- file.path(realistic_base, "search",
+  oof_paths[key] <- file.path(model_base, "search",
                               sprintf("config_%d", shap_sel$config_index[i]),
                               "oof_predictions.qs")
 }
@@ -274,7 +256,7 @@ p_cal <- ggplot(cal_curves, aes(x = mean_pred, y = mean_obs)) +
   coord_equal(xlim = c(0, 1), ylim = c(0, 1)) +
   labs(x = "Mean predicted detection rate (per bin)",
        y = "Observed detection rate (per bin: mean point, 10-90th percentile bar)",
-       title = "OOF calibration: baseline vs 5 realistic-grid SHAP models",
+       title = "OOF calibration of the 5 SHAP models",
        subtitle = "Error bars = trial-weighted 10-90th percentile of observed detection rate within each predicted bin") +
   theme_paper(11)
 ggsave(file.path(out_dir, "calibration_curves_grid.png"),
@@ -286,13 +268,13 @@ log_info("Wrote calibration_curves_grid.png (%d panels, with 10-90 observed band
 # ==============================================================================
 # 5. SHAP IMPORTANCE HEATMAP ACROSS 5 SHAP MODELS
 # ==============================================================================
-# Reads Models/xgboost/realistic/shap_models/<tag>/shap_summary.csv (written
+# Reads Models/xgboost/shap_models/<tag>/shap_summary.csv (written
 # by 03_Select_XGBoost.R). Rank-normalise within each model so scales are
 # comparable across differently-weighted training runs (design doc §10.8).
 
 shap_imp_rows <- lapply(seq_len(nrow(shap_sel)), function(i) {
   tag <- shap_sel$tag[i]
-  f <- file.path(realistic_base, "shap_models", tag, "shap_summary.csv")
+  f <- file.path(model_base, "shap_models", tag, "shap_summary.csv")
   if (!file.exists(f)) { log_warning("Missing shap_summary for %s", tag); return(NULL) }
   ss <- read.csv(f, stringsAsFactors = FALSE)
   data.frame(tag           = tag,
@@ -315,7 +297,7 @@ if (nrow(shap_imp) > 0) {
     geom_tile(colour = "white", linewidth = 0.3) +
     geom_text(aes(label = sprintf("%.2f", mean_abs_shap)), size = 3, colour = "white") +
     scale_fill_viridis_c(name = "mean|SHAP|") +
-    labs(title = "SHAP importance across 5 realistic-grid SHAP models",
+    labs(title = "SHAP importance across the 5 SHAP models",
          subtitle = "Colour = mean|SHAP| (log-odds units); features ordered by avg rank",
          x = NULL, y = NULL) +
     theme_paper(12) +

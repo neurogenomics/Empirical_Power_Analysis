@@ -4,7 +4,7 @@
 #          junk-free footing. For each group, take the MEDIAN (+ IQR) of the two
 #          model characteristics (raw basemean, DESeq2 dispersion) over the
 #          expressed genes in that group, then push that single REPRESENTATIVE
-#          entry through the realistic XGBoost power model at the FIXED design.
+#          entry through the XGBoost power model at the FIXED design.
 #          This answers "are TFs actually lower-expressed than other groups?"
 #          without pseudogene/lncRNA junk diluting any comparison, because it
 #          compares group central tendencies rather than counting genes.
@@ -38,7 +38,7 @@ if (!nzchar(ROOT) && requireNamespace("here", quietly = TRUE)) ROOT <- here::her
 
 gc_dir     <- file.path(ROOT, "Datalink", "Gene_Classification")
 bundle_dir <- file.path(ROOT, "Datalink", "Power_Curve_Fitting",
-                        "Exports", "xgboost", "realistic")
+                        "Exports", "xgboost")
 source(file.path(bundle_dir, "predict_power.R"))
 bundle_path <- file.path(bundle_dir, "power_model_bundle.rds")
 

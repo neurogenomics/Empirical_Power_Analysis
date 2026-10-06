@@ -214,6 +214,11 @@ CATEGORICAL_VARS <- c("Source", "self_reported_ethnicity", "disease")
 # R/sharding/Annotate_Roussos_PMI.R from the PsychAD supplementary table.
 NUMERIC_VARS <- c("pmi")
 
+# Contrast: sex by default; EPA_CONTRAST=ad_vs_control re-points SEX_COL /
+# MALE_VAL / FEMALE_VAL / CATEGORICAL_VARS at the AD vs control subset.
+source(file.path(PROJECT_ROOT, "R", "shared", "contrast.R"))
+check_contrast_dataset(SHARD_DATASET)
+
 # ==============================================================================
 # 7. PARALLEL PROCESSING
 # ==============================================================================

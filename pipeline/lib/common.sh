@@ -53,6 +53,9 @@ epa_init_ws() {
   epa_env TZ UTC
   epa_env LC_ALL C.UTF-8
   epa_env MPLBACKEND Agg
+  # Dates written into outputs (e.g. the exported model bundle) come from the
+  # code commit, not the wall clock, so reruns give byte-identical files.
+  [ -f "$EPA_WORK/code/COMMIT_TIME" ] && epa_env SOURCE_DATE_EPOCH "$(cat "$EPA_WORK/code/COMMIT_TIME")"
   # Pin BLAS/OpenMP threading so floating-point reductions do not depend on
   # how many cores a node happens to expose.
   epa_env OMP_NUM_THREADS 1

@@ -32,8 +32,8 @@
 #       -> gene_id, symbol, locus_group, basemean, dispersion. basemean and
 #          dispersion are the exact checkpoint values used by classify_oligo_*
 #          (verified identical to oligo_gene_features_checkpoint.qs), so no refit.
-#   Datalink/Power_Curve_Fitting/Exports/xgboost/realistic/{predict_power.R,
-#          power_model_bundle.rds}  -> the promoted 'realistic' power model.
+#   Datalink/Power_Curve_Fitting/Exports/xgboost/{predict_power.R,
+#          power_model_bundle.rds}  -> the promoted power model.
 #
 # OUTPUT (Datalink/Gene_Classification/GO_Enrichment/):
 #   oligo_<set>_prerank_input.rnk   two-column (symbol<TAB>score), no header,
@@ -72,7 +72,7 @@ gc_dir     <- file.path(ROOT, "Datalink", "Gene_Classification")
 out_dir    <- file.path(gc_dir, "GO_Enrichment")
 anno_csv   <- file.path(gc_dir, "oligo_gene_classification_annotated.csv")
 bundle_dir <- file.path(ROOT, "Datalink", "Power_Curve_Fitting",
-                        "Exports", "xgboost", "realistic")
+                        "Exports", "xgboost")
 bundle_path <- file.path(bundle_dir, "power_model_bundle.rds")
 
 dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)

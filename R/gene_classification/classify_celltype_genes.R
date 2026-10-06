@@ -2,7 +2,7 @@
 # SCRIPT: classify_celltype_genes.R
 # PURPOSE: Same as classify_oligo_genes.R but for Astro + Micro. Classify EVERY
 #          gene (full transcriptome) into a skewed-trinary detectability call at
-#          a FIXED design + FIXED |LFC|=1.5, using the realistic XGBoost model.
+#          a FIXED design + FIXED |LFC|=1.5, using the XGBoost power model.
 #          Per-gene inputs match training EXACTLY:
 #            gt_basemean   = raw pseudobulk mean = rowMeans(counts(dds))
 #            gt_dispersion = DESeq2::dispersions(dds)  (full-cohort SEX design fit)
@@ -52,7 +52,7 @@ N_CORES_USE  <- as.integer(Sys.getenv("CLASSIFY_CORES", "16"))
 CELL_TYPES   <- c("Astro", "Micro")
 
 bundle_dir <- project_path("Datalink", "Power_Curve_Fitting",
-                           "Exports", "xgboost", "realistic")
+                           "Exports", "xgboost")
 out_dir    <- project_path("Datalink", "Gene_Classification")
 if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 

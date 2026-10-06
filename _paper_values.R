@@ -143,13 +143,15 @@ for (.ds in list(c("seaad", "SEA-AD"), c("rosmap", "ROSMAP"),
 }
 
 # --- Realistic XGBoost model diagnostics -------------------------------------
-# Source: Datalink/Power_Curve_Fitting/Models/xgboost/realistic/cv_metrics.csv.
+# Source: Datalink/Power_Curve_Fitting/Models/xgboost/cv_metrics.csv.
+# (Keys keep their historical "_realistic" suffix because the manuscript cites
+# them by name; there is now only one power model.)
 # The realistic (production) model is the promoted winner. The file currently
 # holds only that winner row; if a future rerun writes all configs, select the
 # winner by the documented realistic ranking (minimum bin_balanced_MAE).
 .xgb_realistic_winner <- function() {
   m <- load_csv(.dl("Power_Curve_Fitting", "Models", "xgboost",
-                    "realistic", "cv_metrics.csv"))
+                    "cv_metrics.csv"))
   m[which.min(m$bin_balanced_MAE), , drop = FALSE]
 }
 register_val("xgb_winner_config_realistic", function() .xgb_realistic_winner()$config_index)
@@ -158,12 +160,12 @@ register_val("xgb_mae_realistic",           function() .xgb_realistic_winner()$b
 register_val("xgb_nrounds_realistic",       function() .xgb_realistic_winner()$best_nrounds)
 
 # --- Realistic XGBoost feature gain (training-loss attribution) --------------
-# Source: .../realistic/feature_importance.csv. Gain per feature. NOTE gain is
+# Source: .../Models/xgboost/feature_importance.csv. Gain per feature. NOTE gain is
 # redundancy-sensitive; SHAP tells a different story for low-gain features (see
 # project.md) -- bind gain only where the prose actually quotes gain.
 .xgb_realistic_gain <- function(feature) {
   fi <- load_csv(.dl("Power_Curve_Fitting", "Models", "xgboost",
-                     "realistic", "feature_importance.csv"))
+                     "feature_importance.csv"))
   v <- fi$Gain[fi$Feature == feature]
   if (length(v) != 1L) {
     stop(sprintf("val(): expected 1 gain row for feature '%s', got %d",

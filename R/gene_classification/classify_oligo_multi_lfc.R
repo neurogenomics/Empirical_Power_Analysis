@@ -9,7 +9,7 @@
 # DESIGN (Figure 6 caption): 50 donors, 1,000 cells per donor, 5,742 counts per
 #   cell (PsychAD oligodendrocyte mean), cell type Oligo, |LFC| in {0.2, 1.0, 2.0},
 #   each for DESeq2, edgeR and limma-voom. Power comes from the shipped
-#   realistic XGBoost bundle (Exports/xgboost/realistic/predict_power.R); the
+#   XGBoost bundle (Exports/xgboost/predict_power.R); the
 #   unsuffixed power_/class_ columns repeat the DESeq2 values.
 #   Classes: power <= 0.4 Undetectable, 0.4-0.8 Unsure, > 0.8 Detectable; genes
 #   without a usable baseMean/dispersion are Undetectable with NA power.
@@ -39,7 +39,7 @@ root <- Sys.getenv("POWER_ANALYSIS_ROOT", unset = "")
 if (!nzchar(root)) root <- here::here()
 ref_dir <- Sys.getenv("EPA_REFERENCE_DIR", unset = file.path(root, "reference"))
 gc_dir  <- file.path(root, "Datalink", "Gene_Classification")
-bundle_dir  <- file.path(root, "Datalink", "Power_Curve_Fitting", "Exports", "xgboost", "realistic")
+bundle_dir  <- file.path(root, "Datalink", "Power_Curve_Fitting", "Exports", "xgboost")
 
 need <- function(p) {
   if (!file.exists(p)) stop("missing input: ", p, call. = FALSE)

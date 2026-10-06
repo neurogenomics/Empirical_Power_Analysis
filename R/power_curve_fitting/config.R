@@ -55,8 +55,15 @@ SHARD_BASE <- project_path("Datalink", "Shards")
 # Input: BioMart gene annotation cache
 BIOMART_CACHE <- project_path("Datalink", "Full_Ground_Truth", "gene_audit_biomart_cache.csv")
 
-# Output: Power curve fitting results (Tiny LFC bin 0.2-1.0)
-OUTPUT_BASE <- project_path("Datalink", "Power_Curve_Fitting")
+# Output: Power curve fitting results (Tiny LFC bin 0.2-1.0). The AD vs control
+# contrast (EPA_CONTRAST=ad_vs_control, see R/shared/contrast.R) writes to its
+# own tree so it can never overwrite the sex-contrast training data.
+PCF_CONTRAST <- Sys.getenv("EPA_CONTRAST", "sex")
+OUTPUT_BASE <- if (PCF_CONTRAST == "ad_vs_control") {
+  project_path("Datalink", "AD_vs_Control", "Power_Curve_Fitting")
+} else {
+  project_path("Datalink", "Power_Curve_Fitting")
+}
 
 # Dataset used in cartesian downsampling (legacy — kept for backward compatibility)
 SHARD_DATASET <- "Roussos"
@@ -100,6 +107,15 @@ DATASET_CONFIGS <- list(
     cartesian_target = "Roussos_ShallowFewer"
   )
 )
+if (PCF_CONTRAST == "ad_vs_control") {
+  DATASET_CONFIGS <- list(list(
+    dataset = "Roussos_ADvsCtrl",
+    cell_types = c("Astro", "Micro", "Oligo"),
+    model_names = NULL,
+    fit_combined = TRUE,
+    special_mode = NULL
+  ))
+}
 
 # ==============================================================================
 # 3. GRID CONFIGURATION (must match cartesian_downsampling)
@@ -210,6 +226,10 @@ CATEGORICAL_VARS <- c("Source", "self_reported_ethnicity", "disease")
 # pmi (post-mortem interval, minutes) annotated onto Roussos shards by
 # R/sharding/Annotate_Roussos_PMI.R. Scaled to pmi_scaled in run_deseq_for_dds().
 NUMERIC_VARS <- c("pmi")
+
+# Contrast override (sex by default; see R/shared/contrast.R).
+source(file.path(PROJECT_ROOT, "R", "shared", "contrast.R"))
+invisible(lapply(DATASET_CONFIGS, function(d) check_contrast_dataset(d$dataset)))
 
 # ==============================================================================
 # 9. DESEQ2 SETTINGS (for Step 0 GT DDS regeneration)
@@ -342,6 +362,11 @@ if (MINI_RUN) {
       cartesian_target = "MINI_Roussos_ShallowFewer"
     )
   )
+  if (PCF_CONTRAST == "ad_vs_control") {
+    OUTPUT_BASE     <- project_path("Datalink", "AD_vs_Control", "MINI_Power_Curve_Fitting")
+    DATASET_CONFIGS <- list(list(dataset = "Roussos_ADvsCtrl", cell_types = MINI_CELL_TYPE,
+                                 model_names = NULL, fit_combined = FALSE, special_mode = NULL))
+  }
   DONOR_STEPS       <- c(5, 10)
   CELL_STEPS        <- c(50, 100, NA)
   READ_STEPS        <- c(100000, 250000, NA)

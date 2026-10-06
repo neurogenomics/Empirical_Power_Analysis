@@ -13,7 +13,7 @@
 #   SD3  Supplementary_Data_3_truth_gene_characteristics.csv
 #          <- DE_Diagnostics/Shared_Gene_Diagnostics/Full_Truth_Set_Summary.csv
 #   SD4  Supplementary_Data_4_xgboost_hyperparameters.csv
-#          <- Power_Curve_Fitting/Models/xgboost/realistic/model_selection.csv
+#          <- Power_Curve_Fitting/Models/xgboost/model_selection.csv
 #
 # Replaces Datalink/Supplementary_Data/_scripts/{package_supplementary_data,slim_sd2}.R
 # (hardcoded paths; README and zip were made by hand). The zip is built with
@@ -86,6 +86,6 @@ cat(sprintf("SD2: %s (%d files)\n", basename(zip_path), n))
 ## ---- SD3 / SD4: plain copies -------------------------------------------------
 file.copy(need(file.path(DL, "DE_Diagnostics", "Shared_Gene_Diagnostics", "Full_Truth_Set_Summary.csv")),
           file.path(OUT, "Supplementary_Data_3_truth_gene_characteristics.csv"), overwrite = TRUE)
-file.copy(need(file.path(DL, "Power_Curve_Fitting", "Models", "xgboost", "realistic", "model_selection.csv")),
+file.copy(need(file.path(DL, "Power_Curve_Fitting", "Models", "xgboost", "model_selection.csv")),
           file.path(OUT, "Supplementary_Data_4_xgboost_hyperparameters.csv"), overwrite = TRUE)
 cat("SD3, SD4 written\n")

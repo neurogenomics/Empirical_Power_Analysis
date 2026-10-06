@@ -46,6 +46,7 @@ new_work() {
   echo "fake image" > "$w/epa.sif"
   cat > "$w/epa.env" <<EOF
 EPA_GRID_CHUNKS=3
+EPA_AD_GRID_CHUNKS=2
 EPA_GRID_CONCURRENCY=2
 EPA_N_RUNS=2
 EPA_DE_METHODS="deseq2,edger,limma"
@@ -92,7 +93,14 @@ check "shard has no dependency" test -z "$(dep_of shard)"
 check "grid depends on shard and gt_manifest" test "$(dep_of grid)" = "$(id_of shard):$(id_of gt_manifest)"
 check "pcf_aggregate depends on the grid array id" grep -qF "$(id_of grid)" <<< "$(dep_of pcf_aggregate)"
 check "grid array has 2 x chunks tasks" grep -q '^#PBS -J 1-6%2$' "$W/jobs/grid.pbs"
-check "xgb_real_search array of 36" grep -q '^#PBS -J 1-36%' "$W/jobs/xgb_real_search.pbs"
+check "xgb_search array of 108" grep -q '^#PBS -J 1-108%' "$W/jobs/xgb_search.pbs"
+check "ad_grid array has AD chunk tasks" grep -q '^#PBS -J 1-2%2$' "$W/jobs/ad_grid.pbs"
+check "ad_grid task list is cells-only" test "$(cat "$W/jobs/ad_grid.todo")" = "$(printf 'cells:1 epa_cells_chunk_1\ncells:2 epa_cells_chunk_2')"
+ok_dep=true
+for s in pcf_aggregate ad_pcf xgb_select xgb_post; do grep -qF "$(id_of "$s")" <<< "$(dep_of ad_validate)" || ok_dep=false; done
+check "ad_validate waits for the sex model and the AD test table" "$ok_dep"
+check "finalise waits for the AD stages" grep -qF "$(id_of ad_validate)" <<< "$(dep_of finalise)"
+check "commit time recorded for SOURCE_DATE_EPOCH" grep -Eq '^[0-9]+$' "$W/code/COMMIT_TIME"
 check "no job uses qsub -v" bash -c "! grep -q -- ' -v ' '$QSUB_LOG'"
 check "job scripts carry their resources" grep -q '^#PBS -l select=1:ncpus=24:mem=200gb$' "$W/jobs/shard.pbs"
 check "code snapshot excludes Datalink" bash -c "! tar -tf '$W/code/code.tar' | grep -q '^Datalink'"

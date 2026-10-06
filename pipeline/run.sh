@@ -82,7 +82,7 @@ EPA_REF_DIR="$WORK/reference"
 mkdir -p "$WORK"/{code,jobs,logs,results,state}
 
 # ---- stage table ---------------------------------------------------------------
-# pipeline/stages.tsv: name  deps(comma|-)  ncpus  mem  walltime  kind(single|array:grid|array:N)
+# pipeline/stages.tsv: name  deps(comma|-)  ncpus  mem  walltime  kind(single|array:grid|array:adgrid|array:N)
 STAGES=() declare -A S_DEPS S_NCPUS S_MEM S_WALL S_KIND
 while IFS=$'\t' read -r name deps ncpus mem wall kind; do
   case "$name" in ''|'#'*) continue ;; esac
@@ -102,14 +102,17 @@ for s in "${STAGES[@]}"; do
 done
 
 # ---- stage state -----------------------------------------------------------------
-# kind = single | array:grid | array:<N>. An array stage's task list is
-# "<task-id> <output-tar-name>" per line; the grid has one task per (mode, chunk).
+# kind = single | array:grid | array:adgrid | array:<N>. An array stage's task
+# list is "<task-id> <output-tar-name>" per line; the grid has one task per
+# (mode, chunk), the AD grid one per cells-mode chunk.
 expected_tasks() {
   local s="$1" k="${S_KIND[$1]#array:}" m c
   if [ "$k" = grid ]; then
     for m in reads cells; do
       for c in $(seq 1 "$EPA_GRID_CHUNKS"); do echo "$m:$c epa_${m}_chunk_${c}"; done
     done
+  elif [ "$k" = adgrid ]; then
+    for c in $(seq 1 "$EPA_AD_GRID_CHUNKS"); do echo "cells:$c epa_cells_chunk_${c}"; done
   else
     for c in $(seq 1 "$k"); do echo "$c task_${c}"; done
   fi
@@ -200,6 +203,7 @@ if [ ! -f "$WORK/code/code.tar" ]; then
     git -C "$REPO_ROOT" archive --format=tar -o "$WORK/code/code.tar" HEAD -- . ':!Datalink'
     echo "$commit" > "$WORK/code/COMMIT"
   fi
+  git -C "$REPO_ROOT" log -1 --format=%ct HEAD > "$WORK/code/COMMIT_TIME"
   sha256sum "$EPA_SIF" | cut -d' ' -f1 > "$WORK/code/SIF_SHA256"
   if [ -n "${EPA_SIF_SHA256:-}" ] && [ "$EPA_SIF_SHA256" != "$(cat "$WORK/code/SIF_SHA256")" ]; then
     rm -f "$WORK/code/code.tar"

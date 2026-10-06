@@ -1,11 +1,12 @@
 # shellcheck shell=bash
 # Container environment for the XGBoost stages. XGB_NTHREAD is fixed at 8 in
-# every XGBoost stage (as in the paper's runs) because the thread count can
-# change floating-point summation order.
-epa_xgb_env() {  # baseline | realistic
+# every XGBoost stage because the thread count can change floating-point
+# summation order. XGBoost caps its threads at the OpenMP maximum, which
+# epa_init_ws pins to 1 for every other stage, so OMP_NUM_THREADS must be
+# raised to match or XGBoost silently runs single-threaded. The scripts'
+# defaults already point at the single power model (Models/xgboost/, trained on
+# Fitting_Data/aggregated_fitting_data.qs).
+epa_xgb_env() {
   epa_env XGB_NTHREAD 8
-  if [ "$1" = realistic ]; then
-    epa_env XGB_MODEL_SUBDIR realistic
-    epa_env XGB_FITTING_DATA aggregated_fitting_data_realistic.qs
-  fi
+  epa_env OMP_NUM_THREADS 8
 }

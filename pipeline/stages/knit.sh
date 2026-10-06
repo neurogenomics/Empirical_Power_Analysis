@@ -6,10 +6,10 @@
 stage_main() {
   epa_init_ws
   local s
-  for s in eda fgt deg_loss cartesian_cells cartesian_reads compose xgb_real_shap xgb_post gene_class tables supp_data; do
+  for s in eda fgt deg_loss cartesian_cells cartesian_reads compose xgb_shap xgb_post gene_class tables supp_data; do
     epa_in "$s"
   done
-  epa_in xgb_real_select model_realistic
+  epa_in xgb_select model
   epa_ref nature.csl ../nature.csl
   local doc
   for doc in nature_comms_draft nature_comms_supplementary; do

@@ -96,6 +96,10 @@ DATALINK <- normalizePath(get_arg("--datalink", file.path(PROJECT_ROOT, "Datalin
                           mustWork = FALSE)
 CELL     <- get_arg("--cell", "Oligo")
 MODE     <- get_arg("--mode", "cells")
+# --dataset: shard dataset whose grid to draw (Roussos = sex contrast,
+# Roussos_ADvsCtrl = AD vs control); --composed-dir: output dir under Datalink.
+DATASET  <- get_arg("--dataset", "Roussos")
+COMPOSED_SUBDIR <- get_arg("--composed-dir", "Composed_Figures")
 if (!MODE %in% c("cells", "reads")) stop("--mode must be 'cells' or 'reads'")
 
 Y_COL   <- if (MODE == "reads") "Target_Reads" else "Cells"
@@ -111,7 +115,7 @@ OUT_DIR <- file.path(HERE, "output_precision_panels")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 checkpoint_path <- function(cell, method) {
-  file.path(DATALINK, "Cartesian_Downsampling", cell, "Roussos", MODE, method,
+  file.path(DATALINK, "Cartesian_Downsampling", cell, DATASET, MODE, method,
             "Plots", "Aggregated_Summary_Data.qs")
 }
 
@@ -312,7 +316,7 @@ msg("Saved: %s", pdf_path)
 
 # Canonical draft figure: emit into Datalink/Composed_Figures so a manuscript
 # chunk can always read a freshly-rendered file on re-render.
-COMPOSED_DIR <- file.path(DATALINK, "Composed_Figures")
+COMPOSED_DIR <- file.path(DATALINK, COMPOSED_SUBDIR)
 dir.create(COMPOSED_DIR, recursive = TRUE, showWarnings = FALSE)
 draft_png <- file.path(COMPOSED_DIR, sprintf("figure_precision_panels_%s_%s.png", tolower(CELL), MODE))
 draft_pdf <- file.path(COMPOSED_DIR, sprintf("figure_precision_panels_%s_%s.pdf", tolower(CELL), MODE))

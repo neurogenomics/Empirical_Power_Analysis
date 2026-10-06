@@ -2,7 +2,7 @@
 # SCRIPT: N-ary classification metrics for the XGBoost power model
 # PURPOSE: Reframe the continuous power model as a multi-class classifier
 #          by sweeping several partition schemes and comparing precision /
-#          recall / F1 / accuracy across classes, models, and schemes.
+#          recall / F1 / accuracy across classes and schemes.
 #
 #          Motivation: mid-band MAE for the continuous model stays at ~0.22
 #          across every configuration tried, but the extremes calibrate to
@@ -32,26 +32,27 @@
 #                   Equal-width quartile partition.
 #
 # TWO MODES (env var XGB_TRINARY_MODE):
-#   insample (default) -- apply saved booster.ubj to aggregated training data.
-#                         Fast; overstates performance. Good for exploration.
-#   oof                -- refit winner in 5-fold gene-grouped CV; the baseline
-#                         uses its 08b out-of-fold predictions (run 08b first).
-#                         ~1.5-2h for winner on iclneuro; honest for paper.
+#   oof (default) -- out-of-fold predictions of the winner: the gene-grouped
+#                    5-fold predictions 02_Fit_XGBoost.R saved for the winning
+#                    configuration (same folds as model selection). Falls back
+#                    to refitting the folds if that file does not line up with
+#                    the training table. Honest; used for the paper.
+#   insample      -- apply the promoted booster to its own training data.
+#                    Fast; overstates performance. Exploration only.
 #
 # WHICH MODELS (env var XGB_TRINARY_CONFIGS):
-#   winner (default) -- realistic winner + baseline (2 models)
-#   all              -- winner + baseline + all 36 config boosters
+#   winner (default) -- the promoted winner only
+#   all              -- winner + every search config booster (insample only)
 #
-# INPUT:  Fitting_Data/aggregated_fitting_data_realistic.qs      (from 01e)
-#         Models/xgboost/realistic/booster.ubj                     (winner)
-#         Models/xgboost/booster.ubj                                (baseline, optional)
-#         Models/xgboost/realistic/search/config_*/booster.ubj      (all 36, optional)
+# INPUT:  Fitting_Data/aggregated_fitting_data.qs                (from 01e)
+#         Models/xgboost/{booster.ubj,model_selection.csv}         (winner)
+#         Models/xgboost/search/config_<winner>/oof_predictions.qs (oof mode)
 #
-# OUTPUT: Models/xgboost/realistic/trinary_classification/
+# OUTPUT: Models/xgboost/trinary_classification/
 #           summary_by_scheme.csv       one row per (model, scheme): overall stats
 #           per_class_metrics.csv       precision/recall/F1 per (model, scheme, class)
 #           confusion_winner_<scheme>.csv  K×K confusion for the winner per scheme
-#           class_f1_grid.png           faceted bar chart: scheme × class × model
+#           class_prf_grid.png          faceted bar chart: scheme × class × metric
 #           README.md
 # ==============================================================================
 
@@ -88,9 +89,9 @@ source(file.path(SCRIPT_DIR, "utils.R"))
 
 log_section("STEP 9: N-ary classification metrics for XGBoost power model")
 
-XGB_MODEL_SUBDIR    <- Sys.getenv("XGB_MODEL_SUBDIR",  "realistic")
-XGB_FITTING_DATA    <- Sys.getenv("XGB_FITTING_DATA",  "aggregated_fitting_data_realistic.qs")
-XGB_TRINARY_MODE    <- tolower(Sys.getenv("XGB_TRINARY_MODE",    "insample"))
+XGB_MODEL_SUBDIR    <- Sys.getenv("XGB_MODEL_SUBDIR",  "")
+XGB_FITTING_DATA    <- Sys.getenv("XGB_FITTING_DATA",  "aggregated_fitting_data.qs")
+XGB_TRINARY_MODE    <- tolower(Sys.getenv("XGB_TRINARY_MODE",    "oof"))
 XGB_TRINARY_CONFIGS <- tolower(Sys.getenv("XGB_TRINARY_CONFIGS", "winner"))
 XGB_NFOLDS          <- as.integer(Sys.getenv("XGB_NFOLDS",   "5"))
 XGB_NTHREAD         <- as.integer(Sys.getenv("XGB_NTHREAD",  as.character(min(8, N_CORES))))
@@ -100,9 +101,9 @@ stopifnot(XGB_TRINARY_CONFIGS %in% c("winner", "all"))
 
 set.seed(SEED_BASE)
 
-model_base_realistic <- file.path(OUTPUT_BASE, "Models", "xgboost", XGB_MODEL_SUBDIR)
-model_base_baseline  <- file.path(OUTPUT_BASE, "Models", "xgboost")
-out_dir <- file.path(model_base_realistic, "trinary_classification")
+model_base <- do.call(file.path, as.list(c(OUTPUT_BASE, "Models", "xgboost",
+                                           XGB_MODEL_SUBDIR[nzchar(XGB_MODEL_SUBDIR)])))
+out_dir <- file.path(model_base, "trinary_classification")
 safe_mkdir(out_dir)
 
 log_info("Mode: %s | Configs: %s", XGB_TRINARY_MODE, XGB_TRINARY_CONFIGS)
@@ -165,7 +166,7 @@ log_info("Partition schemes: %s", paste(names(PARTITION_SCHEMES), collapse = ", 
 
 agg_path <- file.path(OUTPUT_BASE, "Fitting_Data", XGB_FITTING_DATA)
 if (!file.exists(agg_path)) {
-  stop(sprintf("Fitting data not found: %s. Run 01e_Filter_Realistic.R first.", agg_path))
+  stop(sprintf("Fitting data not found: %s. Run 01e_Filter_Design.R first.", agg_path))
 }
 log_info("Loading %s", agg_path)
 dat <- qs::qread(agg_path)
@@ -264,24 +265,16 @@ compute_metrics <- function(truth_cls, pred_cls, K, class_labels) {
 
 model_specs <- list()
 
-winner_booster <- file.path(model_base_realistic, "booster.ubj")
+winner_booster <- file.path(model_base, "booster.ubj")
 if (file.exists(winner_booster)) {
-  model_specs[["realistic_winner"]] <- list(
-    label = "realistic_winner", path = winner_booster, role = "winner")
+  model_specs[["winner"]] <- list(
+    label = "winner", path = winner_booster, role = "winner")
 } else {
-  log_warning("Realistic winner booster not found: %s", winner_booster)
-}
-
-baseline_booster <- file.path(model_base_baseline, "booster.ubj")
-if (file.exists(baseline_booster)) {
-  model_specs[["baseline"]] <- list(
-    label = "baseline", path = baseline_booster, role = "baseline")
-} else {
-  log_info("Baseline booster not found at %s -- skipping baseline", baseline_booster)
+  log_warning("Winner booster not found: %s", winner_booster)
 }
 
 if (XGB_TRINARY_CONFIGS == "all") {
-  cfg_dirs <- list.files(file.path(model_base_realistic, "search"),
+  cfg_dirs <- list.files(file.path(model_base, "search"),
                          pattern = "^config_[0-9]+$", full.names = TRUE)
   for (d in cfg_dirs) {
     b <- file.path(d, "booster.ubj")
@@ -310,37 +303,27 @@ get_predictions <- function(spec) {
     xgboost::xgb.attr(booster, "nthread") <- as.character(XGB_NTHREAD)
     return(predict(booster, newdata = X))
   }
-  # OOF mode, baseline: reuse the baseline's own out-of-fold predictions from
-  # 08b_Baseline_OOF.R (gene-grouped 5-fold on the full grid) and evaluate them
-  # on the realistic rows, matched by their design/gene keys.
-  if (spec$label == "baseline") {
-    oof_path <- file.path(model_base_baseline, "oof_predictions.qs")
-    if (!file.exists(oof_path)) {
-      stop(sprintf("OOF mode needs the baseline OOF predictions (%s); run 08b_Baseline_OOF.R first.",
-                   oof_path))
-    }
-    boof <- qs::qread(oof_path)
-    keys <- intersect(c("gene_id", "cell_type", "de_method", "n_donors", "n_cells",
-                        "reads_per_cell", "abs_gt_lfc", "gt_basemean", "gt_dispersion"),
-                      intersect(colnames(boof), colnames(dat)))
-    key_of <- function(df, obs) do.call(paste, c(lapply(df[, keys, drop = FALSE], as.character),
-                                                list(sprintf("%.12g", obs), sep = "|")))
-    bkey <- key_of(boof, boof$obs)
-    if (anyDuplicated(bkey)) stop("baseline OOF rows are not uniquely keyed by: ", paste(keys, collapse = ", "))
-    idx <- match(key_of(dat, y), bkey)
-    if (anyNA(idx)) {
-      stop(sprintf("%d realistic rows have no baseline OOF prediction", sum(is.na(idx))))
-    }
-    log_info("Baseline OOF: matched %d realistic rows on %s", length(idx), paste(keys, collapse = ", "))
-    return(boof$pred[idx])
-  }
-  if (spec$label != "realistic_winner") {
-    log_warning("OOF mode only for realistic_winner and baseline; skipping %s", spec$label)
+  if (spec$label != "winner") {
+    log_warning("OOF mode only evaluates the winner; skipping %s", spec$label)
     return(NULL)
   }
-  sel_path <- file.path(model_base_realistic, "model_selection.csv")
+  sel_path <- file.path(model_base, "model_selection.csv")
   sel <- read.csv(sel_path, stringsAsFactors = FALSE)
   best <- sel[1, ]
+
+  # The winner's out-of-fold predictions were already computed during the
+  # search on exactly these rows and folds; reuse them when they line up.
+  oof_path <- file.path(model_base, "search", sprintf("config_%d", best$config_index),
+                        "oof_predictions.qs")
+  if (file.exists(oof_path)) {
+    soof <- qs::qread(oof_path)
+    if (nrow(soof) == nrow(dat) && isTRUE(all.equal(soof$obs, y)) &&
+        identical(as.character(soof$gene_id), as.character(dat$gene_id))) {
+      log_info("OOF: reusing search predictions of config %d (%s)", best$config_index, oof_path)
+      return(soof$pred)
+    }
+    log_warning("Search OOF predictions do not line up with the training table; refitting folds")
+  }
   log_info("OOF refit: config %d alpha=%g depth=%d eta=%g nrounds=%d",
            best$config_index, best$alpha, best$max_depth, best$eta, best$best_nrounds)
 
@@ -468,70 +451,42 @@ for (scheme_nm in names(confusion_list)) {
 }
 
 # ==============================================================================
-# 8. FIGURE: FACETED F1 BAR CHART (scheme × class, winner vs baseline)
+# 8. FIGURE: precision / recall / F1 per class, faceted by scheme (winner)
 # ==============================================================================
+# Exploratory version of Figure 5 panel C; the paper panel is drawn by
+# _regenerate_xgb_panels.R from per_class_metrics.csv.
 
-# Scheme display order (simpler → richer)
 scheme_order <- c("binary", "trinary_01_09", "trinary_02_08",
                   "trinary_04_08", "quartile", "four_class")
 
 plot_df <- per_class_df %>%
-  filter(role %in% c("winner", "baseline")) %>%
+  filter(role == "winner") %>%
+  mutate(class_ix = match(class, unlist(lapply(PARTITION_SCHEMES, `[[`, "labels")))) %>%
+  pivot_longer(c(precision, recall, f1), names_to = "metric", values_to = "value") %>%
   mutate(
     scheme = factor(scheme, levels = intersect(scheme_order, unique(scheme))),
-    model  = factor(model, levels = c("realistic_winner", "baseline"),
-                    labels = c("Realistic winner", "Baseline"))
+    class  = factor(class, levels = unique(unlist(lapply(PARTITION_SCHEMES, `[[`, "labels")))),
+    metric = factor(metric, levels = c("precision", "recall", "f1"),
+                    labels = c("Precision", "Recall", "F1"))
   )
 
 if (nrow(plot_df) > 0) {
-  # Scheme label prettifier
-  scheme_label_map <- c(
-    binary         = "Binary (0.5)",
-    trinary_01_09  = "Trinary strict\n[0–0.1] [0.1–0.9] [0.9–1]",
-    trinary_02_08  = "Trinary standard\n[0–0.2] [0.2–0.8] [0.8–1]",
-    trinary_04_08  = "Trinary skewed\n[0–0.4] [0.4–0.8] [0.8–1]",
-    quartile       = "Quartiles\n[0–0.25] [0.25–0.5] [0.5–0.75] [0.75–1]",
-    four_class     = "Four-class\n[0–0.2] [0.2–0.5] [0.5–0.8] [0.8–1]"
-  )
-  plot_df <- plot_df %>%
-    mutate(scheme_label = factor(
-      scheme_label_map[as.character(scheme)],
-      levels = scheme_label_map[scheme_order[scheme_order %in% unique(as.character(scheme))]]))
-
-  p <- ggplot(plot_df, aes(x = class, y = f1, fill = model)) +
-    geom_col(position = position_dodge(width = 0.7), width = 0.6, na.rm = TRUE) +
-    geom_text(aes(label = sprintf("%.2f", f1)),
-              position = position_dodge(width = 0.7), vjust = -0.3,
-              size = 2.5, na.rm = TRUE) +
-    facet_wrap(~ scheme_label, scales = "free_x", ncol = 2) +
+  p <- ggplot(plot_df, aes(x = class, y = value, fill = metric)) +
+    geom_col(position = position_dodge(width = 0.8), width = 0.75, na.rm = TRUE) +
+    geom_text(aes(label = sprintf("%.2f", value)),
+              position = position_dodge(width = 0.8), vjust = -0.3,
+              size = 2.3, na.rm = TRUE) +
+    facet_wrap(~ scheme, scales = "free_x", ncol = 2) +
     scale_y_continuous(limits = c(0, 1.08), breaks = seq(0, 1, 0.2)) +
-    labs(x = NULL, y = "F1 score", fill = NULL) +
+    scale_fill_manual(values = c(Precision = "#0072B2", Recall = "#E69F00", F1 = "#009E73")) +
+    labs(x = NULL, y = "Score", fill = NULL) +
     theme_bw(base_size = 11) +
     theme(legend.position  = "top",
           panel.grid.minor = element_blank(),
           axis.text.x      = element_text(angle = 35, hjust = 1, size = 8),
           strip.text       = element_text(size = 8))
-
-  ggsave(file.path(out_dir, "class_f1_grid.png"),
-         p, width = 10, height = 11, dpi = 150)
-  log_info("Saved class_f1_grid.png")
-}
-
-# Per-scheme individual bar plots (easier to inspect one at a time)
-for (scheme_nm in names(PARTITION_SCHEMES)) {
-  scheme_df <- plot_df %>% filter(as.character(scheme) == scheme_nm)
-  if (nrow(scheme_df) == 0) next
-  p_single <- ggplot(scheme_df, aes(x = class, y = f1, fill = model)) +
-    geom_col(position = position_dodge(width = 0.7), width = 0.6, na.rm = TRUE) +
-    geom_text(aes(label = sprintf("%.2f", f1)),
-              position = position_dodge(width = 0.7), vjust = -0.3, size = 3.5, na.rm = TRUE) +
-    scale_y_continuous(limits = c(0, 1.08), breaks = seq(0, 1, 0.2)) +
-    labs(x = NULL, y = "F1 score", fill = NULL) +
-    theme_bw(base_size = 12) +
-    theme(legend.position = "top", panel.grid.minor = element_blank())
-  ggsave(file.path(out_dir, sprintf("class_f1_%s.png", scheme_nm)),
-         p_single, width = max(4, length(PARTITION_SCHEMES[[scheme_nm]]$labels) * 1.4),
-         height = 4, dpi = 150)
+  ggsave(file.path(out_dir, "class_prf_grid.png"), p, width = 10, height = 11, dpi = 150)
+  log_info("Saved class_prf_grid.png")
 }
 
 # ==============================================================================
@@ -569,7 +524,7 @@ scheme_summary <- paste(
 readme_text <- sprintf(
 "# N-ary classification metrics
 
-Generated %s by 09_Trinary_Classification.R.
+Generated by 09_Trinary_Classification.R.
 
 ## Partition schemes evaluated
 
@@ -579,10 +534,9 @@ Generated %s by 09_Trinary_Classification.R.
 
 - `summary_by_scheme.csv`         one row per (model, scheme): accuracy, macro-F1, weighted-F1
 - `per_class_metrics.csv`         precision / recall / F1 per (model, scheme, class)
-- `confusion_winner_<scheme>.csv` confusion matrix for the realistic winner (K x K)
+- `confusion_winner_<scheme>.csv` confusion matrix for the winner (K x K)
 - `best_scheme_per_model.csv`     best-scoring scheme per model (by weighted-F1)
-- `class_f1_grid.png`             faceted overview: all schemes x winner vs baseline
-- `class_f1_<scheme>.png`         individual bar chart per scheme
+- `class_prf_grid.png`            precision / recall / F1 per class, all schemes
 
 ## Mode
 
@@ -592,10 +546,6 @@ Generated %s by 09_Trinary_Classification.R.
 
 ## Caveats
 
-- The 'baseline' model was trained on the unfiltered 7.2M-row grid and is
-  evaluated here on the 3.4M-row realistic subset. This is not a symmetric
-  comparison: the baseline saw more training data of a different distribution.
-  See xgboost_section_plan.md section 7 for a note on this asymmetry.
 - 'Weighted-F1' weights each class by its support (row count). For schemes
   where unpowered rows dominate (>85%% of the grid), even a degenerate model
   that predicts 'unpowered' everywhere scores a high weighted-F1. Macro-F1
@@ -604,13 +554,12 @@ Generated %s by 09_Trinary_Classification.R.
   on the XGBoost predicted probability. Both are discretised using the same
   break-points for comparability.
 ",
-  format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z"),
   scheme_summary,
   XGB_TRINARY_MODE,
   if (XGB_TRINARY_MODE == "insample")
     "**insample**: booster applied to its own training data. Overstates true generalisation."
   else
-    "**oof**: 5-fold gene-grouped CV refit at the winner's best_nrounds. Honest estimate."
+    "**oof**: gene-grouped 5-fold out-of-fold predictions of the winner. Honest estimate."
 )
 
 writeLines(readme_text, file.path(out_dir, "README.md"))

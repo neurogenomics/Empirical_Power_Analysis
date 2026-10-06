@@ -1,5 +1,5 @@
 # ==============================================================================
-# SCRIPT: Filter aggregated fitting data to the realistic design sub-grid
+# SCRIPT: Filter aggregated fitting data to the power model's design range
 # PURPOSE: The full empirical grid trains on n_cells in {5,10,25,50,...} per
 #          donor. Rows with n_cells < 100 collapse to binomial noise and are
 #          not representative of any real experimental design. The paper's
@@ -9,16 +9,15 @@
 #          actually target -- n_cells >= 100 per donor.
 #
 #          This script reads the aggregated table produced by 01b, applies the
-#          n_cells >= 100 filter, and writes a parallel realistic .qs that the
-#          reweighting sweep (02_Fit_XGBoost.R with XGB_FITTING_DATA=...) reads
-#          in place of aggregated_fitting_data_all.qs.
+#          n_cells >= 100 filter, and writes the training table that
+#          02_Fit_XGBoost.R / 03_Select_XGBoost.R read.
 #
 #          Named 01e_ to preserve the existing XGBoost step numbering after
 #          cross-method scoring moved to
 #          R/cartesian_downsampling/10_CrossScore_Methods.R.
 #
 # INPUT:  Fitting_Data/aggregated_fitting_data_all.qs        (from 01b)
-# OUTPUT: Fitting_Data/aggregated_fitting_data_realistic.qs  (filtered)
+# OUTPUT: Fitting_Data/aggregated_fitting_data.qs            (filtered)
 #         Fitting_Data/filter_summary.csv                    (row & bin diagnostics)
 #         Fitting_Data/filter_dropped_by_group.csv           (dropped-row breakdown)
 # ==============================================================================
@@ -51,7 +50,7 @@ if (!exists("PROJECT_ROOT")) {
 
 source(file.path(SCRIPT_DIR, "utils.R"))
 
-log_section("STEP 01e: Filter aggregated fitting data to realistic sub-grid (n_cells >= 100)")
+log_section("STEP 01e: Filter aggregated fitting data to n_cells >= 100")
 
 # Threshold (env-overridable for exploration; default locked at 100 per design doc).
 MIN_N_CELLS <- as.integer(Sys.getenv("XGB_MIN_N_CELLS", "100"))
@@ -126,7 +125,7 @@ if (length(group_cols) > 0) {
 # 5. WRITE OUTPUTS
 # ==============================================================================
 
-out_qs <- file.path(fit_dir, "aggregated_fitting_data_realistic.qs")
+out_qs <- file.path(fit_dir, "aggregated_fitting_data.qs")
 qs::qsave(dat, out_qs)
 log_info("Wrote filtered .qs -> %s", out_qs)
 
@@ -146,4 +145,4 @@ write.csv(dropped, dropped_path, row.names = FALSE)
 log_info("Wrote dropped-row breakdown -> %s", dropped_path)
 
 log_section("STEP 01e COMPLETE")
-log_info("Realistic sub-grid: %d rows, %d genes", nrow(dat), dplyr::n_distinct(dat$gene_id))
+log_info("Training table: %d rows, %d genes", nrow(dat), dplyr::n_distinct(dat$gene_id))

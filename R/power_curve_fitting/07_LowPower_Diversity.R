@@ -1,6 +1,6 @@
 # ==============================================================================
 # SCRIPT: Low-power mass diversity exploration (M2 -- diagnostic, no model)
-# PURPOSE: The realistic-grid fitting set (n_cells >= 100) is still dominated
+# PURPOSE: The training table (n_cells >= 100) is still dominated
 #          by rows with observed detection rate in [0, 0.1] (~unpowered). If
 #          this "low-power mass" is HOMOGENEOUS (one archetype: e.g. tiny LFC
 #          + adequate expression at any donor count) then class-reweighting
@@ -16,8 +16,8 @@
 #          fitting; uses base R + ggplot2 only. UMAP intentionally SKIPPED
 #          this pass (design doc §5.4, Chris opted out on 2026-07-30).
 #
-# INPUT:  Fitting_Data/aggregated_fitting_data_realistic.qs   (from 01e)
-# OUTPUT: Models/xgboost/realistic/lowpower_diversity/
+# INPUT:  Fitting_Data/aggregated_fitting_data.qs             (from 01e)
+# OUTPUT: Models/xgboost/lowpower_diversity/
 #           feature_marginals/{feature}_hist.png    (5 features)
 #           density2d/{x}_vs_{y}_meanpower.png       (4 pairs)
 #           kmeans_cluster_profile.csv               (cluster mean/median per feature)
@@ -57,14 +57,14 @@ source(file.path(SCRIPT_DIR, "utils.R"))
 
 log_section("STEP 7: Low-power mass diversity exploration")
 
-XGB_MODEL_SUBDIR <- Sys.getenv("XGB_MODEL_SUBDIR", "realistic")
-XGB_FITTING_DATA <- Sys.getenv("XGB_FITTING_DATA", "aggregated_fitting_data_realistic.qs")
+XGB_MODEL_SUBDIR <- Sys.getenv("XGB_MODEL_SUBDIR", "")
+XGB_FITTING_DATA <- Sys.getenv("XGB_FITTING_DATA", "aggregated_fitting_data.qs")
 LOW_POWER_MAX    <- as.numeric(Sys.getenv("XGB_LOW_POWER_MAX", "0.1"))
 KMEANS_K         <- as.integer(Sys.getenv("XGB_KMEANS_K", "4"))
 
 set.seed(SEED_BASE)
 
-model_base <- file.path(OUTPUT_BASE, "Models", "xgboost", XGB_MODEL_SUBDIR)
+model_base <- do.call(file.path, as.list(c(OUTPUT_BASE, "Models", "xgboost", XGB_MODEL_SUBDIR[nzchar(XGB_MODEL_SUBDIR)])))
 out_dir    <- file.path(model_base, "lowpower_diversity")
 safe_mkdir(out_dir)
 safe_mkdir(file.path(out_dir, "feature_marginals"))
@@ -76,7 +76,7 @@ safe_mkdir(file.path(out_dir, "density2d"))
 
 agg_path <- file.path(OUTPUT_BASE, "Fitting_Data", XGB_FITTING_DATA)
 if (!file.exists(agg_path)) {
-  stop(sprintf("Filtered data not found: %s. Run 01e_Filter_Realistic.R first.", agg_path))
+  stop(sprintf("Filtered data not found: %s. Run 01e_Filter_Design.R first.", agg_path))
 }
 dat <- qs::qread(agg_path)
 dat <- dat %>%

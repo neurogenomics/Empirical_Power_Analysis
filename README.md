@@ -88,7 +88,7 @@ Supplementary figures are numbered by `_supp_fig_index.R`, the single source of 
 | Method-pooled discrete recall heatmaps | `recall_discrete_heatmaps` | `Datalink/Cartesian_Downsampling/{Astro,Micro,Oligo}/Roussos/{cells,reads}/all_methods/Plots/Mean_Recall_Total.png` |
 | Chromosome-stratified recall (autosomal vs sex-chromosome) | `recall_chrom_stratified` | `Datalink/Cartesian_Downsampling/{Astro,Micro,Oligo}/Roussos/cells/all_methods/Plots/Mean_Recall_{Autosomal,SexChr}.png` |
 | DEG chromosome-distribution grid | `deg_chrom_distribution` | `Datalink/DE_Diagnostics/Chromosome_Grid/DEG_Chr_Grid_Combined.png` |
-| XGBoost SHAP dependence / violin (winner + reweighting configs) | `xgb_shap_dependence`, `xgb_shap_violin`, `xgb_shap_dependence_by_config` | `Datalink/Power_Curve_Fitting/Models/xgboost/realistic/shap_figures/{median,winner_alpha_0,winner_alpha_0.5,winner_alpha_1}/shap_{dependence,violin}.png` |
+| XGBoost SHAP dependence / violin (winner + reweighting configs) | `xgb_shap_dependence`, `xgb_shap_violin`, `xgb_shap_dependence_by_config` | `Datalink/Power_Curve_Fitting/Models/xgboost/shap_figures/{median,winner_alpha_0,winner_alpha_0.5,winner_alpha_1}/shap_{dependence,violin}.png` |
 | Cross-dataset agreement (sign + LFC) matrices | — | `Datalink/Full_Ground_Truth/{Astro,Micro,Oligo}/Diagnostic_Results/{Sign,LFC}_Agreement_Matrix_Roussos_Sig_Genes.png` |
 | GTEx bulk volcano, bulk-vs-single-cell concordance, and gene recovery | — | `Datalink/Bulk_Analysis/Bulk_Results/Bulk_Volcano_Plot.png`, `Datalink/Bulk_Analysis/{Astro,Micro,Oligo}/{Compare_Correlation_BulkAnchored,Compare_Correlation_BulkAnchored_NoXIST,Recovery_Stats_Stratified}.png` |
 
@@ -102,7 +102,7 @@ Supplementary figures are numbered by `_supp_fig_index.R`, the single source of 
 | Universe-controlled IoU matrices | `Datalink/Full_Ground_Truth/{Astro,Micro,Oligo}/Diagnostic_Results/Expanded_IoU_Matrix_Universe_Controlled.csv` |
 | False-discovery-proportion summary | `Datalink/Full_Ground_Truth/FDP_Summary.csv` |
 | Full truth-set summary (per-gene ground-truth characteristics) | `Datalink/DE_Diagnostics/Shared_Gene_Diagnostics/Full_Truth_Set_Summary.csv` |
-| XGBoost model-selection ranking (36 configurations) | `Datalink/Power_Curve_Fitting/Models/xgboost/realistic/model_selection.csv` |
+| XGBoost model-selection ranking (108 configurations) | `Datalink/Power_Curve_Fitting/Models/xgboost/model_selection.csv` |
 
 Additional canonical source CSVs consumed by the pipeline live in `Datalink/Paper_Source_Data/`.
 
@@ -113,7 +113,7 @@ Additional canonical source CSVs consumed by the pipeline live in `Datalink/Pape
 - **Bulk reference:** GTEx v8 (838 donors across 44 tissues) for external LFC calibration.
 - **Case-control variable:** Sex. Chosen because (i) sex is close to 50:50 in all brain cohorts; (ii) a well-characterised set of sex-biased genes (principally on the sex chromosomes) provides a reproducible ground truth; (iii) sex-biased DE generalises across independent cohorts.
 - **DE methods:** DESeq2, edgeR, and limma-voom, each run on pseudobulk aggregates. The paper's primary recall/precision grids pool detection outcomes across all three methods (`all_methods/`); per-method grids are provided in the supplement. DESeq2 additionally applies apeglm LFC shrinkage.
-- **Power model:** Gradient-boosted decision-tree ensemble (XGBoost), trained on the realistic design regime (≥ 100 cells per donor). It predicts each gene's detection probability from |LFC|, base mean, dispersion, donor count, cells per donor, reads per cell, DE method, and cell type. A dependency-light `predict_power()` wrapper, the fitted model binary (`power_model_bundle.rds`), and an example power curve are exported under `Datalink/Power_Curve_Fitting/Exports/`, so the wrapper runs without refitting.
+- **Power model:** Gradient-boosted decision-tree ensemble (XGBoost), trained on the design rows with ≥ 100 cells per donor. It predicts each gene's detection probability from |LFC|, base mean, dispersion, donor count, cells per donor, reads per cell, DE method, and cell type. A dependency-light `predict_power()` wrapper, the fitted model binary (`power_model_bundle.rds`), and an example power curve are exported under `Datalink/Power_Curve_Fitting/Exports/`, so the wrapper runs without refitting.
 
 ## Key findings
 

@@ -17,7 +17,7 @@
 #       reads every config's cv_metrics.csv, picks the best, and runs SHAP +
 #       calibration on the already-trained best booster.
 #
-# INPUT:  Fitting_Data/aggregated_fitting_data_all.qs  (from 01b)
+# INPUT:  Fitting_Data/aggregated_fitting_data.qs  (n_cells >= 100 design rows, from 01e)
 # OUTPUT (full search): Models/xgboost/{booster.ubj,booster.qs,feature_spec.qs,
 #           cv_metrics.csv,feature_importance.csv,calibration.csv}
 # OUTPUT (array mode):  Models/xgboost/search/config_<k>/{booster.ubj,booster.qs,
@@ -68,23 +68,23 @@ XGB_MONOTONE     <- tolower(Sys.getenv("XGB_MONOTONE", "true")) %in% c("true", "
 XGB_NTHREAD      <- as.integer(Sys.getenv("XGB_NTHREAD", as.character(min(8, N_CORES))))
 XGB_NFOLDS       <- as.integer(Sys.getenv("XGB_NFOLDS", "5"))
 XGB_GENE_SET     <- Sys.getenv("XGB_GENE_SET", "full")   # only 'full' survives 01b
-XGB_MAX_NROUNDS  <- as.integer(Sys.getenv("XGB_MAX_NROUNDS", "5000"))
+# The search grid includes eta = 0.01, where shallow trees need >10k rounds
+# before early stopping fires; the cap must sit well above that, otherwise
+# the slow-learning end of the grid is truncated rather than converged.
+XGB_MAX_NROUNDS  <- as.integer(Sys.getenv("XGB_MAX_NROUNDS", "20000"))
 XGB_EARLY_STOP   <- as.integer(Sys.getenv("XGB_EARLY_STOP", "50"))
 # Array mode: 0 / unset => full local search; k>=1 => train only param_grid[k, ].
 XGB_CONFIG_INDEX <- as.integer(Sys.getenv("XGB_CONFIG_INDEX", "0"))
 
-# ---- realistic-grid reweighting knobs (xgboost_reweighting_design.md) --------
-# XGB_FITTING_DATA: filename under Fitting_Data/ (default = baseline all-rows).
-#   Set to "aggregated_fitting_data_realistic.qs" after running 01e_Filter_Realistic.R
-#   to train on the n_cells >= 100 sub-grid.
-# XGB_MODEL_SUBDIR: subdir under Models/xgboost/ ("" = baseline, "realistic" = the
-#   reweighting sweep). Keeps the old baseline artefacts untouched for the
-#   comparison figure in 08_Compare_Reweighted.R.
-# XGB_ALPHA: per-config default exponent for the inverse-frequency bin weight.
-#   In ARRAY mode, if the param_grid row carries an `alpha` column, THAT value
-#   wins (the array indexes into the {config x alpha} joint grid); the env var
-#   is only used when the grid has no alpha column (full-search legacy path).
-XGB_FITTING_DATA <- Sys.getenv("XGB_FITTING_DATA", "aggregated_fitting_data_all.qs")
+# ---- training data / output location / reweighting -------------------------
+# XGB_FITTING_DATA: filename under Fitting_Data/. The single power model is
+#   trained on the n_cells >= 100 design rows written by 01e_Filter_Design.R.
+# XGB_MODEL_SUBDIR: optional subdir under Models/xgboost/ ("" = Models/xgboost/,
+#   the paper's model). Only useful for side experiments.
+# XGB_ALPHA: exponent for the inverse-frequency bin weight. Every param_grid
+#   row carries its own alpha (the array indexes the {config x alpha} joint
+#   grid), so this env var is unused by the paper's search.
+XGB_FITTING_DATA <- Sys.getenv("XGB_FITTING_DATA", "aggregated_fitting_data.qs")
 XGB_MODEL_SUBDIR <- Sys.getenv("XGB_MODEL_SUBDIR", "")
 XGB_ALPHA_ENV    <- as.numeric(Sys.getenv("XGB_ALPHA", "0"))
 
@@ -105,7 +105,7 @@ log_info("Objective=%s | monotone=%s | nthread=%d | folds=%d | gene_set=%s | max
 
 agg_path <- file.path(OUTPUT_BASE, "Fitting_Data", XGB_FITTING_DATA)
 if (!file.exists(agg_path)) {
-  stop(sprintf("Fitting data not found: %s. Run 01b_Aggregate_Fitting_Data.R (baseline) or 01e_Filter_Realistic.R (realistic sub-grid) first.", agg_path))
+  stop(sprintf("Fitting data not found: %s. Run 01b_Aggregate_Fitting_Data.R then 01e_Filter_Design.R first.", agg_path))
 }
 log_info("Reading fitting data: %s", agg_path)
 
@@ -226,20 +226,21 @@ log_info("Gene-grouped %d-fold on %d genes (fold sizes: %s)",
 # The HPC search array's task count MUST equal nrow(param_grid). Widen/narrow
 # here and the array -J bound follows (see hpc/cx3-xgb-search.pbs).
 #
-# For the realistic-grid reweighting sweep the grid is expanded to include an
-# `alpha` column ({0, 0.5, 1.0}), giving 12 hyperparameter configs x 3 alphas
-# = 36 rows. Baseline runs (XGB_MODEL_SUBDIR="") keep the 12-row grid via a
-# single alpha=0 value so XGB_CONFIG_INDEX mapping is unchanged from the
-# original 12-config search.
+# The grid crosses the tree hyperparameters with the bin-reweighting exponent
+# alpha in {0, 0.5, 1}: 4 depths x 3 learning rates x 3 min_child_weights x
+# 3 alphas = 108 rows. Each tree hyperparameter carries one value beyond the
+# direction that improved bin-balanced MAE in the original 36-config search
+# (depth 10, eta 0.01, min_child_weight 25), so the selected configuration is
+# bracketed: if the extreme values plateau or get worse, the search has found
+# the optimum along that axis rather than stopping at the edge of the grid.
 
-XGB_REWEIGHT <- nzchar(XGB_MODEL_SUBDIR)
-alpha_values <- if (XGB_REWEIGHT) c(0, 0.5, 1.0) else 0
+alpha_values <- c(0, 0.5, 1.0)
 
 param_grid <- expand.grid(
   alpha            = alpha_values,
-  max_depth        = c(3L, 4L, 6L),
-  eta              = c(0.03, 0.1),
-  min_child_weight = c(1, 10),
+  max_depth        = c(3L, 4L, 6L, 10L),
+  eta              = c(0.01, 0.03, 0.1),
+  min_child_weight = c(1, 10, 25),
   subsample        = 0.8,
   colsample_bytree = 0.8,
   KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE
@@ -277,7 +278,7 @@ make_params <- function(p) {
 #' per-fold refit at best_iter rounds (Fix A, 2026-07-31): xgb.cv(prediction=TRUE)
 #' returns cv$pred == NULL in xgboost 3.x, so we can't rely on it. The manual
 #' refit is version-proof and roughly doubles per-config wall time (still under
-#' the realistic-search 1h walltime for the sizes we see, ~16 min -> ~30 min).
+#' the search walltime for the sizes we see, ~16 min -> ~30 min at depth 6, eta 0.03).
 fit_one_config <- function(p) {
   params    <- make_params(p)
   alpha_val <- if (!is.null(p$alpha)) as.numeric(p$alpha) else XGB_ALPHA_ENV
@@ -392,7 +393,7 @@ if (ARRAY_MODE) {
 
   cv_row <- cbind(config_index = XGB_CONFIG_INDEX, p,
                   best_nrounds = res$best_nrounds, cv_logloss = res$cv_logloss)
-  # Ensure alpha is always present in the CV row even in baseline (non-reweight)
+  # Ensure alpha is always present in the CV row
   # mode so downstream selection (03) can uniformly key on it.
   if (!"alpha" %in% colnames(cv_row)) cv_row$alpha <- res$alpha
   write.csv(cv_row, file.path(out_dir, "cv_metrics.csv"), row.names = FALSE)

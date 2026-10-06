@@ -1,25 +1,25 @@
 # ==============================================================================
-# SCRIPT: Select best XGBoost config + interpret (M2 -- HPC Stage C)
-# PURPOSE: After the Stage B array (02_Fit_XGBoost.R in ARRAY mode) has trained
-#          one booster per hyperparameter config into Models/xgboost/search/
-#          config_<k>/, this script:
-#            1. reads every config's cv_metrics.csv, ranks by grouped-CV logloss
-#            2. picks the winner and promotes its booster to the canonical
-#               Models/xgboost/ location (the paper artifact)
-#            3. recomputes honest OOF calibration for the winning config only
-#            4. runs SHAP (xgboost built-in predcontrib) + gain importance
-#            5. writes a surface-fidelity summary (weighted pred vs observed)
+# SCRIPT: Select the XGBoost power model + SHAP refits (M2 -- HPC Stage C)
+# PURPOSE: After the search array (02_Fit_XGBoost.R in ARRAY mode) has trained
+#          one booster per {tree hyperparameters x alpha} configuration into
+#          Models/xgboost/search/config_<k>/, this script:
+#            1. scores every configuration by out-of-fold bin-balanced MAE
+#               (overall and per CV fold), writes calibration_residuals.csv per
+#               configuration, and ranks them (model_selection.csv)
+#            2. picks 5 models for SHAP (best per alpha, overall median,
+#               overall worst), refits each on the full training table and
+#               computes TreeSHAP on a uniform row subsample
+#            3. promotes the overall winner to Models/xgboost/ (the paper model)
 #
-# INPUT:  Fitting_Data/aggregated_fitting_data_all.qs      (from 01b)
-#         Models/xgboost/search/config_*/{booster.qs,feature_spec.qs,cv_metrics.csv}
-# OUTPUT: Models/xgboost/{booster.ubj,booster.qs,feature_spec.qs}   (winner)
-#         Models/xgboost/model_selection.csv     all configs ranked
-#         Models/xgboost/cv_metrics.csv          winner's CV row
-#         Models/xgboost/calibration.csv         winner OOF calibration (bin means)
-#         Models/xgboost/calibration_residuals.csv  per-bin residual dispersion
-#         Models/xgboost/feature_importance.csv  gain / cover / frequency
-#         Models/xgboost/shap_summary.csv        mean|SHAP| per feature
-#         Models/xgboost/shap_values.qs          full per-row SHAP matrix
+# INPUT:  Fitting_Data/aggregated_fitting_data.qs                   (from 01e)
+#         Models/xgboost/search/config_*/{cv_metrics.csv,oof_predictions.qs,feature_spec.qs}
+# OUTPUT: Models/xgboost/model_selection.csv        all configs ranked (Supplementary Data 4)
+#         Models/xgboost/model_selection_folds.csv  bin-balanced MAE per config x CV fold
+#         Models/xgboost/shap_selection.csv         the 5 SHAP models
+#         Models/xgboost/shap_models/<tag>/...      refit boosters + SHAP
+#         Models/xgboost/{booster.ubj,booster.qs,feature_spec.qs,shap_values.qs,
+#                         shap_summary.csv,feature_importance.csv,
+#                         calibration_residuals.csv,cv_metrics.csv}   (winner)
 # ==============================================================================
 
 suppressPackageStartupMessages({
@@ -59,9 +59,9 @@ XGB_NFOLDS   <- as.integer(Sys.getenv("XGB_NFOLDS", "5"))
 XGB_NTHREAD  <- as.integer(Sys.getenv("XGB_NTHREAD", as.character(min(8, N_CORES))))
 XGB_GENE_SET <- Sys.getenv("XGB_GENE_SET", "full")
 
-# Realistic-grid reweighting knobs (must match those used in 02_Fit_XGBoost.R).
+# Must match those used in 02_Fit_XGBoost.R.
 XGB_MODEL_SUBDIR <- Sys.getenv("XGB_MODEL_SUBDIR", "")
-XGB_FITTING_DATA <- Sys.getenv("XGB_FITTING_DATA", "aggregated_fitting_data_all.qs")
+XGB_FITTING_DATA <- Sys.getenv("XGB_FITTING_DATA", "aggregated_fitting_data.qs")
 
 model_base <- if (nzchar(XGB_MODEL_SUBDIR)) {
   file.path(OUTPUT_BASE, "Models", "xgboost", XGB_MODEL_SUBDIR)
@@ -103,9 +103,8 @@ compute_bin_balanced <- function(pred, obs, w) {
 }
 
 # --------------------------------------------------------------------------
-# Weighted summary helpers (used to build calibration_residuals.csv for both
-# baseline and realistic modes; factored out so realistic mode can emit one
-# per config without duplicating the section-4b block below).
+# Weighted summary helpers (used to build one calibration_residuals.csv per
+# configuration).
 # --------------------------------------------------------------------------
 wsd_h <- function(x, wt) {
   m <- weighted.mean(x, wt); sqrt(sum(wt * (x - m)^2) / sum(wt))
@@ -158,24 +157,22 @@ build_calibration_residuals <- function(pred, obs, w) {
 }
 
 # ==============================================================================
-# 2R. REALISTIC-MODE FLOW (design doc §6.3)
+# 2. RANK, SELECT, REFIT, PROMOTE (design doc §6.3)
 # ==============================================================================
-# When XGB_MODEL_SUBDIR is set (e.g. "realistic"), rank by bin-balanced MAE
-# computed from the per-config OOF predictions (saved in ARRAY mode by 02),
-# select 5 models for SHAP (3 alpha-winners + median + worst by bin_balanced),
-# refit each on the full filtered dataset and compute SHAP, then promote the
-# overall winner to the canonical realistic model dir. Baseline mode
-# (XGB_MODEL_SUBDIR="") falls through to the original section 2 below.
+# Rank by bin-balanced MAE computed from the per-config OOF predictions (saved
+# in ARRAY mode by 02), select 5 models for SHAP (3 alpha-winners + median +
+# worst by bin_balanced), refit each on the full training table and compute
+# SHAP, then promote the overall winner to model_base.
 
-if (nzchar(XGB_MODEL_SUBDIR)) {
-  log_section(sprintf("REALISTIC MODE: rank by bin_balanced_MAE, 5-model SHAP refit (%s)",
-                      XGB_MODEL_SUBDIR))
+{
+  log_section("Rank by bin_balanced_MAE, 5-model SHAP refit")
 
   cfg_dirs <- list.files(search_dir, pattern = "^config_[0-9]+$", full.names = TRUE)
   cfg_dirs <- cfg_dirs[order(as.integer(sub(".*config_", "", cfg_dirs)))]
   if (length(cfg_dirs) == 0) stop(sprintf("No config_* dirs under %s", search_dir))
 
   # --- per-config metrics + per-config calibration_residuals.csv ---------------
+  fold_rows <- list()
   per_cfg_rows <- lapply(cfg_dirs, function(d) {
     cv_f  <- file.path(d, "cv_metrics.csv")
     oof_f <- file.path(d, "oof_predictions.qs")
@@ -187,6 +184,17 @@ if (nzchar(XGB_MODEL_SUBDIR)) {
     bb  <- compute_bin_balanced(oof$pred, oof$obs, oof$w_trials)
     cr  <- build_calibration_residuals(oof$pred, oof$obs, oof$w_trials)
     write.csv(cr, file.path(d, "calibration_residuals.csv"), row.names = FALSE)
+    # Per-fold bin-balanced MAE: the folds are gene-grouped and identical for
+    # every configuration (same seed and gene list), so per-fold scores can be
+    # compared pairwise to ask whether a gap between configurations is larger
+    # than fold-to-fold noise.
+    fold_mae <- vapply(sort(unique(oof$fold)), function(k) {
+      ix <- oof$fold == k
+      compute_bin_balanced(oof$pred[ix], oof$obs[ix], oof$w_trials[ix])$bin_balanced_MAE
+    }, numeric(1))
+    fold_rows[[length(fold_rows) + 1]] <<- data.frame(
+      config_index = cv$config_index[1], fold = sort(unique(oof$fold)),
+      bin_balanced_MAE = fold_mae)
     data.frame(
       config_index         = cv$config_index[1],
       config_dir           = d,
@@ -200,6 +208,7 @@ if (nzchar(XGB_MODEL_SUBDIR)) {
       cv_logloss           = cv$cv_logloss[1],
       bin_balanced_MAE     = bb$bin_balanced_MAE,
       bin_balanced_p90_err = bb$bin_balanced_p90_err,
+      bin_balanced_MAE_fold_sd = sd(fold_mae),
       stringsAsFactors     = FALSE
     )
   })
@@ -211,6 +220,8 @@ if (nzchar(XGB_MODEL_SUBDIR)) {
            per_cfg$bin_balanced_MAE[nrow(per_cfg)])
   write.csv(per_cfg %>% select(-config_dir),
             file.path(model_base, "model_selection.csv"), row.names = FALSE)
+  write.csv(bind_rows(fold_rows) %>% arrange(config_index, fold),
+            file.path(model_base, "model_selection_folds.csv"), row.names = FALSE)
 
   # --- select 5 SHAP models -----------------------------------------------------
   # 1) best per alpha (3 rows if 3 alphas)
@@ -421,274 +432,8 @@ if (nzchar(XGB_MODEL_SUBDIR)) {
   write.csv(win %>% select(-config_dir),
             file.path(model_base, "cv_metrics.csv"), row.names = FALSE)
 
-  log_section("STEP 3 (XGBoost) REALISTIC MODE COMPLETE")
+  log_section("STEP 3 (XGBoost) COMPLETE")
   log_info("Winner promoted to %s (bin_balanced_MAE=%.4f)",
            model_base, win$bin_balanced_MAE)
   quit(save = "no", status = 0)
 }
-
-# ==============================================================================
-# 2. RANK CONFIGS BY GROUPED-CV LOGLOSS
-# ==============================================================================
-
-cfg_dirs <- list.files(search_dir, pattern = "^config_[0-9]+$", full.names = TRUE)
-if (length(cfg_dirs) == 0) stop(sprintf("No config_* dirs under %s", search_dir))
-
-metrics <- lapply(cfg_dirs, function(d) {
-  f <- file.path(d, "cv_metrics.csv")
-  if (!file.exists(f)) {
-    log_warning("Missing cv_metrics.csv in %s -- config task may have failed", d)
-    return(NULL)
-  }
-  row <- read.csv(f, stringsAsFactors = FALSE)
-  row$config_dir <- d
-  row
-})
-metrics <- bind_rows(metrics)
-if (nrow(metrics) == 0) stop("No cv_metrics.csv found across configs")
-
-metrics <- metrics %>% arrange(cv_logloss)
-log_info("Ranked %d configs by CV logloss (best=%.5f, worst=%.5f)",
-         nrow(metrics), metrics$cv_logloss[1], metrics$cv_logloss[nrow(metrics)])
-
-write.csv(metrics %>% select(-config_dir),
-          file.path(model_base, "model_selection.csv"), row.names = FALSE)
-
-winner        <- metrics[1, ]
-winner_dir    <- winner$config_dir
-log_info("Winner: config %d (depth=%d eta=%.2f mcw=%g) logloss=%.5f @ %d rounds",
-         winner$config_index, winner$max_depth, winner$eta,
-         winner$min_child_weight, winner$cv_logloss, winner$best_nrounds)
-
-# Load the booster from the canonical .ubj via xgb.load, NOT from booster.qs.
-# An xgboost booster is an external C++ pointer; round-tripping it through qs
-# into a fresh process is unreliable across the xgboost 2.x -> 3.x rewrite and
-# can rehydrate as a null handle, crashing the first predict(). The .ubj is
-# xgboost's own version-stable serialisation and is always written by 02
-# alongside booster.qs (02_Fit_XGBoost.R line 269).
-winner_ubj <- file.path(winner_dir, "booster.ubj")
-if (!file.exists(winner_ubj))
-  stop(sprintf("Winner booster.ubj not found: %s", winner_ubj))
-final_model  <- xgb.load(winner_ubj)
-feature_spec <- qs::qread(file.path(winner_dir, "feature_spec.qs"))
-
-# ==============================================================================
-# 3. REBUILD DESIGN MATRIX (identical recipe to 02_Fit_XGBoost.R)
-# ==============================================================================
-
-agg_path <- file.path(OUTPUT_BASE, "Fitting_Data", XGB_FITTING_DATA)
-dat <- qs::qread(agg_path)
-if ("gene_set" %in% colnames(dat)) dat <- dat %>% filter(gene_set == XGB_GENE_SET)
-
-CONT_FEATURES <- feature_spec$cont_features
-CAT_FEATURES  <- feature_spec$cat_features
-cat_levels    <- feature_spec$cat_levels
-
-dat <- dat %>%
-  filter(
-    is.finite(detection_rate), detection_rate >= 0, detection_rate <= 1,
-    n_trials > 0,
-    is.finite(n_donors), is.finite(n_cells), is.finite(reads_per_cell),
-    is.finite(abs_gt_lfc), is.finite(gt_basemean), is.finite(gt_dispersion)
-  )
-
-build_design <- function(df, cont_features, cat_features, cat_levels) {
-  cont_mat <- as.matrix(df[, cont_features, drop = FALSE])
-  oh_blocks <- lapply(cat_features, function(f) {
-    lv <- cat_levels[[f]]
-    m <- vapply(lv, function(l) as.numeric(as.character(df[[f]]) == l), numeric(nrow(df)))
-    if (is.null(dim(m))) m <- matrix(m, nrow = nrow(df))
-    colnames(m) <- paste0(f, "=", lv)
-    m
-  })
-  do.call(cbind, c(list(cont_mat), oh_blocks))
-}
-
-X <- build_design(dat, CONT_FEATURES, CAT_FEATURES, cat_levels)
-# Align columns to the trained booster's feature order.
-X <- X[, feature_spec$feature_names, drop = FALSE]
-y <- dat$detection_rate
-w <- dat$n_trials
-
-# ==============================================================================
-# 4. HONEST OOF CALIBRATION FOR THE WINNER (refit folds at winning config)
-# ==============================================================================
-
-# Gene-grouped folds (matches 02_Fit_XGBoost.R so the baseline OOF refit here
-# uses the same fold structure).
-gene_ids <- unique(dat$gene_id)
-set.seed(SEED_BASE)
-gene_fold <- sample(rep_len(seq_len(XGB_NFOLDS), length(gene_ids)))
-names(gene_fold) <- gene_ids
-row_fold <- gene_fold[dat$gene_id]
-folds <- lapply(seq_len(XGB_NFOLDS), function(k) which(row_fold == k))
-
-best_params <- feature_spec$best_params
-best_params$nthread <- XGB_NTHREAD
-best_nrounds <- feature_spec$best_nrounds
-
-oof_pred <- rep(NA_real_, nrow(X))
-for (k in seq_len(XGB_NFOLDS)) {
-  te <- folds[[k]]; tr <- setdiff(seq_len(nrow(X)), te)
-  m_k <- xgb.train(
-    params  = best_params,
-    data    = xgb.DMatrix(X[tr, , drop = FALSE], label = y[tr], weight = w[tr]),
-    nrounds = best_nrounds,
-    verbose = 0
-  )
-  oof_pred[te] <- predict(m_k, xgb.DMatrix(X[te, , drop = FALSE]))
-}
-
-eps <- 1e-7
-wrmse    <- sqrt(sum(w * (oof_pred - y)^2, na.rm = TRUE) / sum(w))
-pc       <- pmin(pmax(oof_pred, eps), 1 - eps)
-wlogloss <- -sum(w * (y * log(pc) + (1 - y) * log(1 - pc)), na.rm = TRUE) / sum(w)
-log_info("Winner OOF (weighted): RMSE=%.4f  logloss=%.4f", wrmse, wlogloss)
-
-calib <- data.frame(pred = oof_pred, obs = y, w = w) %>%
-  mutate(bin = cut(pred, breaks = seq(0, 1, 0.1), include.lowest = TRUE)) %>%
-  group_by(bin) %>%
-  summarise(n = dplyr::n(),
-            mean_pred = weighted.mean(pred, w),
-            mean_obs  = weighted.mean(obs, w),
-            .groups = "drop")
-write.csv(calib, file.path(model_base, "calibration.csv"), row.names = FALSE)
-
-# ------------------------------------------------------------------------------
-# 4b. WITHIN-BIN RESIDUAL DISPERSION (calibration_residuals.csv)
-# ------------------------------------------------------------------------------
-# calibration.csv reports only bin means, which can hide the case where the mean
-# is well calibrated but individual predictions scatter widely. This block
-# summarises the row-level OOF residual distribution per predicted-power bin,
-# reusing oof_pred/y/w before they are discarded (no extra model training).
-# All statistics are trial-weighted (w = n_trials), consistent with the logloss.
-# Caveat: obs = n_detected / n_trials is itself binomially noisy (max SE ~0.11 at
-# n_trials=20), so headline the robust summaries (p90/p95 abs error, % within
-# 0.10, % same-or-adjacent bin) rather than raw min/max error.
-
-wsd <- function(x, wt) {
-  m <- weighted.mean(x, wt)
-  sqrt(sum(wt * (x - m)^2) / sum(wt))
-}
-wquantile <- function(x, wt, probs) {
-  o <- order(x); x <- x[o]; wt <- wt[o]
-  cw <- (cumsum(wt) - 0.5 * wt) / sum(wt)
-  approx(cw, x, xout = probs, rule = 2)$y
-}
-
-resid_df <- data.frame(pred = oof_pred, obs = y, w = w) %>%
-  filter(is.finite(pred), is.finite(obs), is.finite(w), w > 0) %>%
-  mutate(
-    err          = obs - pred,
-    abs_err      = abs(obs - pred),
-    pred_bin     = cut(pred, breaks = seq(0, 1, 0.1), include.lowest = TRUE),
-    obs_bin      = cut(obs,  breaks = seq(0, 1, 0.1), include.lowest = TRUE),
-    pred_bin_idx = as.integer(cut(pred, breaks = seq(0, 1, 0.1), include.lowest = TRUE)),
-    obs_bin_idx  = as.integer(cut(obs,  breaks = seq(0, 1, 0.1), include.lowest = TRUE))
-  )
-
-resid_row <- function(d) {
-  sw <- sum(d$w)
-  data.frame(
-    n                   = nrow(d),
-    sum_w               = sw,
-    mean_pred           = weighted.mean(d$pred, d$w),
-    mean_obs            = weighted.mean(d$obs, d$w),
-    bias                = weighted.mean(d$obs, d$w) - weighted.mean(d$pred, d$w),
-    sd_error            = wsd(d$err, d$w),
-    min_error           = min(d$err),
-    max_error           = max(d$err),
-    mae                 = weighted.mean(d$abs_err, d$w),
-    p50_abs_error       = wquantile(d$abs_err, d$w, 0.50),
-    p90_abs_error       = wquantile(d$abs_err, d$w, 0.90),
-    p95_abs_error       = wquantile(d$abs_err, d$w, 0.95),
-    pct_within_005      = sum(d$w[d$abs_err <= 0.05]) / sw,
-    pct_within_010      = sum(d$w[d$abs_err <= 0.10]) / sw,
-    pct_same_bin        = sum(d$w[d$obs_bin_idx == d$pred_bin_idx]) / sw,
-    pct_same_or_adj_bin = sum(d$w[abs(d$obs_bin_idx - d$pred_bin_idx) <= 1]) / sw
-  )
-}
-
-resid_by_bin <- resid_df %>%
-  group_by(pred_bin) %>%
-  group_modify(~ resid_row(.x)) %>%
-  ungroup() %>%
-  mutate(pred_bin = as.character(pred_bin))
-
-resid_overall <- resid_row(resid_df)
-resid_overall$pred_bin <- "ALL"
-
-resid_summary <- bind_rows(resid_by_bin, resid_overall) %>%
-  select(pred_bin, everything())
-write.csv(resid_summary, file.path(model_base, "calibration_residuals.csv"), row.names = FALSE)
-log_info("Winner OOF residual dispersion: overall p90|abs err|=%.4f  %% same-or-adj bin=%.3f",
-         resid_overall$p90_abs_error, resid_overall$pct_same_or_adj_bin)
-
-# ==============================================================================
-# 5. SHAP (xgboost built-in) + GAIN IMPORTANCE
-# ==============================================================================
-
-# SHAP is the slow tail of Stage C (exact TreeSHAP on a 200k subsample of a deep,
-# many-round booster). If a previous run already produced all three SHAP/importance
-# artefacts, skip recomputation so a rerun that only needs the cheaper diagnostics
-# (e.g. calibration_residuals.csv) does not pay the SHAP cost again. Set
-# XGB_FORCE_SHAP=true to force recomputation regardless.
-shap_outputs <- c(
-  file.path(model_base, "shap_values.qs"),
-  file.path(model_base, "shap_summary.csv"),
-  file.path(model_base, "feature_importance.csv")
-)
-force_shap <- tolower(Sys.getenv("XGB_FORCE_SHAP", "false")) %in% c("true", "1", "yes")
-if (!force_shap && all(file.exists(shap_outputs))) {
-  log_info("SHAP: all artefacts already exist, skipping (set XGB_FORCE_SHAP=true to recompute): %s",
-           paste(basename(shap_outputs), collapse = ", "))
-} else {
-  # predcontrib returns per-row contributions per feature + a BIAS column.
-  # Exact TreeSHAP is O(rows x trees x leaves^2); on the full ~7.2M-row matrix with a
-  # deep, many-round booster this is intractable (killed a 4h Stage C during SHAP).
-  # The SHAP *summary* (mean|SHAP|, mean SHAP) is a column mean over rows, so a uniform
-  # random subsample estimates it to ~0.2% relative error while keeping TreeSHAP EXACT
-  # on the sampled rows. Ranking of features is unaffected.
-  SHAP_MAX_ROWS <- as.integer(Sys.getenv("XGB_SHAP_MAX_ROWS", "200000"))
-  if (nrow(X) > SHAP_MAX_ROWS) {
-    set.seed(SEED_BASE)
-    shap_idx <- sort(sample.int(nrow(X), SHAP_MAX_ROWS))
-    log_info("SHAP: exact TreeSHAP on %d of %d rows (uniform subsample)", SHAP_MAX_ROWS, nrow(X))
-  } else {
-    shap_idx <- seq_len(nrow(X))
-    log_info("SHAP: exact TreeSHAP on all %d rows", nrow(X))
-  }
-  shap <- predict(final_model, xgb.DMatrix(X[shap_idx, , drop = FALSE]), predcontrib = TRUE)
-  colnames(shap) <- c(feature_spec$feature_names, "BIAS")
-  qs::qsave(shap, file.path(model_base, "shap_values.qs"))
-
-  shap_feat <- shap[, feature_spec$feature_names, drop = FALSE]
-  shap_summary <- data.frame(
-    feature       = feature_spec$feature_names,
-    mean_abs_shap = colMeans(abs(shap_feat)),
-    mean_shap     = colMeans(shap_feat),
-    row.names = NULL
-  ) %>% arrange(desc(mean_abs_shap))
-  write.csv(shap_summary, file.path(model_base, "shap_summary.csv"), row.names = FALSE)
-  log_info("Top SHAP features: %s",
-           paste(head(shap_summary$feature, 5), collapse = ", "))
-
-  # Pass feature_names explicitly: a booster loaded via xgb.load(.ubj) may not
-  # carry the R-level feature_names attribute, so without this xgb.importance
-  # would emit positional labels (f0, f1, ...) instead of real feature names.
-  imp <- xgb.importance(feature_names = feature_spec$feature_names, model = final_model)
-  write.csv(imp, file.path(model_base, "feature_importance.csv"), row.names = FALSE)
-}
-
-# ==============================================================================
-# 6. PROMOTE WINNER TO CANONICAL ARTIFACT + WINNER CV ROW
-# ==============================================================================
-
-xgb.save(final_model, file.path(model_base, "booster.ubj"))
-qs::qsave(final_model, file.path(model_base, "booster.qs"))
-qs::qsave(feature_spec, file.path(model_base, "feature_spec.qs"))
-write.csv(winner %>% select(-config_dir),
-          file.path(model_base, "cv_metrics.csv"), row.names = FALSE)
-
-log_section("STEP 3 (XGBoost) COMPLETE")
-log_info("Winner promoted to %s (OOF wRMSE=%.4f wlogloss=%.4f)", model_base, wrmse, wlogloss)

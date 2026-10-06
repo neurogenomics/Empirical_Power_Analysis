@@ -27,8 +27,8 @@ SHARD_BASE <- project_path("Datalink", "Shards")
 # 2. SOURCE AND TARGET CONFIGURATION
 # ==============================================================================
 
-# Cell type to equalize (only Astro for this sensitivity analysis)
-SOURCE_CELL_TYPE <- "Astro"
+# Cell type to equalise to microglia (env DEPTH_EQ_CELL_TYPE; Astro or Oligo)
+SOURCE_CELL_TYPE <- Sys.getenv("DEPTH_EQ_CELL_TYPE", "Astro")
 
 # Source shard directory
 SOURCE_DATASET <- "Roussos"
@@ -42,15 +42,22 @@ TARGET_SHARD_DIR <- project_path("Datalink", "Shards", SOURCE_CELL_TYPE, TARGET_
 # 3. DOWNSAMPLING PARAMETERS
 # ==============================================================================
 
-# Source mean reads per cell (from EDA: Read_Depth_Summary_All_CellTypes_Roussos.csv)
-SOURCE_MEAN_RPC <- 9456
+# Source mean reads per cell, per cell type (filtered PsychAD cohort; from the
+# EDA table Read_Depth_Summary_All_CellTypes_Roussos.csv: Astro 9456.25,
+# Micro 4426.18, Oligo 5742.06 UMIs per cell)
+SOURCE_MEAN_RPC_BY_CELL_TYPE <- c(Astro = 9456, Oligo = 5742)
+if (!SOURCE_CELL_TYPE %in% names(SOURCE_MEAN_RPC_BY_CELL_TYPE)) {
+  stop(sprintf("DEPTH_EQ_CELL_TYPE must be one of %s (got '%s')",
+               paste(names(SOURCE_MEAN_RPC_BY_CELL_TYPE), collapse = ", "), SOURCE_CELL_TYPE))
+}
+SOURCE_MEAN_RPC <- SOURCE_MEAN_RPC_BY_CELL_TYPE[[SOURCE_CELL_TYPE]]
 
 # Target mean reads per cell (match Microglia)
 TARGET_MEAN_RPC <- 4426
 
 # Downsampling fraction: every cell's UMI count is multiplied by this
 DOWNSAMPLE_FRACTION <- TARGET_MEAN_RPC / SOURCE_MEAN_RPC
-# = 0.4679...
+# Astro: 0.4679, Oligo: 0.7708
 
 # ==============================================================================
 # 3b. ASTRO_SHALLOW_FEWER EXTENSION CONFIGURATION

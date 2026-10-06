@@ -4,8 +4,10 @@
 # PURPOSE: Simple, decoupled DEG-loss result for the depth-equalisation section.
 #          Runs the 3 DE packages (DESeq2, edgeR, limma) on the ground-truth
 #          split (50% of donors, GT_SPLIT, averaged over 10 robustness runs) for
-#          each of four astrocyte configurations, and reports how many ground-
-#          truth DEGs are lost relative to the native (full) configuration.
+#          each of four configurations of one cell type (env DEPTH_EQ_CELL_TYPE:
+#          Astro, the default, or Oligo), equalised towards microglia, and
+#          reports how many ground-truth DEGs are lost relative to the native
+#          (full) configuration.
 #
 #          This REPLACES the old derivation (07_Depth_Eq_Truth_Summary.R), which
 #          scraped DEG counts out of the heavy power-curve-fitting dataset. Here
@@ -26,7 +28,8 @@
 #   BOTH thresholds (0.2 and 1) from the same cached DE tables. The 0.2 vs 1
 #   contrast is what exposes limma-voom's instability at the permissive cutoff.
 #
-# OUTPUT (Datalink/Depth_Eq_DEG_Loss/):
+# OUTPUT (Datalink/Depth_Eq_DEG_Loss/<cell type>/; combine_deg_loss_tables.R
+#         then stacks the per-cell-type tables into Depth_Eq_DEG_Loss/):
 #   deg_loss_table.csv    ONE display-ready supplementary table. Rows = 4 configs;
 #                         6 value cols = {deseq2,edger,limma} x {|LFC|>0.2, |LFC|>1};
 #                         each cell = "mean DEG count (% of native count)".
@@ -35,7 +38,7 @@
 #   deg_loss_per_run.csv  per (variant, method, run) DEG counts at both thresholds.
 #   GT_Cache/<variant>/Run_<r>/<method>.qs   cached per-run DE tables (server-only; not synced)
 #
-# USAGE:  Rscript R/depth_equalization/deg_loss_analysis.R [n_cores]
+# USAGE:  DEPTH_EQ_CELL_TYPE=Oligo Rscript R/depth_equalization/deg_loss_analysis.R [n_cores]
 # ==============================================================================
 
 suppressPackageStartupMessages({
@@ -78,13 +81,13 @@ source(file.path(DE_UTILS_DIR, "utils.R"))
 
 set.seed(1)  # only affects any incidental RNG; per-run seeds are set explicitly
 
-CELL_TYPE <- "Astro"
+CELL_TYPE <- Sys.getenv("DEPTH_EQ_CELL_TYPE", "Astro")   # Astro or Oligo, equalised to Micro
 METHODS   <- IMPLEMENTED_DE_METHODS          # deseq2, edger, limma
 RUN_IDS   <- 1:N_ROBUSTNESS_RUNS             # 1..10
 if (!is.na(MAX_RUNS)) RUN_IDS <- 1:min(N_ROBUSTNESS_RUNS, MAX_RUNS)
 LFC_CUTS  <- c(0.2, 1)                       # both truth-set thresholds (0.2 exposes limma instability)
 
-OUT_DIR   <- project_path("Datalink", "Depth_Eq_DEG_Loss")
+OUT_DIR   <- project_path("Datalink", "Depth_Eq_DEG_Loss", CELL_TYPE)
 CACHE_DIR <- file.path(OUT_DIR, "GT_Cache")
 dir.create(OUT_DIR,   recursive = TRUE, showWarnings = FALSE)
 dir.create(CACHE_DIR, recursive = TRUE, showWarnings = FALSE)
