@@ -19,7 +19,8 @@ environment (`renv.lock`, or the container built from `Dockerfile`).
   ([CELLxGENE collection 84ce6837](https://cellxgene.cziscience.com/collections/84ce6837-548d-4a1f-919f-0bc0d9a3952f))
   and the PsychAD donor table with post-mortem interval (`media-1.csv`, from
   Fullard et al. 2025). Checksums: `pipeline/inputs.sha256`. For the manual
-  route, place them under `Datalink/raw_data/`.
+  route, place them under `Datalink/raw_data/`. Every input is publicly
+  available, so no data deposit is needed to reproduce the paper.
 - Reference bundle (biomaRt caches, HGNC, PANTHER, Lambert TFs, gnomAD pLI,
   citation style): `pipeline/reference/fetch_reference.sh <dir>`.
 - Environment: build the image with `./docker/docker-build.sh` (see

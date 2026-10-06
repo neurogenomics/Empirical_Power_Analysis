@@ -8,6 +8,7 @@ Code and paper-ready figures accompanying:
 
 > **Single-Cell Study Designs Are Systematically Underpowered for Small-Effect Genes**
 > Chris Crampton, Salman Fawad, Toby Clark, Hiru Dash, Bence Kövér, Garry Cotton, Donghoon Lee,  Eugene Duff, Leonardo Bottolo, Paul Matthews, Nathan Skene
+> bioRxiv preprint (2026), doi: [10.64898/2026.09.17.752063](https://doi.org/10.64898/2026.09.17.752063)
 
 ## Overview
 
@@ -35,7 +36,7 @@ Outputs include:
 │   ├── gene_classification/             #   Per-gene power classification by TF family / protein class (Figure 6)
 │   ├── figure_data_generation/          #   Emits canonical CSVs consumed by the paper
 │   ├── figure_composition/              #   Composes multi-panel paper figures from Datalink/ inputs
-│   ├── supplementary_data/              #   Builds Supplementary Data 1-4
+│   ├── supplementary_data/              #   Builds the Supplementary Data files
 │   ├── shared/                          #   Utility helpers used across pipelines
 │   ├── bulk_deg_processing/             #   Obsolete (GTEx comparison, no longer in the paper)
 │   └── glial_characteristics/           #   Obsolete except utils.R, which figure_data_generation step 1 still loads
@@ -106,13 +107,11 @@ Supplementary figures are numbered by `_supp_fig_index.R`, the single source of 
 
 ### Supplementary Data
 
-Built by `R/supplementary_data/build_supplementary_data.R` into `Datalink/Supplementary_Data/`:
+The manuscript cites Supplementary Data 1 and 4. Both are built by `R/supplementary_data/build_supplementary_data.R` into `Datalink/Supplementary_Data/`:
 
 | File | Contents | Built from |
 | --- | --- | --- |
 | `Supplementary_Data_1_dataset_summary.xlsx` | Dataset characteristics + gene-universe composition | `Datalink/Paper_Source_Data/dataset_statistics.csv`, `Datalink/Full_Ground_Truth/Gene_Audit_Full_Universe_Combined.csv` |
-| `Supplementary_Data_2_cartesian_downsampling.zip` | Aggregated recall/precision for every grid point, per cell type, mode and DE method | `Datalink/Cartesian_Downsampling/` |
-| `Supplementary_Data_3_truth_gene_characteristics.csv` | Per-cell-type summary (median and mean \|LFC\|, SE, SNR, mean expression, dispersion) of full-cohort significant genes with \|LFC\| > 2 | `Datalink/DE_Diagnostics/Shared_Gene_Diagnostics/Full_Truth_Set_Summary.csv` |
 | `Supplementary_Data_4_xgboost_hyperparameters.csv` | Ranking of all 36 XGBoost configurations | `Datalink/Power_Curve_Fitting/Models/xgboost/realistic/model_selection.csv` |
 
 Numbers quoted in the manuscript text are read at knit time by `_paper_values.R`, mainly from `Datalink/Paper_Source_Data/` (`dataset_statistics.csv`, `recall_precision_grid.csv`) and the XGBoost model directory.
@@ -176,7 +175,7 @@ export POWER_ANALYSIS_ROOT=/path/to/this/repo
 
 ### Data prerequisites
 
-This repository ships **final figures, paper source data, Supplementary Data and the fitted power model** only. Raw inputs and most intermediate artefacts (donor shards, DE checkpoints, BioMart caches) are not distributed here owing to size. Every intermediate is regenerable from the raw data, and each pipeline's scripts create their output subdirectories on first run.
+This repository ships **final figures, paper source data, Supplementary Data and the fitted power model** only. Every input to the analysis is already openly available (the PsychAD data on CELLxGENE, plus public reference annotations fetched by `pipeline/reference/fetch_reference.sh`), so we deliberately do not deposit a separate copy of the raw data or of the intermediate artefacts (donor shards, DE checkpoints, BioMart caches, the 10-run grid). Instead, the pipeline regenerates every intermediate from those public sources, with the raw files verified against `pipeline/inputs.sha256`. Each pipeline's scripts create their output subdirectories on first run.
 
 The raw inputs are the three PsychAD h5ad files (`PsychAD-HBCC.h5ad`, `PsychAD-MSSM.h5ad`, `PsychAD-RADC.h5ad`) from [CELLxGENE collection 84ce6837](https://cellxgene.cziscience.com/collections/84ce6837-548d-4a1f-919f-0bc0d9a3952f), plus the PsychAD donor table with post-mortem interval (`media-1.csv`, a supplementary table of Fullard et al. 2025). Checksums are in `pipeline/inputs.sha256`. For the manual route, place them under `Datalink/raw_data/`.
 
@@ -197,7 +196,7 @@ Pipelines form a DAG rooted at sharding. `pipeline/stages.tsv` is the authoritat
 8. R/gene_classification/       # Figure 6 gene detectability classification
 9. R/figure_data_generation/    # Canonical CSVs consumed by the paper
 10. R/figure_composition/       # Composed multi-panel figures
-11. R/supplementary_data/       # Supplementary Data 1-4
+11. R/supplementary_data/       # Supplementary Data files
 ```
 
 The cartesian grid (step 4) is by far the most expensive step and in practice needs a cluster.
@@ -267,7 +266,11 @@ A `pipeline/` run also writes its own `results/PROVENANCE.txt` and `results/MANI
 
 ## Citation
 
-Please cite the accompanying paper (citation and DOI to be added on publication).
+Please cite the accompanying preprint:
+
+> Crampton C, Fawad S, Clark T, Dash H, Kövér B, Cotton G, Lee D, Duff E, Bottolo L, Matthews PM, Skene NG. *Single-Cell Study Designs Are Systematically Underpowered for Small-Effect Genes.* bioRxiv (2026). doi: [10.64898/2026.09.17.752063](https://doi.org/10.64898/2026.09.17.752063)
+
+Machine-readable citation metadata is in `CITATION.cff`. The preprint DOI is the persistent identifier for this work; we do not mint a separate archive DOI for the code or data (see [Data prerequisites](#data-prerequisites)).
 
 ## License
 

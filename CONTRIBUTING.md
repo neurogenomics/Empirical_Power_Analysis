@@ -53,8 +53,11 @@ Thank you for considering contributing to the Empirical Power Analysis pipeline.
 1. Bump `version` in `CITATION.cff`
 2. Update `CHANGELOG.md`
 3. Tag with semver: `git tag -a v1.0.0 -m "Release v1.0.0"` and push the tag
-4. Create a GitHub Release and archive it (e.g. on Zenodo) to mint a DOI
-5. Add the DOI and release date to `CITATION.cff`
+4. Create a GitHub Release from the tag
+5. Add the release date to `CITATION.cff`. The persistent identifier is the
+   paper DOI (currently the bioRxiv preprint); no separate archive DOI is minted,
+   because every input is already public and the pipeline regenerates the rest.
+   Update `preferred-citation` when the journal version is published.
 
 ## Reporting bugs
 

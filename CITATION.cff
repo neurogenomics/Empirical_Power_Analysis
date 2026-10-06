@@ -9,7 +9,10 @@ version: "1.0.0-dev"
 license: MIT
 repository-code: "https://github.com/neurogenomics/Empirical_Power_Analysis"
 url: "https://github.com/neurogenomics/Empirical_Power_Analysis"
-# doi and date-released: add when the first release is archived
+identifiers:
+  - type: doi
+    value: "10.64898/2026.09.17.752063"
+    description: "bioRxiv preprint describing this software and its results"
 
 type: software
 
@@ -62,7 +65,7 @@ authors:
 
 preferred-citation:
   type: article
-  status: in-preparation
+  status: preprint
   title: "Single-Cell Study Designs Are Systematically Underpowered for Small-Effect Genes"
   authors:
     - family-names: "Crampton"
@@ -87,8 +90,11 @@ preferred-citation:
       given-names: "Paul M."
     - family-names: "Skene"
       given-names: "Nathan G."
+  journal: "bioRxiv"
+  doi: "10.64898/2026.09.17.752063"
+  url: "https://doi.org/10.64898/2026.09.17.752063"
   year: 2026
-  # journal and doi: add on publication
+  month: 9
 
 keywords:
   - single-cell RNA-seq
