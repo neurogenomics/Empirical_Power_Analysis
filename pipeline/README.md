@@ -18,7 +18,7 @@ WORK=$EPHEMERAL/epa-repro              # any empty directory on the cluster file
 mkdir -p $WORK/raw
 cp /path/to/PsychAD-{HBCC,MSSM,RADC}.h5ad /path/to/media-1.csv $WORK/raw/
 pipeline/reference/fetch_reference.sh $WORK/reference       # needs internet; login node is fine
-cp /path/to/empirical-power-analysis.sif $WORK/epa.sif       # see "Container image"
+cp /path/to/empirical-power-analysis.sif $WORK/epa.sif       # see docs/container.md
 
 pipeline/run.sh $WORK          # check inputs, freeze code, submit all jobs, return
 pipeline/run.sh $WORK --status # progress, any time
@@ -50,23 +50,20 @@ time. The raw directory is mounted read-only.
 
 ## Container image
 
-The image holds software only, never data. It is built in two steps, from
-files in this repository:
+The image holds software only, never data. Build it from this repository, or
+pull the published image by digest once it exists; either way you end up with
+a `.sif` and its checksum:
 
 ```bash
-./docker/docker-build.sh --image empirical-power-analysis:<tag>   # Docker, ~1 h cold
-./docker/build-sif.sh --image empirical-power-analysis:<tag> --out empirical-power-analysis.sif
+./docker/docker-build.sh       # Docker, ~1 h cold; ends with the smoke test
+./docker/build-sif.sh --out empirical-power-analysis.sif   # converts, then smoke-tests the .sif
 ```
 
-Everything is pinned:
-- the base image by digest;
-- apt packages by version (`docker/apt-packages.txt`);
-- R packages through `renv.lock`;
-- Python wheels by hash (`docker/python-requirements.txt`).
-
-A rebuild therefore gives the same software. Once the image is published to a
-registry, a reproducer needs neither Docker nor a build:
-`./docker/build-sif.sh --from-registry <image>@sha256:<digest>`.
+Both default to `empirical-power-analysis:v1.0.0`. The base image, apt
+packages, R packages (`renv.lock`) and Python wheels are all pinned, and the
+smoke test fails if any installed version differs from its pin. Routes without
+Docker on the cluster, pinning a run to the image checksum, and how to change
+the software are in [`docs/container.md`](../docs/container.md).
 
 ## How it works
 

@@ -5,6 +5,8 @@
 #
 #  Build:        ./docker/docker-build.sh         (auto-detects BuildKit vs legacy)
 #  Verify:       ./docker/docker-smoke.sh
+#  Apptainer:    ./docker/build-sif.sh            (the image pipeline/run.sh uses)
+#  See docs/container.md.
 #
 #  This Dockerfile is intentionally BuildKit-OPTIONAL: it uses no `# syntax=`
 #  directive, no `--mount=type=cache` mounts, and no RUN here-docs, so it builds
@@ -22,8 +24,9 @@
 #    * Working directory is /workspace at runtime (host repo bind-mount target).
 #      At build time we use /tmp/build to avoid littering /workspace with
 #      installer artefacts.
-#    * Runtime user is the host UID:GID via `docker run -u UID:GID`. /etc/passwd
-#      is fixed up by the entrypoint so commands like whoami / Sys.info() work.
+#    * Under `docker run`, the entrypoint drops to TARGET_UID:TARGET_GID and adds
+#      a passwd entry. The pipeline runs the Apptainer conversion of this image
+#      with `apptainer exec`, which does not use the entrypoint.
 # =============================================================================
 
 FROM bioconductor/bioconductor_docker:RELEASE_3_22@sha256:e34177896c1579f66d48b756e4229b58237499183a089da084af72d7aba1d40a
@@ -33,6 +36,7 @@ LABEL org.opencontainers.image.description="Reproducible environment for empiric
 LABEL org.opencontainers.image.source="https://github.com/neurogenomics/Empirical_Power_Analysis"
 LABEL org.opencontainers.image.licenses="MIT"
 LABEL org.opencontainers.image.authors="Skene Lab, UK DRI Imperial"
+LABEL org.opencontainers.image.version="1.0.0"
 
 # -----------------------------------------------------------------------------
 #  System dependencies beyond the digest-pinned bioconductor_docker base.
@@ -171,29 +175,32 @@ RUN /opt/python-env/bin/python -c "import PIL, matplotlib, numpy, pandas; print(
  && test -f /usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf
 
 # -----------------------------------------------------------------------------
+#  Smoke test, run at the end of every build and by docker-smoke.sh /
+#  build-sif.sh afterwards. It fails the build if ANY installed R package
+#  differs from renv.lock or any Python package differs from
+#  python-requirements.txt. The lockfile and requirements are kept in the image
+#  so the check can be rerun on a pulled image with no repository checkout.
+# -----------------------------------------------------------------------------
+COPY renv.lock                     /usr/local/share/epa/renv.lock
+COPY docker/python-requirements.txt /usr/local/share/epa/python-requirements.txt
+COPY docker/smoke_test.R           /usr/local/share/epa/smoke_test.R
+RUN chmod -R a+rX /usr/local/share/epa \
+ && cd /tmp && Rscript /usr/local/share/epa/smoke_test.R
+
+# -----------------------------------------------------------------------------
 #  Runtime layout.
 #
-#  /workspace is the bind-mount target for the host repo at runtime.
-#  POWER_ANALYSIS_ROOT defaults here; the wrapper scripts respect that env var.
-#  Build-time scratch under /opt/build is not needed at runtime.
+#  /workspace is the bind-mount target for the repository under `docker run`;
+#  pipeline/run.sh binds its own staging directory there. renv's autoloader is
+#  disabled for every process (including `apptainer exec`), so a bind-mounted
+#  .Rprofile cannot activate a host renv library and shadow the pinned one.
 # -----------------------------------------------------------------------------
 WORKDIR /workspace
 ENV POWER_ANALYSIS_ROOT=/workspace
-ENV CBERT_HEARTBEAT_FILE=/tmp/empirical-power-analysis.heartbeat
+ENV RENV_CONFIG_AUTOLOADER_ENABLED=FALSE
 
-# Copy the entrypoint and healthcheck into the image (NOT bind-mounted) so
-# they always reflect the image build and cannot be tampered with by host
-# editors mid-run.
-COPY docker/entrypoint.sh   /usr/local/bin/empirical-entrypoint
-COPY docker/healthcheck.sh  /usr/local/bin/empirical-healthcheck
-RUN chmod 0755 /usr/local/bin/empirical-entrypoint /usr/local/bin/empirical-healthcheck
-
-# HEALTHCHECK reports unhealthy if the heartbeat file isn't touched within
-# HEARTBEAT_STALE_MIN (default 30) minutes. The wrapper scripts inside the
-# container update the heartbeat on every stage start and every per-iteration
-# log line. A wedged container goes unhealthy within 30 min.
-HEALTHCHECK --interval=5m --timeout=15s --start-period=10m --retries=2 \
-    CMD /usr/local/bin/empirical-healthcheck
+COPY docker/entrypoint.sh /usr/local/bin/empirical-entrypoint
+RUN chmod 0755 /usr/local/bin/empirical-entrypoint
 
 ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/empirical-entrypoint"]
-CMD []
+CMD ["smoke"]

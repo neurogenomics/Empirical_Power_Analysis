@@ -7,22 +7,24 @@
 #   ./docker/build-sif.sh [--image NAME:TAG | --from-registry REF] [--out FILE]
 #
 #   --image NAME:TAG     local Docker image to convert
-#                        (default: empirical-power-analysis:overnight, the
+#                        (default: empirical-power-analysis:v1.0.0, the
 #                        docker-build.sh default)
 #   --from-registry REF  pull a published image instead, ideally by digest, e.g.
 #                        ghcr.io/neurogenomics/empirical_power_analysis@sha256:<digest>
 #                        (needs only apptainer, no Docker)
 #   --out FILE           output path (default: empirical-power-analysis.sif)
 #
-# The image contains software only, never data. Writes FILE and FILE.sha256;
-# put the checksum in WORKDIR/epa.env as EPA_SIF_SHA256 to pin a run to it.
+# The image contains software only, never data. Writes FILE and FILE.sha256,
+# then runs docker/smoke_test.R inside the new .sif (with --no-home, as the
+# pipeline does) and deletes nothing: a failed smoke test exits non-zero.
+# Put the checksum in WORKDIR/epa.env as EPA_SIF_SHA256 to pin a run to it.
 #
 # Where to build: anywhere with apptainer (or singularity) and, for --image,
 # Docker. On a cluster without Docker, either build on a workstation and copy
 # the .sif, or use --from-registry.
 # =============================================================================
 set -euo pipefail
-IMAGE="empirical-power-analysis:overnight" REF="" OUT="empirical-power-analysis.sif"
+IMAGE="empirical-power-analysis:v1.0.0" REF="" OUT="empirical-power-analysis.sif"
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --image)         IMAGE="$2"; shift 2 ;;
@@ -50,6 +52,5 @@ else
 fi
 sha256sum "$OUT" | tee "$OUT.sha256"
 echo "smoke test:"
-"$APP" exec --cleanenv "$OUT" Rscript -e 'for (p in c("DESeq2","edgeR","limma","xgboost","writexl","rmarkdown")) suppressMessages(library(p, character.only = TRUE)); cat("R packages OK\n")'
-"$APP" exec --cleanenv "$OUT" /opt/python-env/bin/python -c 'import anndata, PIL, matplotlib; print("Python packages OK")'
+( cd /tmp && "$APP" exec --cleanenv --no-home "$OUT" Rscript /usr/local/share/epa/smoke_test.R )
 echo "done: $OUT"

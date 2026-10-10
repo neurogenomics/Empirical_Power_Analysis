@@ -2,16 +2,17 @@
 # =============================================================================
 # docker-build.sh — build the Empirical Power Analysis image.
 #
-# Does ONE thing — build the image — with clear preflight checks and readable
-# errors. No manifest, no heartbeat, no pipeline run. Pair it with
-# docker-smoke.sh to verify the build, and docker-run.sh to run the pipeline
-# (or docker-all.sh to chain all three). See docs/docker.md.
+# Does ONE thing, build the image, with clear preflight checks and readable
+# errors. The build ends by running docker/smoke_test.R, so it fails if any
+# installed package differs from renv.lock or python-requirements.txt. Then
+# convert the image for the pipeline with docker/build-sif.sh. See
+# docs/container.md.
 #
 # Usage (run from the repo root):
 #   ./docker/docker-build.sh [--image NAME:TAG]
 #
 # Flags:
-#   --image NAME:TAG   Image tag to build (default: empirical-power-analysis:overnight)
+#   --image NAME:TAG   Image tag to build (default: empirical-power-analysis:v1.0.0)
 #   -h | --help        Show this help
 #
 # The Dockerfile is BuildKit-optional, so this builds on any host: if the
@@ -23,7 +24,7 @@ set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # This script lives in <repo>/docker/; the build context is the repo root above it.
 REPO_ROOT="$( cd "${SCRIPT_DIR}/.." && pwd )"
-IMAGE="empirical-power-analysis:overnight"
+IMAGE="empirical-power-analysis:v1.0.0"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -60,11 +61,11 @@ fi
 
 # ---- Build ------------------------------------------------------------------
 echo "Building image '${IMAGE}' from ${REPO_ROOT}"
-echo "(this can take 15-30 min on a cold cache; R/Bioconductor packages compile)"
+echo "(this takes about an hour on a cold cache: most R/Bioconductor packages compile from source)"
 DOCKER_BUILDKIT="${BUILDKIT}" docker build "${BUILD_FLAGS[@]}" -t "${IMAGE}" "${REPO_ROOT}"
 
 echo
 echo "Build complete: ${IMAGE}"
 docker image inspect --format '  id:      {{.Id}}' "${IMAGE}" 2>/dev/null || true
 docker image inspect --format '  size:    {{.Size}} bytes' "${IMAGE}" 2>/dev/null || true
-echo "Next: ./docker/docker-smoke.sh --image ${IMAGE}"
+echo "Next: ./docker/build-sif.sh --image ${IMAGE}"

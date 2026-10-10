@@ -146,19 +146,22 @@ cran_archive <- "https://cran.r-project.org/src/contrib/Archive"
 # ---- pre-install compilation-critical packages ------------------------------
 # Rcpp + friends are the most common cascade triggers. Install them FIRST
 # (and retry individually) so a transient failure doesn't poison the rest
-# of renv::restore. Using lockfile versions via renv::install().
+# of renv::restore. A bare renv::install(pkg) installs the LATEST version, so
+# each one is requested as pkg@<lockfile version>.
+lock <- renv::lockfile_read()
 critical_build_pkgs <- c("Rcpp", "RcppArmadillo", "RcppEigen", "RcppTOML")
 cat("\n=== Pre-installing compilation-critical packages ===\n")
 for (pkg in critical_build_pkgs) {
-  if (requireNamespace(pkg, quietly = TRUE)) {
-    cat(sprintf("  [skip] %s already installed (%s)\n",
-                pkg, packageVersion(pkg)))
+  pin <- lock$Packages[[pkg]]$Version
+  if (requireNamespace(pkg, quietly = TRUE) &&
+      identical(as.character(packageVersion(pkg)), pin)) {
+    cat(sprintf("  [skip] %s %s already installed\n", pkg, pin))
     next
   }
   with_retry(
-    renv::install(pkg, prompt = FALSE),
+    renv::install(sprintf("%s@%s", pkg, pin), prompt = FALSE),
     attempts = 4,
-    what = sprintf("install %s", pkg)
+    what = sprintf("install %s@%s", pkg, pin)
   )
 }
 
@@ -217,7 +220,7 @@ if (length(missing) > 0L) {
     # Tier 1 — strict pin via renv::install (honours lockfile version).
     ok <- tryCatch({
       with_retry(
-        renv::install(pkg, prompt = FALSE),
+        renv::install(sprintf("%s@%s", pkg, locked_version), prompt = FALSE),
         attempts = 3,
         what = sprintf("force-install %s", pkg)
       )
@@ -262,13 +265,33 @@ if (file.exists(deviation_log)) {
 cat("\n=== renv::status() ===\n")
 print(renv::status())
 
-installed <- rownames(installed.packages())
-missing <- setdiff(lock_pkgs, installed)
-if (length(missing) > 0L) {
-  stop("Lockfile still has missing packages after all passes: ",
-       paste(missing, collapse = ", "))
+# Presence is not enough: a package pulled in as a dependency, or installed
+# before restore, can sit at a different version from its pin. Compare every
+# lockfile package with the version in the project library, reinstall any
+# mismatch at its pinned version once, then refuse to build if any remain.
+version_mismatches <- function() {
+  ip <- installed.packages(lib.loc = .libPaths()[1])[, "Version"]
+  want <- vapply(lock$Packages, function(x) x$Version, character(1))
+  have <- ip[names(want)]
+  names(want)[is.na(have) | have != want]
 }
-cat(sprintf("\nAll %d lockfile packages installed.\n", length(lock_pkgs)))
+bad <- version_mismatches()
+for (pkg in bad) {
+  pin <- lock$Packages[[pkg]]$Version
+  cat(sprintf("[pin] reinstalling %s at %s\n", pkg, pin))
+  try(with_retry(renv::install(sprintf("%s@%s", pkg, pin), prompt = FALSE),
+                 attempts = 3, what = sprintf("pin %s@%s", pkg, pin)))
+}
+bad <- version_mismatches()
+if (length(bad) > 0L) {
+  ip <- installed.packages(lib.loc = .libPaths()[1])[, "Version"]
+  stop("Installed versions differ from renv.lock: ",
+       paste(sprintf("%s (installed %s, locked %s)", bad, ip[bad],
+                     vapply(lock$Packages[bad], function(x) x$Version, character(1))),
+             collapse = "; "))
+}
+cat(sprintf("\nAll %d lockfile packages installed at their pinned versions.\n",
+            length(lock_pkgs)))
 
 # ---- bake the renv library path into R's site Renviron ---------------------
 # A plain `R` / `Rscript` session does NOT add the renv project library to
