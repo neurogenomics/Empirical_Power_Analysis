@@ -1,157 +1,163 @@
-# Power Curve Fitting Pipeline (v4.0.0)
+# Power Curve Fitting Pipeline (v4.2.0, XGBoost)
 
-## 1. Pipeline Purpose
+## 1. Purpose
 
-Fits continuous power equations to the empirical cartesian downsampling results using logistic regression. For each gene in the ground truth (|LFC| > 1, padj < 0.05), computes per-iteration binary detection outcomes, then models detection probability as a function of experimental design parameters and gene-level characteristics.
+Turns the cartesian downsampling grid into a predictive power model. For every
+truth gene (padj < 0.05 and |LFC| > 0.2 in the truth half of a run), each
+subsample records whether the gene was detected (padj < 0.05). These outcomes
+are aggregated to a detection rate per gene and design point, and an XGBoost
+model is trained to predict that rate from design parameters (donors, cells
+per donor, reads per cell), gene characteristics (|LFC|, baseMean,
+dispersion), DE method and cell type.
 
-### v4.0.0: Logistic Regression (Replacing Beta Regression)
+The production model is the "realistic" model, trained on the `n_cells >= 100`
+sub-grid. It is exported as a portable bundle with a `predict_power()`
+wrapper. See `docs/model-card-predict_power.md` for its intended use and
+limitations.
 
-v4.0.0 switches from beta regression (`betareg`) to logistic regression (`glm(family=binomial)`) because the response is binary per-iteration detection (0/1), not a continuous proportion. Logistic regression uses the same logit link, produces identical coefficient interpretation, and handles binary data natively without the Smithson-Verkuilen squeeze transformation. This is a simplification: removes the `betareg` dependency, squeeze functions, `BETA_SQUEEZE` config flag, and the precision parameter (phi).
+Scope: PsychAD (`Roussos` shards, DLPFC) only; cell types Astro, Micro, Oligo;
+DE methods DESeq2, edgeR and limma-voom.
 
-### v3.1.0: Expanded Truth Set & Simplified Aggregation
+## 2. Scripts in run order
 
-v3.1.0 lowers the truth set threshold from |LFC| > 2 to |LFC| > 1, capturing smaller effect sizes. It also removes the "aggregated" aggregation level (mean detection across iterations), keeping only per-iteration binary detection data. This simplifies the pipeline from 16 to 8 primary models.
+The canonical route is the `pipeline/` stage graph (`pipeline/stages.tsv`,
+`pipeline/stages/*.sh`). The stages that call this directory, in order:
 
-### v3.0.0: Unified Model with Actual Reads-Per-Cell
+| Stage | Script | What it does |
+|-------|--------|--------------|
+| `pcf_aggregate` | `00_Generate_GT_DDS_Checkpoints.R` | Re-fits DESeq2 on the truth half of each run to obtain per-gene dispersion and baseMean |
+| | `00b_Cache_Shard_Read_Counts.R` | Caches per-cell read counts for every donor shard |
+| | `01_Build_Fitting_Dataset.R` | Per-iteration detection outcomes with measured `n_cells` and `reads_per_cell`, cells and reads modes merged; run once per DE method |
+| | `01b_Aggregate_Fitting_Data.R` | Collapses iterations to `detection_rate` and `n_trials` per (gene, cell type, DE method, mode, design point, run) |
+| | `01e_Filter_Realistic.R` | Keeps rows with `n_cells >= 100` (the realistic sub-grid) |
+| `xgb_base_search` (array of 12) | `02_Fit_XGBoost.R` | Baseline model on the full grid: one hyperparameter config per task, gene-grouped 5-fold CV |
+| `xgb_base_select` | `03_Select_XGBoost.R` | Picks the baseline winner by CV log loss; calibration and SHAP. Used only as a comparator in Figure 5 |
+| `xgb_real_search` (array of 36) | `02_Fit_XGBoost.R` | Realistic model: 12 tree configs x 3 re-weighting exponents (`alpha` in {0, 0.5, 1}) |
+| `xgb_real_select` | `03_Select_XGBoost.R` | Ranks the 36 configs by out-of-fold bin-balanced MAE, promotes the winner, refits the five models shown in SHAP figures (winner per alpha, median, worst) |
+| `xgb_real_shap` | `04_SHAP_Figures.R` | SHAP dependence and violin figures for the selected realistic models |
+| `xgb_post` | `08b_Baseline_OOF.R` | Out-of-fold predictions for the baseline winner |
+| | `04_Export_XGBoost.R` | Writes the portable model bundle and `predict_power.R` |
+| | `07_LowPower_Diversity.R` | Mean-power heatmaps of the low-power rows (Figure 5E) |
+| | `08_Compare_Reweighted.R` | Calibration and SHAP comparison across the re-weighted models |
+| | `09_Trinary_Classification.R` | Out-of-fold class F1 for low / borderline / high power partitions (Figure 5C) |
+| | `_regenerate_xgb_panels.R` | Figure 5 panels (then composed by `R/figure_composition/compose_xgb_panels.R`) |
 
-v3.0.0 merges cells-mode and reads-mode cartesian downsampling data into unified models by parsing all ~83K sampling metadata files to extract **actual** n_cells and mean reads_per_cell per iteration. This breaks the collinearity that made v2.0.0's decomposed formula uninformative (where reads_per_cell was a per-cell-type constant).
+The exported bundle is then used by the `gene_class` stage
+(`R/gene_classification/`, Figure 6).
 
-**Unified formula:**
-```
-detection ~ log_donors + log_n_cells + log_reads_per_cell +
-            log_abs_gt_lfc + log_gt_basemean + log_gt_dispersion
-```
+### Supporting analyses (not called by `pipeline/`)
 
-**Key design decisions:**
-- Combined model has **NO cell_type term** — tests whether 6 predictors are sufficient
-- LRT compares: combined (no CT) vs +CT (additive) vs CT×predictors (interaction)
-- 8 models total: (3 per-CT + 1 combined) × 2 gene sets × 1 aggregation level
+| Script | What it does |
+|--------|--------------|
+| `01d_Detection_Scatter.R` | Detection of small-effect truth genes in baseMean x dispersion space at fixed designs |
+| `04b_CellType_ICE.R` | ICE / swing analysis of the `cell_type` input; justifies defaulting it to Oligo |
+| `04c_Swing_vs_Error.R` | Compares the cell-type swing with the model's out-of-fold error |
+| `10_PerGene_Bimodality.R` | Tests whether detection is close to all-or-nothing per gene |
 
-## 2. Pipeline Steps
+### Legacy (logistic era, not used for the paper)
 
-| Step | Script | Description |
-|------|--------|-------------|
-| 0 | `00_Generate_GT_DDS_Checkpoints.R` | Re-run DESeq2 on GT halves for dispersion extraction |
-| 0.5 | `00b_Cache_Shard_Read_Counts.R` | Pre-compute per-cell read counts for all donor shards |
-| 1 | `01_Build_Fitting_Dataset.R` | Parse metadata, merge cells+reads modes, build unified datasets |
-| 2 | `02_Fit_Models.R` | Fit 8 model variants, LRT tests, coefficient comparison |
-| 3 | `03_Visualise.R` | Power curves, depth decomposition, cell type comparisons |
-| 4 | `04_Cross_Validate_Modes.R` | Validate unified model on mode subsets, combined vs per-CT |
-| 5 | `05_Export_Equations.R` | Export coefficients, lookup tables, standalone predict_power.R |
+`02_Fit_Models.R`, `03_Visualise.R`,
+`04_Cross_Validate_Modes.R`, `05_Export_Equations.R`,
+`06_Compare_All_Models.R` and the master runner `run_pipeline.R` belong to the
+retired logistic-regression model (v4.0.0 to v4.1.0). `run_pipeline.R` still
+calls these scripts and does not run the XGBoost steps. The unit tests
+(`tests/test_power_curve_fitting.R`) and toy test (`toy/run_toy_test.R`) also
+cover the logistic model only.
 
-## 3. Inputs Expected
+## 3. Inputs
 
-| Input | Path | Format | Prerequisites |
-|-------|------|--------|---------------|
-| Cartesian downsampling DE results | `Datalink/Cartesian_Downsampling/{CT}/Roussos/{mode}/Run_{1-6}/N*_C*_I*.qs` | DESeqResults (.qs) | Cartesian downsampling complete |
-| Sampling metadata | `Datalink/Cartesian_Downsampling/{CT}/Roussos/{mode}/Run_{1-6}/*_sampling_metadata.qs` | Named list (.qs) | Cartesian downsampling complete |
-| Ground truth results | `Datalink/Cartesian_Downsampling/{CT}/Roussos/{mode}/Run_{1-6}/Ground_Truth.qs` | DESeqResults (.qs) | Cartesian downsampling complete |
-| Donor shards | `Datalink/Shards/{CT}/Roussos/donor_*.qs` | SingleCellExperiment (.qs) | Sharding pipeline complete |
-| BioMart cache | `Datalink/Full_Ground_Truth/gene_audit_biomart_cache.csv` | CSV | Full ground truth pipeline complete |
+| Input | Path |
+|-------|------|
+| Cartesian downsampling DE results and sampling metadata | `Datalink/Cartesian_Downsampling/{CT}/Roussos/{cells,reads}/{deseq2,edger,limma}/Run_{1-10}/` |
+| Donor shards | `Datalink/Shards/{CT}/Roussos/` |
+| BioMart cache | `Datalink/Full_Ground_Truth/gene_audit_biomart_cache.csv` |
 
-## 4. Outputs Produced
+## 4. Outputs
 
-### Step 0: GT DDS Checkpoints
+All paths are under `Datalink/Power_Curve_Fitting/`.
+
 | Output | Path |
 |--------|------|
-| GT DDS checkpoints | `GT_DDS_Checkpoints/{CT}/GT_DDS_Run_{1-6}.qs` |
+| Truth-half DESeq2 checkpoints | `GT_DDS_Checkpoints/{CT}/GT_DDS_Run_{N}.qs` |
+| Read-count cache | `Shard_Cache/{CT}/donor_{ID}_reads.qs` |
+| Per-iteration detection, per DE method | `Fitting_Data/{CT}/unified_fitting_data_per_iteration__{method}.qs` |
+| Aggregated training table (full grid) | `Fitting_Data/aggregated_fitting_data_all.qs` |
+| Aggregated training table (realistic) | `Fitting_Data/aggregated_fitting_data_realistic.qs`, plus `filter_summary.csv`, `filter_dropped_by_group.csv` |
+| Baseline model | `Models/xgboost/` (`booster.ubj`, `feature_spec.qs`, `model_selection.csv`, `calibration*.csv`, SHAP outputs, `search/config_{k}/`) |
+| Realistic (production) model | `Models/xgboost/realistic/` (`booster.ubj`, `feature_spec.qs`, `model_selection.csv`, `cv_metrics.csv`, `shap_selection.csv`, `search/config_{k}/` with per-config out-of-fold predictions) |
+| Downstream analyses | `Models/xgboost/realistic/{shap_figures,comparison,lowpower_diversity,trinary_classification,supp_panels}/` |
+| Figure 5 | `Models/xgboost/figure_xgb_composed.png` |
+| Portable model | `Exports/xgboost/realistic/{power_model_bundle.rds,predict_power.R,example_power_curve.csv,README.md}` |
 
-### Step 0.5: Shard Cache
-| Output | Path |
-|--------|------|
-| Per-cell read counts | `Shard_Cache/{CT}/donor_{ID}_reads.qs` |
+`model_selection.csv` for the realistic model is Supplementary Data 4. Load
+boosters from `booster.ubj` (or the bundle via `xgb.load.raw()`), not from
+`booster.qs`.
 
-### Step 1: Fitting Datasets
-| Output | Path |
-|--------|------|
-| Per-iteration fitting data (full) | `Fitting_Data/{CT}/unified_fitting_data_per_iteration.qs` |
-| Per-iteration fitting data (shared) | `Fitting_Data/{CT}/unified_fitting_data_per_iteration_shared.qs` |
-| Shared gene list | `Fitting_Data/shared_truth_genes.qs` |
+## 5. Model specification
 
-### Step 2: Models
-| Output | Path |
-|--------|------|
-| Per-CT models | `Models/{gene_set}_per_iteration/{CT}_model.qs` |
-| Combined model (no CT) | `Models/{gene_set}_per_iteration/combined_model.qs` |
-| Combined + CT (additive) | `Models/{gene_set}_per_iteration/combined_additive_model.qs` |
-| Combined + CT×pred | `Models/{gene_set}_per_iteration/combined_interaction_model.qs` |
-| Model checkpoint | `Models/{gene_set}_per_iteration/all_models_checkpoint.qs` |
-| Coefficients | `Models/{gene_set}_per_iteration/all_coefficients.csv` |
-| Model comparison | `Models/{gene_set}_per_iteration/model_comparison.csv` |
-| **v3 comparison** | `Models/model_comparison_v3.csv` |
+- Objective `binary:logistic` on `detection_rate`, weighted by `n_trials`
+  (times a normalised inverse-frequency power-bin weight when `alpha > 0`).
+- Continuous features on their raw scale: `n_donors`, `n_cells`,
+  `reads_per_cell`, `abs_gt_lfc`, `gt_basemean`, `gt_dispersion`. One-hot
+  `cell_type` and `de_method`. 12 columns in total.
+- Monotone constraints: increasing in the first five continuous features,
+  decreasing in dispersion.
+- Search grid: `max_depth` {3, 4, 6} x `eta` {0.03, 0.1} x `min_child_weight`
+  {1, 10}, `subsample = 0.8`, `colsample_bytree = 0.8`, up to 5,000 rounds with
+  early stopping after 50. Folds are grouped by gene.
+- Selected realistic model: config 25 (`alpha = 0`, `max_depth = 6`,
+  `eta = 0.03`, `min_child_weight = 10`, 1,383 rounds).
+- Export defaults: `cell_type = "Oligo"`, `de_method = "deseq2"`,
+  `n_cells = 250`, `reads_per_cell = 5742`.
 
-### Steps 3-5: Plots, Cross-Validation, Export
-| Output | Path |
-|--------|------|
-| Per-variant plots | `Plots/{gene_set}_per_iteration/` |
-| Comparison plots | `Plots/Comparison/` |
-| Cross-validation | `Plots/Cross_Validation/` |
-| Equation coefficients | `Exports/power_equation_coefficients.csv` |
-| Lookup table | `Exports/power_lookup_table.csv` |
-| Prediction function | `Exports/predict_power.R` |
+## 6. Key configuration (`config.R`)
 
-## 5. Model Variants
+| Constant | Value |
+|----------|-------|
+| `DONOR_STEPS` | 5, 10, 15, 25, 50, 75, 100, 150, 200, 300, 500, 600 |
+| `CELL_STEPS` | 5, 10, 20, 50, 75, 100, 250, 500, 750, 1000, 1500, 2000, 3000, all cells |
+| `READ_STEPS` | 25k to 15M reads per donor (12 levels), plus all reads |
+| `N_ROBUSTNESS_RUNS` / `N_ITERATIONS` | 10 / 20 |
+| `GT_PADJ_THRESHOLD` / `GT_LFC_THRESHOLD` | 0.05 / 0.2 |
+| `DETECT_PADJ_THRESHOLD` | 0.05 |
+| `MIN_GENE_COUNT` | 10 |
+| `MEAN_READS_PER_CELL` | Astro 9456, Micro 4426, Oligo 5742 |
+| `CARTESIAN_DE_METHOD` | env var; `deseq2`, `edger` or `limma` |
 
-### Gene sets
-- **full**: All truth genes per cell type (different genes per CT)
-- **shared**: Intersection of truth genes across all CTs
+`config.R` also still defines logistic-era settings (`DATASET_CONFIGS` with
+depth-equalised Astro variants, `GENE_SETS`, `LRT_ALPHA`, `LOOKUP_*`), which
+the XGBoost steps do not use.
 
-### Aggregation level
-- **per_iteration**: No aggregation → 1 row per gene × grid point × run × iteration
+XGBoost scripts are controlled by environment variables: `XGB_FITTING_DATA`
+(`aggregated_fitting_data_realistic.qs` for the production model),
+`XGB_MODEL_SUBDIR` (`realistic`), `XGB_CONFIG_INDEX` (array task), and
+`XGB_NTHREAD` (fixed at 8 in the pipeline, since thread count can change
+floating-point summation order). `XGB_MIN_N_CELLS` sets the 01e threshold
+(default 100).
 
-### Models per variant
-- 3 per-CT models (Astro, Micro, Oligo) — identical formula, different data
-- 1 combined model (no cell_type term) — tests generalisability
-- 1 combined + cell_type (additive) — for LRT comparison
-- 1 combined + cell_type × predictors (interaction) — for LRT comparison
+## 7. How to run
 
-### LRT tests
-- **LRT1**: combined (no CT) vs combined + CT → does cell type add explanatory power?
-- **LRT2**: combined + CT vs combined + CT × predictors → do cell types differ in slopes?
-
-## 6. Usage
+End to end, on a PBS cluster, via the stage graph (see `pipeline/README.md`):
 
 ```bash
-# Run all steps
-Rscript R/power_curve_fitting/run_pipeline.R all 48
-
-# Run specific steps
-Rscript R/power_curve_fitting/run_pipeline.R 0.5,1,2 48
-
-# Step IDs: 0, 0.5, 1, 2, 3, 4, 5
+pipeline/run.sh $WORK            # submits all stages, including those above
+pipeline/run.sh $WORK --status
 ```
 
-## 7. Tests
+To run one script by hand from the repository root, set the same environment
+variables the stage scripts set, for example the production export:
 
-### Stage 1: Unit Tests (`tests/test_power_curve_fitting.R`)
+```bash
+XGB_MODEL_SUBDIR=realistic \
+XGB_FITTING_DATA=aggregated_fitting_data_realistic.qs \
+Rscript R/power_curve_fitting/04_Export_XGBoost.R
+```
 
-| Test | What it validates |
-|------|-------------------|
-| Config consistency | Grid dimensions, thresholds, v3.1.0 settings |
-| Path helpers | get_paths(), get_model_dir(), shard_cache_dir |
-| File pattern parsing | DE results + metadata files, both modes |
-| Logistic regression fit | GLM convergence and coefficient signs |
-| Model formula (v3.1.0) | Unified 6-predictor formula, cell_type variants |
-| Shared gene identification | Intersection logic |
-| Shard cache paths | Path generation for cache files |
-| Prediction grid (v3.1.0) | n_cells and reads_per_cell axes |
-| Coefficient formatting | NULL handling, column names |
-| Model variant count | Confirms 8 total models |
+## 8. Not tested
 
-### Stage 2: Toy Integration Test (`toy/run_toy_test.R`)
-
-- Tests shard cache loading
-- Tests metadata parsing (compute_iteration_depth)
-- Builds mini unified dataset from both modes (per-iteration)
-- Fits v3.1.0 unified formula
-- Validates predictions in [0,1]
-- Tests prediction grid generation
-
-## 8. What Is NOT Tested
-
-- **Dispersion accuracy**: DESeq2 dispersions from GT half assumed reasonable
-- **Model family comparison**: Logistic regression chosen for binary data; not compared to mixed-effects logistic (glmer) or quasi-binomial
-- **Extrapolation**: Model fitted on 5-600 donors, 5-3000 cells; outside range unreliable
-- **Cross-dataset generalisability**: Fitted on Roussos data only
-- **Gene random effects**: Deliberately excluded for generalisability
-- **Covariate interactions**: Per-CT models don't include gene × design interactions
+- No automated tests cover the XGBoost steps; the existing tests target the
+  legacy logistic model.
+- No cross-cohort validation: trained and evaluated on PsychAD only.
+- Extrapolation beyond the training ranges (trees predict a constant there;
+  `predict_power()` warns).
+- Accuracy of the truth-half DESeq2 dispersion estimates is assumed.

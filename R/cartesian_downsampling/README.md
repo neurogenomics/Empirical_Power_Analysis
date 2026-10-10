@@ -1,9 +1,8 @@
 # Cartesian Downsampling Pipeline
 
-This pipeline implements empirical power analysis through systematic downsampling of single-cell RNA-seq data across a Cartesian grid of donor counts and cells per donor.
+This pipeline implements empirical power analysis through systematic downsampling of PsychAD single-cell RNA-seq data (`Roussos` in code and paths) across a Cartesian grid of donor counts and cells (or UMIs) per donor.
 
-**Last Updated:** 2026-03-31  
-**Pipeline Version:** 2.2.1  
+**Pipeline Version:** 2.3.0 (`config.R`)
 **Framework:** Three-Stage Validation
 
 ---
@@ -11,24 +10,35 @@ This pipeline implements empirical power analysis through systematic downsamplin
 ## 1. Pipeline Purpose
 
 The Cartesian Downsampling Pipeline estimates statistical power for detecting sex-biased differential expression by:
-1. Creating a "ground truth" from 50% of available donors
-2. Systematically subsampling the remaining donors across a grid of (N donors) x (N cells per donor)
-3. Running DESeq2 differential expression at each grid point
-4. Computing precision and recall relative to ground truth
-5. Visualizing power as heatmaps
-
-This provides empirical power estimates that can be compared against simulation-based approaches (e.g., hierarchicell).
+1. Splitting the filtered donors 50:50 into a ground-truth half and a validation half, repeated over `N_ROBUSTNESS_RUNS` (10) independent splits
+2. Systematically subsampling the validation half across a grid of (N donors) x (N cells per donor), or (N donors) x (UMI budget per donor) in reads mode
+3. Running pseudobulk DE at each grid point with DESeq2, edgeR and limma-voom
+4. Computing precision and recall against the ground-truth half, per |LFC| bin, expression bin and chromosome category
+5. Pooling the three methods and visualising power as discrete and interpolated heatmaps
 
 ---
 
-## 2. Inputs Expected
+## 2. Use in the Reproduction Pipeline
+
+The canonical end-to-end route is `pipeline/` (see `pipeline/README.md`). The stages call `run_pipeline.R` with `SHARD_DATASET=Roussos`, `DE_METHODS=deseq2,edger,limma` and `N_ROBUSTNESS_RUNS=10`:
+
+| Stage | Steps | Notes |
+|-------|-------|-------|
+| `gt_manifest` | 1 (cells), then 1.5 for cells and reads | Ground truth is mode-independent; it is written under `cells/` and copied to `reads/` |
+| `grid` | 2 | PBS array: one task per (mode, chunk), `JOB_N_CHUNKS` chunks per mode |
+| `cartesian_cells`, `cartesian_reads` | 3, 3.5, 4, 5, 6 | With `CARTESIAN_INCLUDE_ALL_METHODS=true` so the pooled `all_methods` outputs are plotted |
+| `crossscore` | `10_CrossScore_Methods.R` | Run directly, both modes, all runs |
+
+---
+
+## 3. Inputs Expected
 
 ### Data Sources
 
 | Input | Path | Format | Description |
 |-------|------|--------|-------------|
-| Donor Shards | `Datalink/Shards/{CellType}/{Dataset}/` | `.qs` files | One SCE per donor |
-| Manifest | `Datalink/Shards/{CellType}/{Dataset}/00_MASTER_MANIFEST.qs` | `.qs` | Donor metadata and file paths |
+| Donor Shards | `Datalink/Shards/{CellType}/Roussos/` | `.qs` files | One SCE per donor |
+| Manifest | `Datalink/Shards/{CellType}/Roussos/00_MASTER_MANIFEST.qs` | `.qs` | Donor metadata and file paths |
 
 ### Data Structure Requirements
 
@@ -37,92 +47,99 @@ This provides empirical power estimates that can be compared against simulation-
 - `colData(sce)$donor_id` - Donor identifier
 - `colData(sce)$sex` - "male" or "female"
 - `colData(sce)$development_stage` - Age string (e.g., "65 year-old stage")
+- `colData(sce)$Source`, `self_reported_ethnicity`, `disease`, `pmi` - Design covariates
 
 **Manifest Structure:**
 ```r
 manifest <- qs::qread("00_MASTER_MANIFEST.qs")
 # manifest$manifest is a data.frame with columns:
 #   - donor_id: character
+#   - cell_count: integer
 #   - file_path: character (path to donor shard)
 ```
 
 ### Prerequisites
 
-- Sharding pipeline must have completed successfully
-- Donor shards must contain raw counts (not normalized)
-- At least 10 donors per sex required for meaningful analysis
+- Sharding pipeline (including PMI annotation) must have completed successfully
+- Donor shards must contain raw counts (not normalised)
 
 ---
 
-## 3. Outputs Produced
+## 4. Method
 
-### Per Cell Type, Per Run
+- **Grid:** `DONOR_STEPS` = 5, 10, 15, 25, 50, 75, 100, 150, 200, 300, 500, 600 (12 levels). Cells mode: `CELL_STEPS` = 5, 10, 20, 50, 75, 100, 250, 500, 750, 1000, 1500, 2000, 3000, Max (14 levels). Reads mode: `READ_STEPS` = 25,000 to 15,000,000 total UMIs per donor plus Max (13 levels).
+- **Iterations:** `N_SUBSAMPLES` = 20 per grid point per run.
+- **Design:** `~ sex + age_scaled + pmi_scaled + Source + self_reported_ethnicity + disease`, falling back to `~ sex` if rank-deficient.
+- **DE:** DESeq2 (`fitType = "glmGamPoi"`), edgeR quasi-likelihood (`glmQLFit`, robust), limma-voom (`eBayes`, robust). All LFCs are shrunk with ashr so effect sizes are comparable across methods.
+- **Truth set:** ground-truth genes with padj < 0.05 (BH) and |LFC| >= 0.2. Precision and recall are reported in `LFC_INTERVALS`: Tiny (0.2-1.0), Small (1.0-2.0), Medium (2.0-3.0), Large (3.0+), and in `BASEMEAN_INTERVALS` for the Tiny and Small bins.
+- **Pooling:** step 3.5 pools the three methods trial-weighted into `all_methods`; cell types stay separate.
 
-| Output | Path | Format | Description |
-|--------|------|--------|-------------|
-| Ground Truth | `{output}/Run_{i}/Ground_Truth.qs` | DESeqResults | DE results from 50% of donors |
-| Ground Truth Log | `{output}/Run_{i}/Ground_Truth_sampling_metadata.qs` | list | Cell indices used |
-| Subsample Results | `{output}/Run_{i}/N{d}_C{c}_I{i}.qs` | DESeqResults | DE results per grid point |
-| Subsample Logs | `{output}/Run_{i}/N{d}_C{c}_I{i}_sampling_metadata.qs` | list | Cell indices used |
+---
+
+## 5. Pipeline Steps
+
+| Step | Script | Description |
+|------|--------|-------------|
+| 1 | `01_Generate_Ground_Truth.R` | 50:50 donor split and ground-truth DE per run and method |
+| 1.5 | `01b_Build_HPC_Job_Manifest.R` | Cost-balanced job manifest for PBS array chunks |
+| 2 | `02_Run_Downsampling_Grid.R` | Executes the donor x cells (or UMIs) grid |
+| 3 | `03_Aggregate_Results.R` | Precision/recall per grid point, bin and chromosome category |
+| 3.5 | `08_Aggregate_CrossMethod.R` | Trial-weighted pooling of methods into `all_methods` |
+| 4 | `04_Visualise_Power.R` | Discrete heatmaps and summary plots |
+| 5 | `07_Visualise_Continuous_Grid.R` | Bilinear-interpolated continuous surfaces |
+| 6 | `09_Visualise_Figure_TS.R` | Tiny/Small bins x four expression categories (Figure T / Figure S) |
+| (direct) | `10_CrossScore_Methods.R` | 3x3 cross-method scoring (subsample method x truth method) |
+
+---
+
+## 6. Outputs Produced
+
+### Per Cell Type, Mode, Method, Run
+
+Under `Datalink/Cartesian_Downsampling/{CellType}/Roussos/{cells|reads}/{deseq2|edger|limma}/Run_{i}/`:
+
+| Output | File | Description |
+|--------|------|-------------|
+| Ground Truth | `Ground_Truth.qs` | DE results from the ground-truth half |
+| Ground Truth Log | `Ground_Truth_sampling_metadata.qs` | Donors/cells used |
+| Validation Donors | `Validation_Donors.qs` | Donors available for subsampling |
+| Subsample Results | `N{d}_C{c}_I{i}.qs` (cells) or `N{d}_R{r}_I{i}.qs` (reads) | DE results per grid point and iteration |
+| Subsample Logs | `..._sampling_metadata.qs` | Cells/UMIs sampled |
 
 ### Aggregated Outputs
 
-| Output | Path | Format | Description |
-|--------|------|--------|-------------|
-| Summary Data | `{plots}/Aggregated_Summary_Data.qs` | list | Precision, recall, read stats |
-| Precision Heatmap | `{plots}/Mean_Precision_{category}.png` | PNG | Heatmap by LFC bin |
-| Recall Heatmap | `{plots}/Mean_Recall_{category}.png` | PNG | Heatmap by LFC bin |
-| XIST Check | `{plots}/XIST_Sanity_Check.png` | PNG | XIST detection rate |
-| Read Depth | `{plots}/Total_Reads_Per_Matrix.png` | PNG | Read depth heatmap |
+Under `{CellType}/Roussos/{mode}/{method or all_methods}/`:
 
-### Astro Variant Outputs (Step 6)
+| Output | Path | Description |
+|--------|------|-------------|
+| Summary Data | `Plots/Aggregated_Summary_Data.qs` | Precision, recall, read stats (input to `R/figure_data_generation` step 8 and the composers) |
+| Heatmaps | `Plots/Mean_{Recall,Precision}_{Total,Autosomal,SexChr}.png` | Discrete heatmaps by \|LFC\| bin |
+| P-value quartiles | `Plots/Mean_{Recall,Precision}_PValQuartile_AllMethods.png` | Recall/precision by ground-truth padj quartile |
+| Figure T / S | `Plots/Figure_TS/` | Tiny/Small bin x expression panels |
+| Continuous surfaces | `Continuous_Viz/`, `Continuous_Viz_Log/` | Interpolated surfaces (linear and semi-log) |
 
-When Step 6 is run, additional comparison plots are generated for Astrocyte variant datasets (if available):
+### Cross-method scoring
 
-| Output | Path | Format | Description |
-|--------|------|--------|-------------|
-| Individual Heatmaps | `Astro/Variants/{mode}/Plots/{Dataset}_Recall_{category}.png` | PNG | Per-variant recall heatmaps |
-| Comparison Grid | `Astro/Variants/{mode}/Plots/Comparison_{metric}_Total.png` | PNG | Side-by-side variant comparison |
-| Difference Heatmaps | `Astro/Variants/{mode}/Plots/Difference_{Variant}_vs_Standard_Recall.png` | PNG | Delta plots (Variant - Standard) |
-| Summary Table | `Astro/Variants/{mode}/Plots/Variant_Summary_Table.csv` | CSV | Max recall per variant/bin |
+`Datalink/Cartesian_Downsampling/Cross_Score/cross_score_matrix.csv`, rendered by `R/figure_composition/compose_crossscore.R`.
 
-**Astro Variants:**
-- `Roussos` - Standard (deep sequencing, ~9,456 reads/cell)
-- `Roussos_DepthEq` - Depth-equalized to match Microglia (~4,426 reads/cell)
-- `Roussos_ShallowFewer` - Depth-equalized + cell count matched to Microglia
+### HPC manifests
 
-### Output Paths
-
-```
-Datalink/Roussos_Analysis/{CellType}/
-├── Roussos_Empirical_Downsampling/
-│   ├── Run_1/
-│   │   ├── Ground_Truth.qs
-│   │   ├── Ground_Truth_sampling_metadata.qs
-│   │   ├── N5_C50_I1.qs
-│   │   ├── N5_C50_I1_sampling_metadata.qs
-│   │   └── ...
-│   ├── Run_2/
-│   └── ...
-└── Roussos_Empirical_Downsampling_Plots/
-    ├── Aggregated_Summary_Data.qs
-    ├── Mean_Precision_Total.png
-    ├── Mean_Recall_Total.png
-    └── ...
-```
+`Datalink/Cartesian_Downsampling/_hpc_job_manifests/manifest_Roussos_{cells,reads}_runsXX-YY_NNN_chunks.csv`.
 
 ---
 
-## 4. Tests Implemented
+## 7. Tests Implemented
 
 ### Stage 1: Unit Tests (`tests/`)
 
-| Test File | Functions Tested | What's Validated |
-|-----------|------------------|------------------|
-| `test_age_parsing.R` | `parse_age_stage_to_years()`, `is_unknown_string()` | Correct parsing of age strings, NA handling, edge cases |
-| `test_aggregation.R` | `aggregate_from_shards()` | SCE loading, cell sampling, pseudobulk aggregation, gene alignment |
-| `test_deseq_worker.R` | `run_deseq_worker()` | DESeq2 execution, formula construction, LFC shrinkage, result saving |
-| `test_job_planning.R` | Job grid generation | Correct filtering by cell count, sex ratio preservation, file naming |
+| Test File | What's Validated |
+|-----------|------------------|
+| `test_age_parsing.R` | Age string parsing, NA handling, edge cases |
+| `test_aggregation.R` | SCE loading, cell sampling, pseudobulk aggregation, gene alignment |
+| `test_deseq_worker.R` | DESeq2 execution, formula construction, LFC shrinkage, result saving |
+| `test_job_planning.R` | Job grid generation, filtering by cell count, file naming |
+| `test_reads_sampling.R` | Reads-mode sampling (multinomial overflow, exact targeting) |
+| `test_fittype_equivalence.R` | `glmGamPoi` vs `parametric` DESeq2 fits agree (LFC and -log10 padj correlation >= 0.99) |
 
 **Run Stage 1:**
 ```bash
@@ -130,103 +147,69 @@ Rscript R/cartesian_downsampling/tests/test_age_parsing.R
 Rscript R/cartesian_downsampling/tests/test_aggregation.R
 Rscript R/cartesian_downsampling/tests/test_deseq_worker.R
 Rscript R/cartesian_downsampling/tests/test_job_planning.R
+Rscript R/cartesian_downsampling/tests/test_reads_sampling.R
 ```
 
-### Stage 2: Toy Integration Test (`toy/`)
+### Stage 2: Toy Integration Test (`toy/run_toy_test.R`)
 
-| Test | Parameters | What's Validated |
-|------|------------|------------------|
-| `run_toy_test.R` | 1 cell type, 1 run, 3x3 grid, 2 iterations | End-to-end pipeline execution, output file creation, heatmap generation |
-
-**Toy Test Parameters:**
-- Cell type: Micro (smallest dataset)
+- Cell type: Micro (smallest)
 - Robustness runs: 1
 - Donor steps: 5, 10, 25
-- Cell steps: 50, 100, NA (Max)
+- Cell steps: 50, 100, Max
 - Iterations: 2 per grid point
 
-**Expected Outputs:**
-- 1 ground truth file
-- 18 subsample results (3 donors x 3 cells x 2 iterations)
-- Aggregated summary
-- Heatmaps for visual inspection
-
-**Run Stage 2:**
-```bash
-Rscript R/cartesian_downsampling/toy/run_toy_test.R
-```
+A reduced end-to-end run is also available with `MINI_RUN=true` (writes to `Datalink/MINI_Cartesian_Downsampling/`).
 
 ### Stage 3: Production Run
 
-| Test | Parameters | What's Validated |
-|------|------------|------------------|
-| `run_pipeline.R` | All cell types, 6 runs, full grid | Complete analysis at scale |
-
-**Run Stage 3:**
-```bash
-Rscript R/cartesian_downsampling/run_pipeline.R
-```
+The `gt_manifest`, `grid`, `cartesian_cells`, `cartesian_reads` and `crossscore` stages of `pipeline/`: 3 cell types, 2 modes, 3 methods, 10 runs, full grid.
 
 ---
 
-## 5. What Is NOT Tested
-
-**CRITICAL:** The following assumptions are made but NOT explicitly validated by tests:
+## 8. What Is NOT Tested
 
 ### Data Quality Assumptions
-- [ ] **Donor shards contain raw counts** - We assume counts are integers, not normalized. If shards contain TPM/CPM, DESeq2 will produce incorrect results.
-- [ ] **No duplicate donors across datasets** - If the same donor appears in multiple datasets, they may be sampled multiple times.
-- [ ] **Metadata is accurate** - Sex labels, age values, and donor IDs are assumed correct.
+- [ ] **Donor shards contain raw counts**: if shards contain TPM/CPM, DE results are invalid.
+- [ ] **Metadata is accurate**: sex labels, age, PMI and donor IDs are assumed correct (sex labels are checked separately by `R/eda_roussos/Validate_Sex_Labels.R`).
 
 ### Statistical Assumptions
-- [ ] **Ground truth is "true"** - The 50% split ground truth is treated as the reference, but it's still an estimate with uncertainty.
-- [ ] **DESeq2 model is appropriate** - The `~ sex + age_scaled + covariates` model assumes these are the relevant factors.
-- [ ] **LFC bins map to effect sizes** - The mapping of fold changes to "Small/Medium/Large" bins is arbitrary.
+- [ ] **Ground truth is "true"**: the ground-truth half is an estimate with its own error; false negatives in the truth lower apparent precision.
+- [ ] **LFC bins map to effect sizes**: bin boundaries are a convention.
 
 ### Computational Assumptions
-- [ ] **Parallel jobs are independent** - We assume no race conditions or shared state between parallel workers.
-- [ ] **Memory is sufficient** - Large cell counts (3000 cells x 500 donors) may exceed available RAM.
-
-### Edge Cases NOT Tested
-- [ ] **Very small donor counts** - Behavior with <3 donors per sex is undefined.
-- [ ] **Missing metadata columns** - Pipeline may fail silently if expected columns are missing.
-- [ ] **Manifest-shard mismatches** - If manifest lists files that don't exist, errors may not be clear.
+- [ ] **Parallel jobs are independent**: no shared state between workers is assumed.
+- [ ] **Memory is sufficient**: large grid points (3000 cells x 600 donors) need substantial RAM.
 
 ### Known Limitations
-- [ ] **No cross-validation** - Ground truth uses a single 50/50 split, not k-fold.
-- [ ] **No multiple testing correction across grid** - Each grid point is treated independently.
-- [ ] **Chromosome mapping failures** - Genes not in org.Hs.eg.db are silently excluded from autosomal/sex chromosome categories.
+- [ ] **No multiple testing correction across the grid**: each grid point is treated independently.
+- [ ] **Chromosome mapping failures**: genes without a chromosome annotation are excluded from the Autosomal/SexChr categories.
 
 ---
 
 ## Usage
 
-### Run Complete Pipeline
-```bash
-cd R/cartesian_downsampling
-Rscript run_pipeline.R
-```
-
 ### Run Specific Steps
 ```bash
-# Run only steps 1 and 2
-Rscript run_pipeline.R 1,2
+# Ground truth and job manifest (cells mode)
+DOWNSAMPLE_MODE=cells Rscript R/cartesian_downsampling/run_pipeline.R 1,1.5 24
 
-# Run only visualization
-Rscript run_pipeline.R 4
+# One grid chunk
+DOWNSAMPLE_MODE=reads JOB_CHUNK=3 Rscript R/cartesian_downsampling/run_pipeline.R 2 24
 
-# Run Astro variants comparison (requires Steps 1-3 for all variants first)
-Rscript run_pipeline.R 6
+# Aggregation and figures, including pooled all_methods
+CARTESIAN_INCLUDE_ALL_METHODS=true Rscript R/cartesian_downsampling/run_pipeline.R 3,3.5,4,5,6 24
 ```
 
 ### Configuration
 
-Edit `config.R` to modify:
-- `SHARD_DATASET` - Which dataset to use (default: "Roussos")
-- `DONOR_STEPS` / `CELL_STEPS` - Grid dimensions
-- `N_ROBUSTNESS_RUNS` - Number of independent runs
-- `N_SUBSAMPLES` - Iterations per grid point
-- `N_CORES` - Parallel workers
+`config.R` settings (most overridable by environment variable):
+- `SHARD_DATASET` - Dataset (default `Roussos`)
+- `DOWNSAMPLE_MODE` - `cells` or `reads`
+- `DONOR_STEPS` / `CELL_STEPS` / `READ_STEPS` - Grid dimensions
+- `N_ROBUSTNESS_RUNS` (10), `RUN_START` / `RUN_END` - Runs to process
+- `N_SUBSAMPLES` (20) - Iterations per grid point
+- `DE_METHODS` - Subset of `deseq2`, `edger`, `limma`
+- `JOB_N_CHUNKS` / `JOB_CHUNK` - Array chunking
 - `FORCE_RECALC` - Whether to overwrite existing results
 
 ---
@@ -234,11 +217,8 @@ Edit `config.R` to modify:
 ## References
 
 - Love MI, Huber W, Anders S (2014). "Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2." Genome Biology.
-- Zhu A, Ibrahim JG, Love MI (2019). "Heavy-tailed prior distributions for sequence count data: removing the noise and preserving large differences." Bioinformatics.
+- Stephens M (2017). "False discovery rates: a new deal." Biostatistics.
 
 ---
 
-*Pipeline Version: 2.2.1*  
-*Framework: Three-Stage Validation*  
-*Created: 2026-02-06*  
-*Updated: 2026-03-31*  
+*Last Updated: 2026-10-06*

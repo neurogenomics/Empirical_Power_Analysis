@@ -1,21 +1,15 @@
 # Raw data (not distributed)
 
-This directory is intentionally empty. It is the expected location for the primary
-single-nucleus RNA-seq input files consumed by `R/sharding/`.
+This directory is intentionally empty. It is the expected location for the raw
+inputs when running the pipelines by hand (the `pipeline/` route stages them
+itself). We do not redistribute them: they are already public, and the pipeline
+regenerates every intermediate from them.
 
-Populate this directory from the original public sources before running the
-sharding pipeline:
+| Input | Source |
+|-------|--------|
+| `PsychAD-HBCC.h5ad`, `PsychAD-MSSM.h5ad`, `PsychAD-RADC.h5ad` | PsychAD snRNA-seq, [CELLxGENE collection 84ce6837](https://cellxgene.cziscience.com/collections/84ce6837-548d-4a1f-919f-0bc0d9a3952f) (Fullard et al. 2025) |
+| `media-1.csv` | PsychAD donor table with post-mortem interval, a supplementary table of Fullard et al. 2025 |
 
-| Dataset       | Expected files                                            | Source |
-|---------------|-----------------------------------------------------------|--------|
-| PsychAD       | `roussos_<CellType>.h5ad`                                 | Fullard et al. 2025 (Synapse: syn52293417) |
-| SEA-AD (Allen)| `allen_astrocytes.qs`, `allen_microglia.qs`, `allen_oligo.qs` | Allen Institute (sea-ad.org) |
-| ROSMAP (DeJager)| `dejager_<CellType>.h5Seurat`, `DeJagerMeta.csv`        | Green et al. 2024 (Synapse: syn53366818) |
-| Johansen      | `johansen_<CellType>.qs`                                  | Johansen et al. 2023 |
-| Rexach        | `rexach_<CellType>.h5ad`                                  | Rexach et al. 2024 |
-
-Exact filenames expected by each `Run_Shard_*.R` script are declared at the top
-of that script (see the `INPUT_FILES` list).
-
-Each dataset has its own access terms; please refer to the original study for
-licensing and download instructions.
+Checksums for all four files are in `pipeline/inputs.sha256`. Exact filenames
+expected by `R/sharding/Run_Shard_Roussos.R` are declared at the top of that
+script. Please refer to the original study for dataset licensing terms.

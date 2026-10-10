@@ -1,30 +1,40 @@
 # Contributing
 
-Thank you for considering contributing to the Empirical Power Analysis pipeline. This
-document covers the workflow for humans. Agents should start with `AGENTS.md`.
+Thank you for considering contributing to the Empirical Power Analysis pipeline.
 
 ## Development loop
 
-1. **Fork** the repo and create a feature branch from `dev`:
-   `git checkout -b feat/your-change dev`
-2. **Install the dev environment**: `docker compose up -d` or pull the container
-   directly: `docker pull ghcr.io/neurogenomics/empirical_power_analysis:dev`
-3. **Build + smoke-test the container** before making changes to confirm baseline:
-   `./docker/docker-all.sh --skip-run` (build + smoke; see `docs/docker.md`)
-4. **Make your change** — respect the "scientific code safety rails" listed in `AGENTS.md`
-5. **Add tests** — every scientific-logic change needs a matching `tests/` update
-6. **Run tests locally** before pushing:
+1. **Fork** the repo and create a feature branch from `main`:
+   `git checkout -b feat/your-change main`
+2. **Build + smoke-test the container** to get the pinned environment and confirm
+   the baseline: `./docker/docker-all.sh --skip-run` (build + smoke; see
+   `docs/docker.md`)
+3. **Make your change**, respecting the scientific safety rails below
+4. **Add tests**: every scientific-logic change needs a matching `tests/` update
+5. **Run tests locally** before pushing:
    ```bash
    # R unit tests
    for d in R/*/tests; do [ -d "$d" ] && Rscript -e "testthat::test_dir('$d')"; done
 
+   # Reproduction pipeline tests (stubbed scheduler, no cluster needed)
+   bash pipeline/tests/test_pipeline.sh
+
    # Wrapper sanity check
    ./run_all.sh --dry-run
-
-   # Lint
-   Rscript -e 'lintr::lint_dir("R")'
    ```
-7. **Open a PR** against `dev`. Fill in the PR template. CI will run.
+6. **Open a PR** against `main`. There is no CI at present, so say in the PR
+   which tests you ran.
+
+## Scientific safety rails
+
+- Every randomised step is seeded deterministically from the robustness run,
+  grid point and iteration; keep it that way.
+- The ground-truth and downsampling halves must never share donors.
+- Filter and significance thresholds (`GT_LFC_THRESHOLD`, `FDR_THRESHOLD`,
+  `MIN_GENE_COUNT`, LFC bins) are load-bearing: changing one changes the paper.
+- Report cell types in the order Astro, Micro, Oligo.
+- Do not bump DESeq2, edgeR, limma, ashr or xgboost in `renv.lock` without
+  re-running the full grid.
 
 ## Pull request expectations
 
@@ -40,37 +50,40 @@ document covers the workflow for humans. Agents should start with `AGENTS.md`.
 
 ## Release process
 
-1. Bump `version` in `CITATION.cff` and the `Dockerfile` LABEL block
+1. Bump `version` in `CITATION.cff`
 2. Update `CHANGELOG.md`
-3. Merge `dev` → `main`
-4. Tag with semver: `git tag -a v1.0.0 -m "Release v1.0.0"`
-5. Push tag: `git push origin v1.0.0`
-6. GitHub Actions builds the Docker image → `ghcr.io/neurogenomics/empirical_power_analysis:1.0.0`
-7. Create a GitHub Release; Zenodo auto-mints a DOI
-8. Update `CITATION.cff` with the new DOI and open a follow-up PR
+3. Tag with semver: `git tag -a v1.0.0 -m "Release v1.0.0"` and push the tag
+4. Create a GitHub Release from the tag
+5. Add the release date to `CITATION.cff`. The persistent identifier is the
+   paper DOI (currently the bioRxiv preprint); no separate archive DOI is minted,
+   because every input is already public and the pipeline regenerates the rest.
+   Update `preferred-citation` when the journal version is published.
 
 ## Reporting bugs
 
 Open an issue using the bug report template. Include:
-- How you ran the pipeline (host-native `./run_all.sh`, container via
-  `./docker/docker-run.sh` / `./docker/docker-all.sh`, or per-pipeline `Rscript R/<pipeline>/run_pipeline.R`)
+- How you ran the pipeline (`pipeline/run.sh` on a cluster, host-native
+  `./run_all.sh`, container via `./docker/docker-run.sh` / `./docker/docker-all.sh`,
+  or per-pipeline `Rscript R/<pipeline>/run_pipeline.R`)
 - Docker version (`docker --version`) if containerised
 - R version (`R --version`) if host-native
 - Log output: attach the contents of
-  `Datalink/Run_Output_Logs/run_all/latest/` (host-native) or
-  `logs/docker-run/latest/` (container)
+  `Datalink/Run_Output_Logs/run_all/latest/` (host-native),
+  `logs/docker-run/latest/` (container), or the failing stage's PBS log and
+  `results/PROVENANCE.txt` (`pipeline/`)
 - Expected vs actual behaviour
 
 ## Scientific questions
 
 For scientific questions about the results, methods, or interpretation, please read
-the paper first (`paper/paper.Rmd`) and then open an issue tagged `science`. We
-respond to methodological critiques in good faith — disagreement is how this gets
-better.
+the paper first (`nature_comms_draft.rmd` and `nature_comms_supplementary.rmd`)
+and then open an issue tagged `science`. We respond to methodological critiques in
+good faith: disagreement is how this gets better.
 
 ## Code of conduct
 
-Be excellent to each other. See `CODE_OF_CONDUCT.md` (Contributor Covenant v2.1).
+Be excellent to each other. We follow the
+[Contributor Covenant v2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
 
 ## License
 

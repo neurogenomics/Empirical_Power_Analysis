@@ -1,3 +1,5 @@
+> **Obsolete.** This pipeline (GTEx bulk validation) is not part of the paper and is not run by the reproduction pipeline (`pipeline/`). It is retained for reference only.
+
 # Bulk DEG Processing Pipeline
 
 ## Purpose
