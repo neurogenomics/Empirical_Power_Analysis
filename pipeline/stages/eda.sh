@@ -18,7 +18,9 @@ stage_main() {
     epa_require "Exploratory_Analysis/$ct/Roussos_Full/PCA/PCA_FullCohort_sex_scaled.png" \
                 "Exploratory_Analysis/$ct/Roussos/PCA/PCA_FilteredCohort_sex_scaled.png"
   done
-  epa_require Sex_Validation/sex_exclusion_combined.csv Paper_Source_Data/dataset_statistics.csv
-  epa_out eda Exploratory_Analysis Sex_Validation Paper_Source_Data/dataset_statistics.csv
+  epa_require Sex_Validation/sex_exclusion_combined.csv Paper_Source_Data/dataset_statistics.csv \
+              Paper_Source_Data/cohort_prefilter.csv
+  epa_out eda Exploratory_Analysis Sex_Validation Paper_Source_Data/dataset_statistics.csv \
+          Paper_Source_Data/cohort_prefilter.csv
   epa_complete
 }

@@ -67,7 +67,7 @@ the software are in [`docs/container.md`](../docs/container.md).
 
 ## How it works
 
-- **Stages.** `pipeline/stages.tsv` defines 28 stages, their dependencies and
+- **Stages.** `pipeline/stages.tsv` defines 29 stages, their dependencies and
   their resources. Each stage is one PBS job (three of them, `grid`, `xgb_search`
   and `ad_grid`, are job arrays) and
   is implemented in `pipeline/stages/<stage>.sh`, which calls the analysis code
@@ -137,6 +137,7 @@ its README) are byte-identical across reruns of the same commit.
 | `tables` | fgt, pcf_aggregate, cartesian_* | Supp. Table 2, recall grid CSV (numbers in text), Supp. Data 3 | < 1 h |
 | `compose` | cartesian_*, crossscore | Figures 2-4, cross-method and per-method Supp. Figs. | < 1 h |
 | `supp_data` | several | Supplementary Data 1-4 (+ SD2 zip) | < 1 h |
+| `paper_values` | eda, tables, deg_loss, pcf_aggregate, xgb_*, gene_class | `Paper_Source_Data/paper_values.csv`: every data-derived number quoted in the text, with its definition and source file | minutes |
 | `knit` | all of the above | `Manuscript/nature_comms_{draft,supplementary}.html` | < 1 h |
 | `ad_shard` | shard | AD vs control donor shards: AD as the only diagnosis vs no diagnosis | < 1 h |
 | `ad_gt_manifest`, `ad_grid` (array, `EPA_AD_GRID_CHUNKS`, cells mode) | ad_shard | the AD vs control grid, 10 runs x 3 methods, same seeds | ~5 h per task |

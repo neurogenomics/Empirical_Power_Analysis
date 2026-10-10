@@ -48,7 +48,7 @@ them inside the container (`docs/container.md`, "Running the image by hand").
 | `R/shared/` | Helpers used across pipelines (`contrast.R` switches sex vs AD-vs-control) |
 | `Dockerfile`, `docker/`, `renv.lock` | The pinned software environment (`docs/container.md`) |
 | `nature_comms_draft.rmd`, `nature_comms_supplementary.rmd` | Manuscript sources, knitted by the `knit` stage |
-| `_paper_values.R` | `val("key")`: numbers quoted in the text, read from output tables at knit time |
+| `_paper_values.R` | `val("key")`: numbers quoted in the text, read at knit time. Keys not registered there come from `Datalink/Paper_Source_Data/paper_values.csv` (stage `paper_values`, `R/figure_data_generation/09_Paper_Values.R`), which states each number's definition and source |
 | `_supp_fig_index.R` | `SF("key")`: supplementary figure numbering for both documents |
 | `Datalink/` | Output tree. Git tracks only the files the manuscript renders; a run regenerates all of it |
 
@@ -85,9 +85,10 @@ no internet: anything external comes from the reference bundle.
   `docs/container.md`. Never install packages at run time.
 - **No hard-coded paths.** Code resolves the project root with `here::here()`
   or `POWER_ANALYSIS_ROOT`. `git grep -nE '/mnt/|/home/|/rds/'` over tracked
-  files finds only `/home/rstudio`, a path inside the base image.
+  files finds only `/home/rstudio` (a path inside the base image) and this line.
 - **Numbers in the text** come from `val()` keys, not literals, wherever a key
-  exists. Add a key rather than typing a number.
+  exists. To add one, add an `add()` call to `09_Paper_Values.R` with a full
+  definition, rather than typing a number.
 
 ## Testing
 

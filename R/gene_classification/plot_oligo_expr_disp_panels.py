@@ -7,6 +7,9 @@
 # Input : Datalink/Gene_Classification/oligo_gene_power_multiLFC.csv
 #         (R/gene_classification/classify_oligo_multi_lfc.R)
 # Output: Datalink/Gene_Classification/oligo_paper_expr_disp_panels.{png,pdf}
+#         Datalink/Gene_Classification/oligo_gene_group_power_summary.csv
+#         (per column and |LFC|: genes, expressed genes, and % of expressed genes
+#         in each class; the numbers in the column headers, read by the text)
 #
 # Columns (x axis), ordered by the median mean expression of their expressed genes:
 #   * seven Lambert TF families (DNA-binding domain) plus "Other TF" (all other
@@ -106,6 +109,22 @@ def build_groups(df):
     return groups
 
 
+def group_summary(groups):
+    """One row per column and |LFC|: class percentages among expressed genes."""
+    rows = []
+    for g in groups:
+        expr = g["genes"][g["genes"].expressed]
+        n = len(expr)
+        for tag, label in LFC_ROWS:
+            cls = expr[f"class_lfc{tag}"]
+            row = {"group": g["name"], "kind": g["kind"], "abs_lfc": float(label),
+                   "n_genes": len(g["genes"]), "n_expressed": n}
+            for c in ("Undetectable", "Unsure", "Detectable"):
+                row[f"pct_{c.lower()}"] = 100 * (cls == c).sum() / n if n else np.nan
+            rows.append(row)
+    return pd.DataFrame(rows)
+
+
 def draw_panel(ax, groups, value_col, lfc_tag, lfc_label, floor_y, line_y, ylim, clip=None, ticks=None):
     cls_col = f"class_lfc{lfc_tag}"
     for i, g in enumerate(groups):
@@ -168,6 +187,8 @@ def main():
     df["is_tf"] = as_bool(df.is_tf_lambert)
     df["lof_intol"] = as_bool(df.lof_intol)
     groups = build_groups(df)
+    group_summary(groups).to_csv(os.path.join(GC_DIR, "oligo_gene_group_power_summary.csv"),
+                                 index=False)
 
     disp = df.loc[df.expressed, "dispersion"].to_numpy(float)
     disp = disp[np.isfinite(disp) & (disp > 0)]

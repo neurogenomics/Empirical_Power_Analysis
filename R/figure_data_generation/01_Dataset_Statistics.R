@@ -127,3 +127,21 @@ write.csv(dataset_stats, out_path, row.names = FALSE)
 
 message(sprintf("\n[DONE] Wrote %d rows to %s", nrow(dataset_stats), out_path))
 message(sprintf("  Datasets: %s", paste(unique(dataset_stats$Dataset), collapse = ", ")))
+
+# ==============================================================================
+# Donors before filtering (unfiltered Roussos_Full shards), per cell type and
+# their union. Quoted as the PsychAD cohort size; read by step 09.
+# ==============================================================================
+
+full_donors <- lapply(setNames(CELL_TYPES, CELL_TYPES), function(ct) {
+  m <- qs::qread(file.path(SHARD_BASE, ct, "Roussos_Full", "00_MASTER_MANIFEST.qs"))
+  unique(as.character(m$manifest$donor_id))
+})
+prefilter <- data.frame(
+  cell_type = c(CELL_TYPES, "All"),
+  n_donors  = c(vapply(full_donors, length, integer(1)), length(Reduce(union, full_donors)))
+)
+prefilter_path <- file.path(OUTPUT_BASE, "cohort_prefilter.csv")
+write.csv(prefilter, prefilter_path, row.names = FALSE)
+message(sprintf("[DONE] Wrote %s (all cell types: %d donors)", prefilter_path,
+                prefilter$n_donors[prefilter$cell_type == "All"]))

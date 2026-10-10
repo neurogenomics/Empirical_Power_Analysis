@@ -20,7 +20,8 @@ stage_main() {
   epa_R R/gene_classification/classify_oligo_multi_lfc.R
   epa_step "Figure 6"
   epa_py R/gene_classification/plot_oligo_expr_disp_panels.py
-  epa_require "$g/oligo_paper_expr_disp_panels.png" "$g/oligo_gene_power_multiLFC.csv"
+  epa_require "$g/oligo_paper_expr_disp_panels.png" "$g/oligo_gene_power_multiLFC.csv" \
+              "$g/oligo_gene_group_power_summary.csv"
   epa_out gene_class "$g/*.csv" "$g/oligo_paper_expr_disp_panels.png" "$g/oligo_paper_expr_disp_panels.pdf"
   epa_complete
 }

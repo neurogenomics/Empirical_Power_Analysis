@@ -8,20 +8,22 @@ from pipeline outputs rather than typed by hand.
 ## Use in the Reproduction Pipeline
 
 The canonical end-to-end route is `pipeline/` (see `pipeline/README.md`). Only
-steps 1, 6 and 8 exist:
+steps 1, 6, 8 and 9 exist:
 
 | Stage | Command | Used for |
 |-------|---------|----------|
 | `eda` | `Rscript R/figure_data_generation/run_pipeline.R 1` | Cohort statistics (donor counts quoted in the text, Supplementary Data 1) |
 | `tables` | `Rscript R/figure_data_generation/run_pipeline.R 6,8` | Supplementary Table 2 and truth-set sizes; tidy recall/precision grid for numbers quoted in the Results |
+| `paper_values` | `Rscript R/figure_data_generation/run_pipeline.R 9` | Every data-derived number quoted in the text, with its definition |
 
 ## Steps
 
 | Step | Script | Output |
 |------|--------|--------|
-| 1 | `01_Dataset_Statistics.R` | `Paper_Source_Data/dataset_statistics.csv` (PsychAD x 3 cell types) |
+| 1 | `01_Dataset_Statistics.R` | `Paper_Source_Data/dataset_statistics.csv` (PsychAD x 3 cell types), `Paper_Source_Data/cohort_prefilter.csv` (donors before filtering) |
 | 6 | `06_Autosomal_vs_SexChr_Summary.R` | `Datalink/_scratch_autosomal_vs_sexchr_summary.csv` and `_pivot.csv` |
 | 8 | `08_Recall_Precision_Grid.R` | `Paper_Source_Data/recall_precision_grid.csv` |
+| 9 | `09_Paper_Values.R` | `Paper_Source_Data/paper_values.csv` |
 
 Step numbers are kept from the original pipeline. Steps 2-5 and 7 (truth-gene
 characteristics at the legacy \|LFC\| > 1 cut-off, logistic-model
@@ -34,6 +36,7 @@ Notes:
 - Step 1 loads every filtered donor shard (`Datalink/Shards/{CellType}/Roussos/`) and reports N donors, N cells, and per-donor and per-cell summaries (cells, UMIs, genes). It sources the shard helpers in `R/glial_characteristics/utils.R`. `DATASETS` in `config.R` contains only `Roussos` (label `PsychAD`).
 - Step 6 reads the truth-half DESeq2 checkpoints (`Power_Curve_Fitting/GT_DDS_Checkpoints/`) and uses the paper truth set, padj < 0.05 and \|LFC\| >= 0.2.
 - Step 8 flattens the cartesian `Aggregated_Summary_Data.qs` checkpoints into one row per (cell type, mode, method, donors, cells/UMI level, \|LFC\| bin, gene category).
+- Step 9 writes one row per quoted number: `key, value, unit, definition, source`. It reads outputs of the `eda`, `tables`, `deg_loss`, `pcf_aggregate`, `xgb_select`, `xgb_post` and `gene_class` stages. `val("key")` in the manuscript falls back to this table for keys `_paper_values.R` does not register. Each `definition` states the subset, threshold and aggregation, so a reader can check what a number means.
 
 ## Usage
 
@@ -43,12 +46,13 @@ The supported way to run this is `pipeline/run.sh` (`--only <stage>` reruns one 
 # Steps used for the paper
 Rscript R/figure_data_generation/run_pipeline.R 1
 Rscript R/figure_data_generation/run_pipeline.R 6,8
+Rscript R/figure_data_generation/run_pipeline.R 9
 
 # With more cores
 Rscript R/figure_data_generation/run_pipeline.R 1 24
 ```
 
-`run_pipeline.R` with no arguments runs steps 1, 6 and 8.
+`run_pipeline.R` with no arguments runs steps 1, 6, 8 and 9.
 
 ## Step 1 runtime
 

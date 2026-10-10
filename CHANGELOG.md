@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Stage `paper_values` (`R/figure_data_generation/09_Paper_Values.R`) writes
+  `Paper_Source_Data/paper_values.csv`: every data-derived number quoted in
+  the text (cohort sizes, grid recall/precision claims, DEG loss, power-model
+  calibration, gene-group detectability), each with a written definition and
+  its source file. `val()` falls back to this table for keys `_paper_values.R`
+  does not register. Step 1 also writes `cohort_prefilter.csv` (donors before
+  filtering), and the Figure 6 script writes `oligo_gene_group_power_summary.csv`
+  (the percentages in its column headers).
+- `docker/smoke_test.R`: checks every `renv.lock` and Python pin at its exact
+  version; runs at the end of the image build and inside every `.sif`.
+
+### Fixed
+- The container build could install the Rcpp family at the latest CRAN version
+  instead of the `renv.lock` pin (the 2026-10-01 image had Rcpp 1.1.2 and
+  RcppParallel 6.2.1 against pins 1.1.1-1 and 5.1.11-2). The build now
+  requests pinned versions and fails on any version mismatch.
+
 ### Changed
 - Documentation merged from the PsychAD-only refresh and aligned with the
   current tree. `pipeline/run.sh` is the only supported way to run the code,

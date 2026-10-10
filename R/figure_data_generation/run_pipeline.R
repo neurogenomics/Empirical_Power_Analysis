@@ -63,7 +63,10 @@ steps <- list(
        desc = "Build _scratch_autosomal_vs_sexchr_summary.csv for paper Table (line 589)"),
   list(id = 8, name = "Recall / Precision Grid",
        script = file.path(SCRIPT_DIR, "08_Recall_Precision_Grid.R"),
-       desc = "Tidy long-format recall_precision_grid.csv (source of _paper_values.R grid numbers)")
+       desc = "Tidy long-format recall_precision_grid.csv (source of _paper_values.R grid numbers)"),
+  list(id = 9, name = "Paper Values",
+       script = file.path(SCRIPT_DIR, "09_Paper_Values.R"),
+       desc = "paper_values.csv: every data-derived number quoted in the text, with its definition")
 )
 
 # ==============================================================================

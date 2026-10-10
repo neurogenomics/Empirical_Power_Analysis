@@ -83,13 +83,21 @@ register_val <- function(key, fn) {
 # pct    : multiply a proportion (<=1) by 100 before formatting; a value already
 #          on a 0-100 scale is passed through unchanged.
 # big    : format with thousands separators (returns a string; implies integer).
-val <- function(key, digits = NULL, pct = FALSE, big = FALSE) {
-  fn <- .val_registry[[key]]
-  if (is.null(fn)) {
-    stop(sprintf("val(): unknown key '%s' (see _paper_values.R)", key),
+# Keys not registered below are looked up in Paper_Source_Data/paper_values.csv
+# (written by R/figure_data_generation/09_Paper_Values.R, which documents each
+# key's definition in the table itself).
+.paper_values_table <- function(key) {
+  pv <- load_csv(.dl("Paper_Source_Data", "paper_values.csv"))
+  x <- pv$value[pv$key == key]
+  if (length(x) != 1) {
+    stop(sprintf("val(): unknown key '%s' (not in _paper_values.R or paper_values.csv)", key),
          call. = FALSE)
   }
-  x <- fn()
+  x
+}
+val <- function(key, digits = NULL, pct = FALSE, big = FALSE) {
+  fn <- .val_registry[[key]]
+  x <- if (is.null(fn)) .paper_values_table(key) else fn()
   if (pct) x <- x * ifelse(x <= 1, 100, 1)
   if (big) return(formatC(round(x), format = "d", big.mark = ","))
   if (!is.null(digits)) return(formatC(x, format = "f", digits = digits))
