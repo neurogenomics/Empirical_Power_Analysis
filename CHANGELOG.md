@@ -7,6 +7,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Documentation merged from the PsychAD-only refresh and aligned with the
+  current tree. `pipeline/run.sh` is the only supported way to run the code,
+  on a PBS cluster or with `--local` on one host. Container documentation
+  moves from `docs/docker.md` to `docs/container.md`.
+- One XGBoost power model, trained on the `n_cells >= 100` rows
+  (`01e_Filter_Design.R`, formerly `01e_Filter_Realistic.R`; training table
+  `Fitting_Data/aggregated_fitting_data.qs`). The full-grid "baseline" model
+  and the "realistic" naming are gone; outputs are in `Models/xgboost/` and
+  `Exports/xgboost/`.
+- The hyperparameter search grows from 36 to 108 configurations
+  (`max_depth` {3, 4, 6, 10} x `eta` {0.01, 0.03, 0.1} x `min_child_weight`
+  {1, 10, 25} x `alpha` {0, 0.5, 1}), up to 20,000 rounds with early stopping,
+  ranked by out-of-fold bin-balanced MAE with per-fold values in
+  `model_selection_folds.csv`. Stages `xgb_search` (array of 108),
+  `xgb_select`, `xgb_shap` and `xgb_post` replace the `xgb_base_*` and
+  `xgb_real_*` stages, and `08b_Baseline_OOF.R` is removed. XGBoost stages run
+  with 8 threads.
+- Figure 5B shows hyperparameter bracketing with fold-paired standard errors;
+  Figure 5C shows the model's out-of-fold per-class precision, recall and F1.
+- Depth and cell-count equalisation (stage `deg_loss`) runs for
+  oligodendrocytes as well as astrocytes; Supplementary Table 3 has a cell-type
+  column.
+- Container image tagged `empirical-power-analysis:v1.0.0`, built with
+  `docker/docker-build.sh`, checked with `docker/docker-smoke.sh` and converted
+  with `docker/build-sif.sh`; to be published as
+  `ghcr.io/neurogenomics/empirical_power_analysis`.
+
+### Added
+- AD vs control contrast (`EPA_CONTRAST=ad_vs_control`, `R/shared/contrast.R`,
+  `R/ad_contrast/`, `R/sharding/Build_AD_Control_Shards.R`): AD as the only
+  recorded diagnosis vs no recorded diagnosis, sex as a covariate, a
+  cells-mode grid with the same seeds, a full-cohort DE comparison, and a test
+  of the sex-trained power model. Stages `ad_shard`, `ad_gt_manifest`,
+  `ad_grid`, `ad_cartesian`, `ad_pcf`, `ad_de` and `ad_validate`; outputs in
+  `Datalink/AD_vs_Control/`. Its place in the manuscript is not yet decided.
+
+### Removed
+Everything not on the reproduction path is untracked (commit `f14c924`; the
+files remain in the git history):
+- Superseded runners: `run_all.sh`, `run_all.config`,
+  `run_power_curve_fitting.sh`, `render_pdf.R`, `docker/docker-run.sh`,
+  `docker/docker-all.sh`, `hpc/`.
+- Non-PsychAD code and outputs: `R/bulk_deg_processing/`, the other-cohort
+  sharders, `Run_Harmonise_Gene_IDs.R`, `Audit_Roussos_PMI.R`, the
+  cross-dataset diagnostics in `R/full_ground_truth/`,
+  `Datalink/Bulk_Analysis/`, `Diagnostic_Results/` and `FDP_Summary.csv`.
+- Logistic-model and off-paper analyses: `R/power_curve_fitting/run_pipeline.R`,
+  `01d`, `02_Fit_Models.R`, `02b`, `03` to `06`, `04b`, `04c` and `10`;
+  `R/figure_data_generation/` steps 2-5 and 7; `R/eda_roussos/` steps 3 and 6
+  and two standalone scripts; unused `R/gene_classification/` and
+  `R/figure_composition/` scripts; the matching `Paper_Source_Data/` CSVs and
+  `Datalink/Dataset_Statistics_Table/`.
+- One-off `_run_step*.R` helpers with hard-coded server paths.
+- `Reproducibility/` and `R/shared/capture_environment.R` (a host snapshot;
+  the container defines the environment).
+
+## [Unreleased] (docs refresh, 2026-10-06)
+
 ### Added
 - `pipeline/`: one-command reproduction on a PBS Pro cluster (written for
   Imperial CX3). Submits every stage as a dependency-chained job inside the

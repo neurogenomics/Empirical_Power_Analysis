@@ -10,9 +10,9 @@ model is trained to predict that rate from design parameters (donors, cells
 per donor, reads per cell), gene characteristics (|LFC|, baseMean,
 dispersion), DE method and cell type.
 
-The production model is the "realistic" model, trained on the `n_cells >= 100`
-sub-grid. It is exported as a portable bundle with a `predict_power()`
-wrapper. See `docs/model-card-predict_power.md` for its intended use and
+There is one power model, trained on the rows with `n_cells >= 100` (designs
+below 100 cells per donor are not ones anyone would plan). It is exported as a
+portable bundle with a `predict_power()` wrapper. See `docs/model-card-predict_power.md` for its intended use and
 limitations.
 
 Scope: PsychAD (`Roussos` shards, DLPFC) only; cell types Astro, Micro, Oligo;
@@ -29,40 +29,34 @@ The canonical route is the `pipeline/` stage graph (`pipeline/stages.tsv`,
 | | `00b_Cache_Shard_Read_Counts.R` | Caches per-cell read counts for every donor shard |
 | | `01_Build_Fitting_Dataset.R` | Per-iteration detection outcomes with measured `n_cells` and `reads_per_cell`, cells and reads modes merged; run once per DE method |
 | | `01b_Aggregate_Fitting_Data.R` | Collapses iterations to `detection_rate` and `n_trials` per (gene, cell type, DE method, mode, design point, run) |
-| | `01e_Filter_Realistic.R` | Keeps rows with `n_cells >= 100` (the realistic sub-grid) |
-| `xgb_base_search` (array of 12) | `02_Fit_XGBoost.R` | Baseline model on the full grid: one hyperparameter config per task, gene-grouped 5-fold CV |
-| `xgb_base_select` | `03_Select_XGBoost.R` | Picks the baseline winner by CV log loss; calibration and SHAP. Used only as a comparator in Figure 5 |
-| `xgb_real_search` (array of 36) | `02_Fit_XGBoost.R` | Realistic model: 12 tree configs x 3 re-weighting exponents (`alpha` in {0, 0.5, 1}) |
-| `xgb_real_select` | `03_Select_XGBoost.R` | Ranks the 36 configs by out-of-fold bin-balanced MAE, promotes the winner, refits the five models shown in SHAP figures (winner per alpha, median, worst) |
-| `xgb_real_shap` | `04_SHAP_Figures.R` | SHAP dependence and violin figures for the selected realistic models |
-| `xgb_post` | `08b_Baseline_OOF.R` | Out-of-fold predictions for the baseline winner |
-| | `04_Export_XGBoost.R` | Writes the portable model bundle and `predict_power.R` |
+| | `01e_Filter_Design.R` | Keeps rows with `n_cells >= 100`: the training table `aggregated_fitting_data.qs` |
+| `xgb_search` (array of 108) | `02_Fit_XGBoost.R` | One hyperparameter configuration per task (`XGB_CONFIG_INDEX`), gene-grouped 5-fold CV, then a full fit |
+| `xgb_select` | `03_Select_XGBoost.R` | Ranks the 108 configurations by out-of-fold bin-balanced MAE (per-fold values kept), promotes the winner, refits the five models shown in SHAP figures (winner per alpha, median, worst) |
+| `xgb_shap` | `04_SHAP_Figures.R` | SHAP dependence and violin figures for the five selected models |
+| `xgb_post` | `04_Export_XGBoost.R` | Writes the portable model bundle and `predict_power.R` |
 | | `07_LowPower_Diversity.R` | Mean-power heatmaps of the low-power rows (Figure 5E) |
-| | `08_Compare_Reweighted.R` | Calibration and SHAP comparison across the re-weighted models |
-| | `09_Trinary_Classification.R` | Out-of-fold class F1 for low / borderline / high power partitions (Figure 5C) |
+| | `08_Compare_Reweighted.R` | Calibration across configurations, SHAP comparison, and the hyperparameter bracketing with fold-paired standard errors (Figure 5B) |
+| | `09_Trinary_Classification.R` | The selected model's out-of-fold per-class precision, recall and F1 for low / borderline / high power partitions (Figure 5C) |
 | | `_regenerate_xgb_panels.R` | Figure 5 panels (then composed by `R/figure_composition/compose_xgb_panels.R`) |
 
+The XGBoost stages run with 8 threads (`XGB_NTHREAD` and `OMP_NUM_THREADS`).
 The exported bundle is then used by the `gene_class` stage
 (`R/gene_classification/`, Figure 6).
 
-### Supporting analyses (not called by `pipeline/`)
+The AD vs control stage `ad_pcf` runs `00`, `00b`, `01`, `01b` and `01e` again
+with `EPA_CONTRAST=ad_vs_control`, writing to
+`Datalink/AD_vs_Control/Power_Curve_Fitting/`. That table is only a test set:
+`R/ad_contrast/03_Validate_Power_Model.R` (stage `ad_validate`) applies the
+sex-trained model to it.
 
-| Script | What it does |
-|--------|--------------|
-| `01d_Detection_Scatter.R` | Detection of small-effect truth genes in baseMean x dispersion space at fixed designs |
-| `04b_CellType_ICE.R` | ICE / swing analysis of the `cell_type` input; justifies defaulting it to Oligo |
-| `04c_Swing_vs_Error.R` | Compares the cell-type swing with the model's out-of-fold error |
-| `10_PerGene_Bimodality.R` | Tests whether detection is close to all-or-nothing per gene |
+### Removed
 
-### Legacy (logistic era, not used for the paper)
-
-`02_Fit_Models.R`, `03_Visualise.R`,
-`04_Cross_Validate_Modes.R`, `05_Export_Equations.R`,
-`06_Compare_All_Models.R` and the master runner `run_pipeline.R` belong to the
-retired logistic-regression model (v4.0.0 to v4.1.0). `run_pipeline.R` still
-calls these scripts and does not run the XGBoost steps. The unit tests
-(`tests/test_power_curve_fitting.R`) and toy test (`toy/run_toy_test.R`) also
-cover the logistic model only.
+The retired logistic-regression model (v4.0.0 to v4.1.0, including the
+master runner `run_pipeline.R`) and the supporting analyses that were not in
+the paper (`01d`, `04b`, `04c`, `10`) are no longer in the repository; they
+remain in the git history. The unit tests (`tests/test_power_curve_fitting.R`)
+and toy test (`toy/run_toy_test.R`) date from the logistic model and do not
+cover the XGBoost steps.
 
 ## 3. Inputs
 
@@ -82,14 +76,14 @@ All paths are under `Datalink/Power_Curve_Fitting/`.
 | Read-count cache | `Shard_Cache/{CT}/donor_{ID}_reads.qs` |
 | Per-iteration detection, per DE method | `Fitting_Data/{CT}/unified_fitting_data_per_iteration__{method}.qs` |
 | Aggregated training table (full grid) | `Fitting_Data/aggregated_fitting_data_all.qs` |
-| Aggregated training table (realistic) | `Fitting_Data/aggregated_fitting_data_realistic.qs`, plus `filter_summary.csv`, `filter_dropped_by_group.csv` |
-| Baseline model | `Models/xgboost/` (`booster.ubj`, `feature_spec.qs`, `model_selection.csv`, `calibration*.csv`, SHAP outputs, `search/config_{k}/`) |
-| Realistic (production) model | `Models/xgboost/realistic/` (`booster.ubj`, `feature_spec.qs`, `model_selection.csv`, `cv_metrics.csv`, `shap_selection.csv`, `search/config_{k}/` with per-config out-of-fold predictions) |
-| Downstream analyses | `Models/xgboost/realistic/{shap_figures,comparison,lowpower_diversity,trinary_classification,supp_panels}/` |
+| Training table (`n_cells >= 100`) | `Fitting_Data/aggregated_fitting_data.qs`, plus `filter_summary.csv`, `filter_dropped_by_group.csv` |
+| Power model | `Models/xgboost/` (`booster.ubj`, `feature_spec.qs`, `model_selection.csv`, `model_selection_folds.csv`, `cv_metrics.csv`, `calibration_residuals.csv`, `shap_selection.csv`, `shap_models/`, SHAP and importance tables) |
+| Search | `Models/xgboost/search/config_{k}/` (one per configuration, with out-of-fold predictions) |
+| Downstream analyses | `Models/xgboost/{shap_figures,comparison,lowpower_diversity,trinary_classification,supp_panels}/` |
 | Figure 5 | `Models/xgboost/figure_xgb_composed.png` |
-| Portable model | `Exports/xgboost/realistic/{power_model_bundle.rds,predict_power.R,example_power_curve.csv,README.md}` |
+| Portable model | `Exports/xgboost/{power_model_bundle.rds,predict_power.R,example_power_curve.csv,README.md}` |
 
-`model_selection.csv` for the realistic model is Supplementary Data 4. Load
+`model_selection.csv` is Supplementary Data 4. Load
 boosters from `booster.ubj` (or the bundle via `xgb.load.raw()`), not from
 `booster.qs`.
 
@@ -102,11 +96,13 @@ boosters from `booster.ubj` (or the bundle via `xgb.load.raw()`), not from
   `cell_type` and `de_method`. 12 columns in total.
 - Monotone constraints: increasing in the first five continuous features,
   decreasing in dispersion.
-- Search grid: `max_depth` {3, 4, 6} x `eta` {0.03, 0.1} x `min_child_weight`
-  {1, 10}, `subsample = 0.8`, `colsample_bytree = 0.8`, up to 5,000 rounds with
-  early stopping after 50. Folds are grouped by gene.
-- Selected realistic model: config 25 (`alpha = 0`, `max_depth = 6`,
-  `eta = 0.03`, `min_child_weight = 10`, 1,383 rounds).
+- Search grid: `max_depth` {3, 4, 6, 10} x `eta` {0.01, 0.03, 0.1} x
+  `min_child_weight` {1, 10, 25} x `alpha` {0, 0.5, 1} = 108 configurations,
+  `subsample = 0.8`, `colsample_bytree = 0.8`, up to 20,000 rounds with early
+  stopping after 50 rounds without improvement in log loss. Folds are grouped
+  by gene.
+- Selection: lowest out-of-fold bin-balanced MAE; the winner is the first row
+  of `model_selection.csv`.
 - Export defaults: `cell_type = "Oligo"`, `de_method = "deseq2"`,
   `n_cells = 250`, `reads_per_cell = 5742`.
 
@@ -129,35 +125,34 @@ depth-equalised Astro variants, `GENE_SETS`, `LRT_ALPHA`, `LOOKUP_*`), which
 the XGBoost steps do not use.
 
 XGBoost scripts are controlled by environment variables: `XGB_FITTING_DATA`
-(`aggregated_fitting_data_realistic.qs` for the production model),
-`XGB_MODEL_SUBDIR` (`realistic`), `XGB_CONFIG_INDEX` (array task), and
+(default `aggregated_fitting_data.qs`), `XGB_MODEL_SUBDIR` (default empty, i.e.
+`Models/xgboost/`; set only for side experiments), `XGB_CONFIG_INDEX` (array
+task, 1 to 108), `XGB_MAX_NROUNDS` (20,000), `XGB_EARLY_STOP` (50) and
 `XGB_NTHREAD` (fixed at 8 in the pipeline, since thread count can change
 floating-point summation order). `XGB_MIN_N_CELLS` sets the 01e threshold
-(default 100).
+(default 100). `EPA_CONTRAST=ad_vs_control` (see `R/shared/contrast.R`)
+switches steps 00 to 01e to the AD vs control shards and output tree.
 
 ## 7. How to run
 
-End to end, on a PBS cluster, via the stage graph (see `pipeline/README.md`):
+Only through the stage graph (see `pipeline/README.md`), on a PBS cluster or
+with `--local` on one host:
 
 ```bash
-pipeline/run.sh $WORK            # submits all stages, including those above
+pipeline/run.sh $WORK                  # submits all stages, including those above
 pipeline/run.sh $WORK --status
+pipeline/run.sh $WORK --only xgb_post  # rerun one stage (its dependencies must be complete)
 ```
 
-To run one script by hand from the repository root, set the same environment
-variables the stage scripts set, for example the production export:
-
-```bash
-XGB_MODEL_SUBDIR=realistic \
-XGB_FITTING_DATA=aggregated_fitting_data_realistic.qs \
-Rscript R/power_curve_fitting/04_Export_XGBoost.R
-```
+`pipeline/stages/<stage>.sh` shows the exact scripts and environment variables
+each stage uses.
 
 ## 8. Not tested
 
 - No automated tests cover the XGBoost steps; the existing tests target the
   legacy logistic model.
-- No cross-cohort validation: trained and evaluated on PsychAD only.
+- No cross-cohort validation: trained and evaluated on PsychAD only (the AD
+  vs control test uses the same cohort).
 - Extrapolation beyond the training ranges (trees predict a constant there;
   `predict_power()` warns).
 - Accuracy of the truth-half DESeq2 dispersion estimates is assumed.

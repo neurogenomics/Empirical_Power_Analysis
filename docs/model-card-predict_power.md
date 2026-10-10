@@ -1,7 +1,7 @@
 # Model Card: `predict_power.R` (XGBoost power model)
 
 This card documents the gradient-boosted power model shipped in
-`Datalink/Power_Curve_Fitting/Exports/xgboost/realistic/`. It follows the
+`Datalink/Power_Curve_Fitting/Exports/xgboost/`. It follows the
 [Model Cards for Model Reporting](https://arxiv.org/abs/1810.03993) framework.
 The earlier logistic-regression model (pipeline v4.0.0) is retired and is not
 the model reported in the paper.
@@ -19,9 +19,10 @@ the model reported in the paper.
   `cell_type` (Astro, Micro, Oligo).
 - **Monotone constraints**: predicted power is non-decreasing in donors, cells,
   reads per cell, |LFC| and baseMean, and non-increasing in dispersion.
-- **Selected configuration**: config 25 of 36 (`alpha = 0`, `max_depth = 6`,
-  `eta = 0.03`, `min_child_weight = 10`, `subsample = 0.8`,
-  `colsample_bytree = 0.8`, 1,383 boosting rounds; grouped-CV log loss 0.1001).
+- **Selected configuration**: the top-ranked of 108 configurations, i.e. the
+  first row of `Models/xgboost/model_selection.csv` (Supplementary Data 4),
+  which records its hyperparameters, boosting rounds and grouped-CV log loss.
+  The manuscript quotes these values from that file at knit time.
 - **Training code**: `R/power_curve_fitting/02_Fit_XGBoost.R` (search),
   `03_Select_XGBoost.R` (selection), `04_Export_XGBoost.R` (export).
 - **Exported with**: pipeline v4.2.0, xgboost 3.2.1.1.
@@ -65,29 +66,36 @@ the model reported in the paper.
 - **Truth set**: genes with padj < 0.05 and |LFC| > 0.2 in the truth half
   (sex contrast). A gene counts as detected in a subsample when padj < 0.05.
 - **Training rows**: detection rate per gene, cell type, DE method, design
-  point and run, restricted to `n_cells >= 100` (the "realistic" sub-grid,
-  `01e_Filter_Realistic.R`). Rows below 100 cells per donor are excluded
-  because they do not correspond to designs anyone would plan.
+  point and run, restricted to `n_cells >= 100` (`01e_Filter_Design.R`,
+  output `Fitting_Data/aggregated_fitting_data.qs`). Rows below 100 cells per
+  donor are excluded because they do not correspond to designs anyone would
+  plan.
 
 ## Evaluation
 
 - **Protocol**: 5-fold cross-validation grouped by gene (all rows of a gene
-  sit in one fold), early stopping on log loss. The 36 configurations
-  (12 tree settings x 3 loss re-weighting exponents, `alpha` in {0, 0.5, 1})
-  are ranked by out-of-fold bin-balanced MAE (`model_selection.csv`).
-- **Extremes**: 97.6% (power 0 to 0.1) and 98.0% (power 0.9 to 1) of
-  out-of-fold predictions fall within 0.10 of the observed detection rate.
-- **Mid band**: MAE is 0.22 to 0.24 for observed power between 0.2 and 0.8,
-  across all configurations tried.
-- **Data balance**: only 7.8% of grid rows have observed power in (0.1, 0.9);
+  sit in one fold), early stopping after 50 rounds without improvement in log
+  loss, up to 20,000 rounds. The search grid is `max_depth` {3, 4, 6, 10} x
+  `eta` {0.01, 0.03, 0.1} x `min_child_weight` {1, 10, 25} x loss
+  re-weighting exponent `alpha` {0, 0.5, 1} (108 configurations;
+  `subsample = colsample_bytree = 0.8`). Each tree hyperparameter has one value
+  beyond the best end of an earlier, smaller search, so the grid brackets the
+  optimum (Figure 5B). Configurations are ranked by out-of-fold bin-balanced
+  MAE (`model_selection.csv`; per-fold values in `model_selection_folds.csv`).
+- **Extremes and mid band**: out-of-fold predictions track the observed
+  detection rate closely near power 0 and 1, and much less closely between
+  about 0.2 and 0.8, in every configuration (Figure 5A).
+- **Data balance**: most training rows have observed power near 0 or 1;
   detection is close to all-or-nothing for most gene and design combinations.
-- **Classification view**: `09_Trinary_Classification.R` reports per-class
-  precision, recall and F1 for several low / borderline / high partitions.
+- **Classification view**: `09_Trinary_Classification.R` reports the selected
+  model's out-of-fold per-class precision, recall and F1 for several
+  low / borderline / high partitions (Figure 5C).
 
 ## Limitations and caveats
 
-1. **Mid-band unreliability.** Between roughly 0.2 and 0.8 the prediction can
-   be off by about 0.2 on average. Treat such outputs as "borderline".
+1. **Mid-band unreliability.** Between roughly 0.2 and 0.8 the prediction is
+   much less accurate than at the extremes. Treat such outputs as
+   "borderline".
 2. **Extrapolation.** Trees predict a flat constant beyond the observed range
    of each feature. `predict_power()` warns when any continuous input falls
    outside the training range; designs below 100 cells per donor or above
@@ -98,12 +106,16 @@ the model reported in the paper.
 4. **Sex as the contrast.** The truth set is sex-differential expression,
    used because it gives a known, cohort-wide biological signal. Disease
    contrasts may have a different effect-size and dispersion structure, so
-   predicted power for them is less certain.
+   predicted power for them is less certain. The pipeline tests the
+   sex-trained model on an AD vs control grid from the same cohort
+   (`R/ad_contrast/03_Validate_Power_Model.R`, outputs in
+   `Datalink/AD_vs_Control/Power_Model_Test/`); where that test goes in the
+   manuscript is not yet decided.
 5. **Cell type default.** `cell_type` defaults to Oligo, the cell type with
-   the least depth-censored truth set. The ICE and swing analyses
-   (`04b_CellType_ICE.R`, `04c_Swing_vs_Error.R`) show that defaulting to Oligo
-   tends to under-state power for the other cell types, which is the
-   conservative direction for planning.
+   the least depth-censored truth set. An earlier ICE and swing analysis of
+   the `cell_type` input (not part of the reproduction pipeline) found that
+   defaulting to Oligo tends to under-state power for the other cell types,
+   which is the conservative direction for planning.
 6. **Gene inputs must be estimated.** `abs_lfc`, `basemean` and `dispersion`
    are on the DESeq2 scale of a pseudobulk fit. Values from pilot data or
    other tools need to be on the same scale.

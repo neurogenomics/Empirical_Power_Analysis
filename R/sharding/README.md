@@ -5,20 +5,20 @@ uniform donor-level shard store. Every downstream pipeline (full ground truth,
 cartesian downsampling, depth equalisation, EDA) expects shards in the format
 produced here.
 
-The directory also contains sharders for four other cohorts (SEA-AD, ROSMAP,
-Johansen, Rexach) and a cross-dataset gene ID harmoniser. These were used for
-the earlier cross-dataset analysis, which is no longer part of the paper; they
-are obsolete (not used for the paper).
+It also builds the AD vs control shard subset used by the AD vs control
+stages. The sharders for other cohorts used by an earlier cross-dataset
+analysis are no longer in the repository (scope is PsychAD only).
 
 ## Use in the Reproduction Pipeline
 
 The canonical end-to-end route is `pipeline/` (see `pipeline/README.md`). Stage
-`shard` first checks the raw inputs against `pipeline/inputs.sha256`, then runs
-only:
+`shard` first checks the raw inputs against `pipeline/inputs.sha256`, then runs:
 
 ```bash
 Rscript R/sharding/Run_Shard_Roussos.R Astro,Micro,Oligo
 ```
+
+Stage `ad_shard` runs `Rscript R/sharding/Build_AD_Control_Shards.R <n_cores>`.
 
 ## What each script does
 
@@ -27,12 +27,7 @@ Rscript R/sharding/Run_Shard_Roussos.R Astro,Micro,Oligo
 | `Run_Shard_Roussos.R`          | Paper    | Orchestrator: runs the three steps below for each cell type |
 | `Run_Shard_Roussos_Full.R`     | Paper    | Step 1: unfiltered donor shards from `PsychAD-{HBCC,RADC,MSSM}.h5ad` (`Roussos_Full`) |
 | `Annotate_Roussos_PMI.R`       | Paper    | Step 3: writes donor post-mortem interval (`pmi`, minutes) from `media-1.csv` into shard `colData` |
-| `Audit_Roussos_PMI.R`          | Optional | Read-only check that every shard donor joins to a PMI value; writes `Datalink/Shards/.pmi_audit/` |
-| `Run_Shard_Allen.R`            | Obsolete (not used for the paper) | SEA-AD sharder |
-| `Run_Shard_DeJager.R`          | Obsolete (not used for the paper) | ROSMAP sharder |
-| `Run_Shard_Johansen.R`         | Obsolete (not used for the paper) | Johansen sharder |
-| `Run_Shard_Rexach.R`           | Obsolete (not used for the paper) | Rexach sharder |
-| `Run_Harmonise_Gene_IDs.R`     | Obsolete (not used for the paper) | Converts gene symbols to Ensembl IDs in DeJager/Johansen shards |
+| `Build_AD_Control_Shards.R`    | AD vs control | Copies the filtered shards of donors with AD as the only recorded diagnosis, or no recorded diagnosis, to `Roussos_ADvsCtrl/` with an added `ad_group` column; writes `Datalink/AD_vs_Control/ad_control_donor_counts.csv` |
 
 `Run_Shard_Roussos.R` steps, per cell type:
 
@@ -45,6 +40,8 @@ Rscript R/sharding/Run_Shard_Roussos.R Astro,Micro,Oligo
 
 ## Running
 
+The supported way to run this is `pipeline/run.sh` (`--only <stage>` reruns one stage). The commands below are what the stage runs, for reading and debugging inside the container.
+
 ```bash
 export POWER_ANALYSIS_ROOT=/path/to/this/repo     # optional; otherwise here::here()
 Rscript R/sharding/Run_Shard_Roussos.R             # Astro, Micro, Oligo
@@ -53,8 +50,9 @@ Rscript R/sharding/Run_Shard_Roussos.R Astro,Oligo # subset
 
 ## Inputs
 
-Under `Datalink/raw_data/` (not distributed): `PsychAD-HBCC.h5ad`,
-`PsychAD-MSSM.h5ad`, `PsychAD-RADC.h5ad` and `media-1.csv`. See
+Under `Datalink/raw_data/` (not distributed; `pipeline/run.sh` mounts
+`WORK/raw/` there read-only): `PsychAD-HBCC.h5ad`, `PsychAD-MSSM.h5ad`,
+`PsychAD-RADC.h5ad` and `media-1.csv`. See
 `pipeline/README.md` for sources and `pipeline/inputs.sha256` for checksums.
 
 ## Outputs

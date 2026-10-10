@@ -38,7 +38,10 @@ must stay in sync when pipelines are added or renamed. CI stub-run enforces this
 
 ## ADR-001b: Replace Nextflow with bash drivers + Docker image
 
-**Status**: Accepted, 2026-04-28
+**Status**: Accepted, 2026-04-28. SUPERSEDED by ADR-007 (2026-10-01). The bash
+drivers (`run_all.sh`, `run_power_curve_fitting.sh`) and `docker-run.sh` /
+`docker-all.sh` were removed from the repository on 2026-10-10. Original
+decision retained below for historical context.
 
 **Context**: ADR-001 chose Nextflow for SLURM dispatch and lab consistency.
 In practice we never deployed to SLURM for this paper, all production runs
@@ -168,8 +171,13 @@ versions.
 in `Dockerfile`, not only by the mutable release tag; apt packages added on top
 are pinned in `docker/apt-packages.txt`, R packages come from `renv.lock`, and
 Python packages are installed with `pip --require-hashes`. The image is built
-locally with `docker/docker-build.sh` (there is no CI build) and converted to
-Apptainer with `docker/build-sif.sh` for cluster use.
+locally with `docker/docker-build.sh` (there is no CI build), checked with
+`docker/docker-smoke.sh` and converted to Apptainer with `docker/build-sif.sh`
+for `pipeline/run.sh`. The release image is tagged
+`empirical-power-analysis:v1.0.0` and, once published, is available as
+`ghcr.io/neurogenomics/empirical_power_analysis`. The container, not a
+snapshot of the analysis host, defines the environment, so the former host
+snapshot (`Reproducibility/`) was removed. See `docs/container.md`.
 
 ---
 
@@ -193,15 +201,16 @@ file and in the relevant README.
 
 ## ADR-007: Staged PBS pipeline for full reproduction
 
-**Status**: Accepted, 2026-10-01. Supersedes the single-host route of ADR-001b
-for reproducing the paper; the bash drivers remain for single-pipeline reruns.
+**Status**: Accepted, 2026-10-01. Supersedes ADR-001b. Since 2026-10-10 it is
+the only supported way to run the code.
 
 **Context**: Three DE methods × 10 robustness runs × two downsampling modes made
 the grid far too large for one host, and the Imperial CX3 cluster has no internet
 on compute nodes and penalises many small files on its shared filesystem.
 
 **Decision**: `pipeline/run.sh` submits each stage in `pipeline/stages.tsv` as a
-dependency-chained PBS job (the grid as an array job). Every stage runs in the
+dependency-chained PBS job (the sex-contrast grid, the XGBoost hyperparameter
+search and the AD vs control grid as array jobs). Every stage runs in the
 pinned Apptainer image, stages inputs to node-local scratch as a few large tars,
 and writes its outputs as tars. Raw inputs and an offline `reference/` bundle
 (biomaRt caches, annotation tables, citation style) are checked against
@@ -210,5 +219,8 @@ that is not part of the pipeline.
 
 **Consequences**: One command reproduces every figure, table, quoted number and
 Supplementary Data file and knits the manuscript. The pipeline is written for
-PBS Pro; other schedulers need a port of `pipeline/lib/`. The older hand-driven
-scripts in `hpc/` are kept for reference only.
+PBS Pro; other schedulers need a port of `pipeline/lib/`. `--local` runs the
+same stages one after another on a single host. Code that `pipeline/run.sh`
+does not execute, and outputs the manuscript does not read, were untracked
+(commit `f14c924`: the bash drivers, `hpc/`, the other cohorts, the logistic
+model and off-paper analyses); they remain in the git history.

@@ -1,2 +1,0 @@
-# Placeholder so this directory exists in fresh clones. Real sharding input
-# data is never committed; production runs read from Datalink/raw_data.

@@ -33,7 +33,7 @@
 #   for a manuscript chunk to include when wired in. Re-running refreshes the
 #   figure. It does not edit the .rmd itself.
 #
-# Run (on iclneuro, where the .qs checkpoints and R live):
+# Run (on a host where the .qs checkpoints and R live):
 #   Rscript R/figure_composition/compose_precision_panels.R
 #   Rscript R/figure_composition/compose_precision_panels.R --cell Oligo --mode cells
 #   Rscript R/figure_composition/compose_precision_panels.R --datalink /path/to/Datalink

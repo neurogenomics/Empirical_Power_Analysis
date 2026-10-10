@@ -28,6 +28,7 @@ The canonical end-to-end route is `pipeline/` (see `pipeline/README.md`). The st
 | `grid` | 2 | PBS array: one task per (mode, chunk), `JOB_N_CHUNKS` chunks per mode |
 | `cartesian_cells`, `cartesian_reads` | 3, 3.5, 4, 5, 6 | With `CARTESIAN_INCLUDE_ALL_METHODS=true` so the pooled `all_methods` outputs are plotted |
 | `crossscore` | `10_CrossScore_Methods.R` | Run directly, both modes, all runs |
+| `ad_gt_manifest`, `ad_grid`, `ad_cartesian` | 1 and 1.5, then 2 (PBS array), then 3, 3.5, 4, 5, 6 | AD vs control contrast: `EPA_CONTRAST=ad_vs_control`, `SHARD_DATASET=Roussos_ADvsCtrl`, cells mode only, same seeds. Outputs under `Cartesian_Downsampling/{CT}/Roussos_ADvsCtrl/` |
 
 ---
 
@@ -188,6 +189,8 @@ The `gt_manifest`, `grid`, `cartesian_cells`, `cartesian_reads` and `crossscore`
 
 ## Usage
 
+The supported way to run this is `pipeline/run.sh` (`--only <stage>` reruns one stage). The commands below are what the stage runs, for reading and debugging inside the container.
+
 ### Run Specific Steps
 ```bash
 # Ground truth and job manifest (cells mode)
@@ -204,6 +207,7 @@ CARTESIAN_INCLUDE_ALL_METHODS=true Rscript R/cartesian_downsampling/run_pipeline
 
 `config.R` settings (most overridable by environment variable):
 - `SHARD_DATASET` - Dataset (default `Roussos`)
+- `EPA_CONTRAST` - `sex` (default) or `ad_vs_control` (see `R/shared/contrast.R`; must match `SHARD_DATASET`)
 - `DOWNSAMPLE_MODE` - `cells` or `reads`
 - `DONOR_STEPS` / `CELL_STEPS` / `READ_STEPS` - Grid dimensions
 - `N_ROBUSTNESS_RUNS` (10), `RUN_START` / `RUN_END` - Runs to process

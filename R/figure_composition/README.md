@@ -22,6 +22,9 @@ python3 R/figure_composition/compose_supplementary.py --mode <mode>
 
 Stage `xgb_post` runs `Rscript R/figure_composition/compose_xgb_panels.R`.
 
+Stage `ad_cartesian` runs, for each of Astro, Micro and Oligo, `compose_recall_panels.R` and
+`compose_precision_panels.R` with `--mode cells --dataset Roussos_ADvsCtrl --composed-dir AD_vs_Control/Composed_Figures`.
+
 ## Scripts and the figures they produce
 
 | Script | Output (paper copy) | Paper figure |
@@ -32,9 +35,9 @@ Stage `xgb_post` runs `Rscript R/figure_composition/compose_xgb_panels.R`.
 | `compose_crossscore.R` | `Composed_Figures/Cross_Score/crossscore_{recall,precision}_mega_{Astro,Micro,Oligo}_{cells,reads}_discrete_raw.png` | Supplementary cross-method grids |
 | `compose_supplementary.py` | `Composed_Figures/Supplementary/supp_*_bymethod_{cells,reads}.png` (36 files) | Supplementary per-method surfaces and tiny/small panels |
 | `interp_helpers.R` | (helper) | Local copy of the interpolation helpers from `R/cartesian_downsampling/07_Visualise_Continuous_Grid.R`, sourced by `compose_crossscore.R` |
-| `compose_crossscore.py` | (wrapper) | Compatibility wrapper around `compose_crossscore.R` |
-| `compose_precision_panels.R` | `Composed_Figures/figure_precision_panels_<cell>_<mode>.png` | Not used for the paper (precision counterpart of the recall panels) |
-| `figure1_panel_a.py` | (none in the pipeline) | Not used by the pipeline. Fig. 1 (`FigOverview`) uses the static `Figure1_Diagram.png` at the repository root |
+| `compose_precision_panels.R` | `AD_vs_Control/Composed_Figures/figure_precision_panels_<cell>_cells.png` | AD vs control figures only (precision counterpart of the recall panels; placement in the manuscript not yet decided) |
+
+Fig. 1 (`FigOverview`) uses the static `Figure1_Diagram.png` at the repository root.
 
 Fig. 6 (`FigGeneGroups`) is produced by `R/gene_classification/`, not here.
 
@@ -61,6 +64,3 @@ Each figure is rendered in three styles under
 - `compose_recall_panels.R` rebuilds its panels from the cartesian checkpoints rather than tiling PNGs, so facet annotations and subtitles can be dropped.
 - To change a source image for `compose_figures.py`, edit the `FIG1_SOURCES` dictionary at the top of the script; layout lives in `build_fig1*`.
 - Python dependencies (Pillow etc.) are pinned in `docker/python-requirements.txt`.
-
-`FIGURE_TRACKING.md` is a historical handover note from the original
-compositing trial and does not describe the current figure set.

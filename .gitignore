@@ -173,9 +173,7 @@ paper_final_draft.rmd
 # Keep ONLY paper-cited Datalink artefacts; drop internal/agent docs.
 # =============================================================================
 
-# Agent-facing / internal contributor docs (reference internal tooling and
-# server paths; not for the public repo).
-AGENTS.md
+# Internal agent notes (AGENTS.md is the public agent guide and IS tracked).
 CLAUDE.md
 GEMINI.md
 
@@ -298,3 +296,18 @@ Datalink/Supplementary_Data/_scripts/
 /Datalink/Paper_Source_Data/truth_gene_characteristics.csv
 /Datalink/Paper_Source_Data/depth_eq_truth_summary*.csv
 /Datalink/Power_Curve_Fitting/Models/xgboost/realistic/per_gene_bimodality/
+# Tests that need the full data on disk, or test the archived logistic model
+# (the five self-contained unit tests that remain are listed in AGENTS.md)
+/R/cartesian_downsampling/tests/test_aggregation.R
+/R/cartesian_downsampling/tests/test_deseq_worker.R
+/R/cartesian_downsampling/tests/test_fittype_equivalence.R
+/R/cartesian_downsampling/toy/
+/R/de_diagnostics/tests/test_de_diagnostics.R
+/R/depth_equalization/tests/
+/R/eda_roussos/toy/
+/R/full_ground_truth/tests/
+/R/full_ground_truth/toy/
+/R/power_curve_fitting/tests/
+/R/power_curve_fitting/toy/
+/R/sharding/tests/
+/R/sharding/toy/

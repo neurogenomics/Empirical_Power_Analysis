@@ -25,7 +25,7 @@ project_path <- function(...) file.path(PROJECT_ROOT, ...)
 # PATH CONFIGURATION
 # ==============================================================================
 
-# Input: raw single-cell files (not distributed; see Datalink/raw_data/README.md)
+# Input: raw single-cell files (not distributed; see Datalink/raw_data_README.md)
 RAW_DATA_DIR <- project_path("Datalink", "raw_data")
 
 # Output: donor-level SingleCellExperiment shards

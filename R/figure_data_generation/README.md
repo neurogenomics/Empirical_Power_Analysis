@@ -8,7 +8,7 @@ from pipeline outputs rather than typed by hand.
 ## Use in the Reproduction Pipeline
 
 The canonical end-to-end route is `pipeline/` (see `pipeline/README.md`). Only
-steps 1, 6 and 8 are run:
+steps 1, 6 and 8 exist:
 
 | Stage | Command | Used for |
 |-------|---------|----------|
@@ -17,16 +17,17 @@ steps 1, 6 and 8 are run:
 
 ## Steps
 
-| Step | Script | Status | Output |
-|------|--------|--------|--------|
-| 1 | `01_Dataset_Statistics.R` | Paper | `Paper_Source_Data/dataset_statistics.csv` (PsychAD x 3 cell types) |
-| 2 | `02_Truth_Gene_Characteristics.R` | Obsolete (not used for the paper) | `Paper_Source_Data/truth_gene_characteristics.csv` (uses the legacy \|LFC\| > 1 cut-off) |
-| 3 | `03_Collect_Model_Data.R` | Obsolete (not used for the paper) | `model_coefficients.csv`, `model_summary.csv` from the removed logistic-regression power model |
-| 4 | `04_Collect_FDP_Data.R` | Obsolete (not used for the paper) | `fdp_summary.csv` from the removed cross-dataset FDP analysis |
-| 5 | `05_Validate_Exports.R` | Obsolete (not used for the paper) | Checks the step 1-4 files; expects the old five-dataset layout |
-| 6 | `06_Autosomal_vs_SexChr_Summary.R` | Paper | `Datalink/_scratch_autosomal_vs_sexchr_summary.csv` and `_pivot.csv` |
-| 7 | `07_Depth_Eq_Truth_Summary.R` | Not run by the pipeline | `depth_eq_truth_summary.csv`, `depth_eq_truth_summary_sd.csv` |
-| 8 | `08_Recall_Precision_Grid.R` | Paper | `Paper_Source_Data/recall_precision_grid.csv` |
+| Step | Script | Output |
+|------|--------|--------|
+| 1 | `01_Dataset_Statistics.R` | `Paper_Source_Data/dataset_statistics.csv` (PsychAD x 3 cell types) |
+| 6 | `06_Autosomal_vs_SexChr_Summary.R` | `Datalink/_scratch_autosomal_vs_sexchr_summary.csv` and `_pivot.csv` |
+| 8 | `08_Recall_Precision_Grid.R` | `Paper_Source_Data/recall_precision_grid.csv` |
+
+Step numbers are kept from the original pipeline. Steps 2-5 and 7 (truth-gene
+characteristics at the legacy \|LFC\| > 1 cut-off, logistic-model
+coefficients, the cross-dataset FDP summary, an export validator, and
+depth-equalised truth-set summaries) were not used by the paper and are no
+longer in the repository.
 
 Notes:
 
@@ -35,6 +36,8 @@ Notes:
 - Step 8 flattens the cartesian `Aggregated_Summary_Data.qs` checkpoints into one row per (cell type, mode, method, donors, cells/UMI level, \|LFC\| bin, gene category).
 
 ## Usage
+
+The supported way to run this is `pipeline/run.sh` (`--only <stage>` reruns one stage). The commands below are what the stage runs, for reading and debugging inside the container.
 
 ```bash
 # Steps used for the paper
@@ -45,8 +48,7 @@ Rscript R/figure_data_generation/run_pipeline.R 6,8
 Rscript R/figure_data_generation/run_pipeline.R 1 24
 ```
 
-`run_pipeline.R` with no arguments runs all steps, including the obsolete ones,
-which fail if their legacy inputs are absent.
+`run_pipeline.R` with no arguments runs steps 1, 6 and 8.
 
 ## Step 1 runtime
 

@@ -33,7 +33,7 @@
 #   Datalink/Power_Curve_Fitting/Models/xgboost/figure_xgb_composed.png
 #   Re-running refreshes the draft figure in place. It does not edit the .rmd.
 #
-# Run (on iclneuro, where the panel PNGs and R live):
+# Run (on a host where the panel PNGs and R live):
 #   Rscript R/figure_composition/compose_xgb_panels.R
 #   Rscript R/figure_composition/compose_xgb_panels.R --datalink /path/to/Datalink
 # =============================================================================

@@ -98,7 +98,6 @@ R/de_diagnostics/
 ├── run_pipeline.R                 # Master runner (steps 4-5)
 ├── 04_DEG_Chromosome_Grid.R       # Step 4: DEG chromosome grid
 ├── 05_Shared_Gene_Diagnostics.R   # Step 5: shared gene cross-CT comparisons
-├── _run_step4.R, _run_step4_shared_datalink.R   # Standalone wrappers for step 4
 ├── tests/
 │   └── test_de_diagnostics.R      # Unit tests
 ├── toy/

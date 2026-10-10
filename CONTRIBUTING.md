@@ -6,9 +6,10 @@ Thank you for considering contributing to the Empirical Power Analysis pipeline.
 
 1. **Fork** the repo and create a feature branch from `main`:
    `git checkout -b feat/your-change main`
-2. **Build + smoke-test the container** to get the pinned environment and confirm
-   the baseline: `./docker/docker-all.sh --skip-run` (build + smoke; see
-   `docs/docker.md`)
+2. **Build and smoke-test the container** to get the pinned environment:
+   `./docker/docker-build.sh --image empirical-power-analysis:<tag>`, then
+   `./docker/docker-smoke.sh --image empirical-power-analysis:<tag>` (see
+   `docs/container.md`)
 3. **Make your change**, respecting the scientific safety rails below
 4. **Add tests**: every scientific-logic change needs a matching `tests/` update
 5. **Run tests locally** before pushing:
@@ -18,9 +19,6 @@ Thank you for considering contributing to the Empirical Power Analysis pipeline.
 
    # Reproduction pipeline tests (stubbed scheduler, no cluster needed)
    bash pipeline/tests/test_pipeline.sh
-
-   # Wrapper sanity check
-   ./run_all.sh --dry-run
    ```
 6. **Open a PR** against `main`. There is no CI at present, so say in the PR
    which tests you ran.
@@ -62,15 +60,12 @@ Thank you for considering contributing to the Empirical Power Analysis pipeline.
 ## Reporting bugs
 
 Open an issue using the bug report template. Include:
-- How you ran the pipeline (`pipeline/run.sh` on a cluster, host-native
-  `./run_all.sh`, container via `./docker/docker-run.sh` / `./docker/docker-all.sh`,
-  or per-pipeline `Rscript R/<pipeline>/run_pipeline.R`)
-- Docker version (`docker --version`) if containerised
-- R version (`R --version`) if host-native
-- Log output: attach the contents of
-  `Datalink/Run_Output_Logs/run_all/latest/` (host-native),
-  `logs/docker-run/latest/` (container), or the failing stage's PBS log and
-  `results/PROVENANCE.txt` (`pipeline/`)
+- How you ran the pipeline: `pipeline/run.sh` on a PBS cluster or with
+  `--local`, and any `--only` stages
+- The container image you used (tag and sha256; both are recorded in
+  `results/PROVENANCE.txt`) and your Apptainer version (`apptainer --version`)
+- Log output: the failing stage's PBS log (or the console output with
+  `--local`) and `results/PROVENANCE.txt`
 - Expected vs actual behaviour
 
 ## Scientific questions
