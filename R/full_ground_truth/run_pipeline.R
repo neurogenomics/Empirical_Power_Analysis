@@ -116,28 +116,10 @@ steps <- list(
     description = "Pseudobulk aggregation + DESeq2 for all 7 datasets x 3 cell types"
   ),
   list(
-    id = 2,
-    name = "Cross-Dataset Diagnostics",
-    script = "02_Cross_Dataset_Diagnostics.R",
-    description = "UpSet plots, correlation matrices, concordance, forest plots, expanded LFC bounds, FDP"
-  ),
-  list(
-    id = 3,
-    name = "Visualise Summary",
-    script = "03_Visualise_Summary.R",
-    description = "Cross-cell-type summary tables and overview figures"
-  ),
-  list(
     id = 4,
     name = "Gene Audit Matrix",
     script = "04_Gene_Audit_Matrix.R",
     description = "Audit gene composition across datasets by chromosome, biotype, and PAR status"
-  ),
-  list(
-    id = 5,
-    name = "Regenerate Heatmaps",
-    script = "02b_Regenerate_Heatmaps.R",
-    description = "Re-render IoU and FDP heatmaps from cached CSVs (viz-only, no DE recomputation)"
   )
 )
 
@@ -146,10 +128,10 @@ steps <- list(
 # ==============================================================================
 
 if (tolower(STEPS_TO_RUN) == "all") {
-  steps_to_run <- seq_along(steps)
+  steps_to_run <- vapply(steps, function(s) s$id, numeric(1))
 } else {
   steps_to_run <- as.integer(unlist(strsplit(STEPS_TO_RUN, ",")))
-  steps_to_run <- steps_to_run[steps_to_run >= 1 & steps_to_run <= length(steps)]
+  steps_to_run <- steps_to_run[steps_to_run %in% vapply(steps, function(s) s$id, numeric(1))]
 }
 
 # ==============================================================================
@@ -183,7 +165,7 @@ step_status <- list()
 
 for (step_id in steps_to_run) {
 
-  step <- steps[[step_id]]
+  step <- Filter(function(s) s$id == step_id, steps)[[1]]
   step_start <- Sys.time()
 
   cat("\n")
@@ -242,7 +224,7 @@ cat("\n")
 
 cat("  Step Details:\n")
 for (step_id in steps_to_run) {
-  step <- steps[[step_id]]
+  step <- Filter(function(s) s$id == step_id, steps)[[1]]
   status <- step_status[[as.character(step_id)]]
   duration <- step_times[[as.character(step_id)]]
 

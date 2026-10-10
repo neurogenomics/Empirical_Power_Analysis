@@ -61,18 +61,6 @@ pipeline_steps <- list(
     name = "PCA Diagnostics",
     script = "01_PCA_Diagnostics.R",
     description = "Generate PCA plots colored by metadata variables"
-  ),
-  list(
-    id = 3,
-    name = "Read Depth Analysis",
-    script = "03_Read_Depth_Analysis.R",
-    description = "Analyze distribution of reads per cell"
-  ),
-  list(
-    id = 6,
-    name = "DE Filtering Summary",
-    script = "06_DE_Filtering_Summary.R",
-    description = "Summarise DESeq2 gene filtering by category and LFC magnitude"
   )
 )
 

@@ -30,9 +30,9 @@ repos:
 
   - repo: local
     hooks:
-      - id: run-all-dry-run
-        name: run_all.sh --dry-run
-        entry: bash -c './run_all.sh --dry-run >/dev/null'
+      - id: pipeline-tests
+        name: pipeline/tests/test_pipeline.sh
+        entry: bash pipeline/tests/test_pipeline.sh
         language: system
-        files: '^(run_all\.sh|run_power_curve_fitting\.sh|run_all\.config)$'
+        files: ^pipeline/
         pass_filenames: false

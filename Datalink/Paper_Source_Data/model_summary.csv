@@ -1,7 +1,0 @@
-"Model","Gene_Set","R2","N_Obs","Req_Donors_80pct_moderate","Req_Donors_80pct_large"
-"Astro","Full",0.666,9372940,125,38
-"Micro","Full",0.733,2649600,59,16
-"Oligo","Full",0.655,10418360,289,82
-"Astro_Shallow","Full",0.713,5841080,124,37
-"Astro_Shallow_Fewer","Full",0.701,3839420,36,11
-"Combined","Combined",0.653,22440900,303,83

@@ -224,3 +224,77 @@ Datalink/Supplementary_Data/Supplementary_Data_2_cartesian_downsampling/
 # Helper scripts used to BUILD the Supplementary Data - kept for provenance,
 # hidden from the public release.
 Datalink/Supplementary_Data/_scripts/
+
+# =============================================================================
+# NOT PART OF THE REPRODUCTION PATH
+# Files below are kept on the analysis server and in git history, but are not
+# needed to reproduce the paper: nothing in pipeline/ calls them and the live
+# manuscript does not use their outputs. The public tree holds only what
+# pipeline/run.sh executes and the manuscript renders.
+# =============================================================================
+# Superseded single-host runners and the manual PBS route (replaced by pipeline/)
+/run_all.sh
+/run_all.config
+/run_power_curve_fitting.sh
+/render_pdf.R
+/docker/docker-run.sh
+/docker/docker-all.sh
+/hpc/
+# Host environment snapshot (the container, not the server, defines the environment)
+/Reproducibility/
+/R/shared/capture_environment.R
+# Non-PsychAD datasets and the GTEx bulk comparison (out of scope)
+/R/bulk_deg_processing/
+/R/sharding/Run_Shard_Allen.R
+/R/sharding/Run_Shard_DeJager.R
+/R/sharding/Run_Shard_Johansen.R
+/R/sharding/Run_Shard_Rexach.R
+/R/sharding/Run_Harmonise_Gene_IDs.R
+/R/sharding/Audit_Roussos_PMI.R
+/R/full_ground_truth/02_Cross_Dataset_Diagnostics.R
+/R/full_ground_truth/02b_Regenerate_Heatmaps.R
+/R/full_ground_truth/03_Visualise_Summary.R
+/Datalink/Bulk_Analysis/
+/Datalink/Full_Ground_Truth/*/Diagnostic_Results/
+/Datalink/Full_Ground_Truth/FDP_Summary.csv
+# One-off runners with hard-coded server paths
+/R/full_ground_truth/_run_step2*.R
+/R/de_diagnostics/_run_step4*.R
+/R/figure_data_generation/_run_step1.R
+# Logistic-regression power model (archived) and analyses not in the paper
+/R/power_curve_fitting/run_pipeline.R
+/R/power_curve_fitting/01d_Detection_Scatter.R
+/R/power_curve_fitting/02_Fit_Models.R
+/R/power_curve_fitting/02b_Regenerate_Heatmaps.R
+/R/power_curve_fitting/03_Visualise.R
+/R/power_curve_fitting/04_Cross_Validate_Modes.R
+/R/power_curve_fitting/04b_CellType_ICE.R
+/R/power_curve_fitting/04c_Swing_vs_Error.R
+/R/power_curve_fitting/05_Export_Equations.R
+/R/power_curve_fitting/06_Compare_All_Models.R
+/R/power_curve_fitting/10_PerGene_Bimodality.R
+/R/figure_data_generation/02_Truth_Gene_Characteristics.R
+/R/figure_data_generation/03_Collect_Model_Data.R
+/R/figure_data_generation/04_Collect_FDP_Data.R
+/R/figure_data_generation/05_Validate_Exports.R
+/R/figure_data_generation/07_Depth_Eq_Truth_Summary.R
+/R/eda_roussos/03_Read_Depth_Analysis.R
+/R/eda_roussos/06_DE_Filtering_Summary.R
+/R/eda_roussos/Analyse_Sex_Validation_CrossCellType.R
+/R/eda_roussos/Run_Genes_Per_Cell_Histogram_Micro.R
+/R/gene_classification/classify_celltype_genes.R
+/R/gene_classification/compare_dispersion_designs.R
+/R/gene_classification/deg_dispersion_table.R
+/R/gene_classification/go_prerank_oligo.py
+/R/gene_classification/group_analysis_oligo.R
+/R/gene_classification/rank_oligo_power.R
+/R/figure_composition/compose_crossscore.py
+/R/figure_composition/figure1_panel_a.py
+/R/figure_composition/FIGURE_TRACKING.md
+/Datalink/Dataset_Statistics_Table/
+/Datalink/Paper_Source_Data/model_coefficients.csv
+/Datalink/Paper_Source_Data/model_summary.csv
+/Datalink/Paper_Source_Data/fdp_summary.csv
+/Datalink/Paper_Source_Data/truth_gene_characteristics.csv
+/Datalink/Paper_Source_Data/depth_eq_truth_summary*.csv
+/Datalink/Power_Curve_Fitting/Models/xgboost/realistic/per_gene_bimodality/
