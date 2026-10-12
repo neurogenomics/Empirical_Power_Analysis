@@ -122,6 +122,14 @@ add("recall_large_d500_c10_oligo", 100 * cell_at("Large", 500, 10), "percent",
 add("recall_medium_min_donors_80_c750_oligo",
     min_donors(g_oligo("Medium") %>% filter(cells >= 750), "mean_recall", 0.8), "donors",
     paste("Fewest donors at which medium-effect (|LFC| 2-3) recall reaches 0.80 at any cells-per-donor level >= 750;", GRID_DEF), src)
+all_levels_min_donors <- function(df, col, thr) {
+  d <- df %>% group_by(n_donors) %>% summarise(m = min(.data[[col]], na.rm = TRUE), .groups = "drop") %>%
+    filter(m >= thr)
+  if (nrow(d) == 0) NA_real_ else min(d$n_donors)
+}
+add("recall_medium_min_donors_80_all_c750_oligo",
+    all_levels_min_donors(g_oligo("Medium") %>% filter(cells >= 750 | is.na(cells)), "mean_recall", 0.8), "donors",
+    paste("Fewest donors at which medium-effect (|LFC| 2-3) recall is >= 0.80 at EVERY cells-per-donor level >= 750 (including all cells);", GRID_DEF), src)
 add("medium_mean_truth_genes_oligo", mean(g_oligo("Medium")$ref_gt_count), "genes",
     paste("Mean number of medium-effect truth genes per grid cell;", GRID_DEF), src)
 add("recall_max_lfc_lt2", 100 * max(grid$mean_recall[grid$bin %in% c("Tiny", "Small")]), "percent",
@@ -138,12 +146,33 @@ add("precision_large_min_d_gt5", 100 * min(lg$mean_precision, na.rm = TRUE), "pe
     "Lowest large-effect precision at more than 5 donors, any cell type; method-pooled, cells mode, all truth genes", src)
 add("precision_large_pct_cells_gt90_d_gt5", 100 * mean(lg$mean_precision > 0.9, na.rm = TRUE), "percent",
     "Percentage of large-effect grid cells (more than 5 donors, all three cell types) with precision above 0.90", src)
+donor_floor <- function(df, col, thr) {
+  # Smallest donor count D such that every grid cell with n_donors >= D has col > thr.
+  ok <- df %>% group_by(n_donors) %>% summarise(ok = all(.data[[col]] > thr, na.rm = TRUE), .groups = "drop") %>%
+    arrange(desc(n_donors))
+  bad <- ok$n_donors[!ok$ok]
+  above <- ok$n_donors[ok$ok & (length(bad) == 0 | ok$n_donors > max(c(bad, -Inf)))]
+  if (length(above) == 0) NA_real_ else min(above)
+}
+for (ct in names(cts)) {
+  add(paste0("precision_large_floor_90_", cts[[ct]]),
+      donor_floor(filter(grid, bin == "Large", cell_type == ct), "mean_precision", 0.9), "donors",
+      sprintf("Smallest donor count D such that large-effect (|LFC| > 3) precision is above 0.90 at every design with >= D donors; %s, method-pooled, cells mode, all truth genes", ct), src)
+}
+add("precision_large_floor_90_all",
+    donor_floor(filter(grid, bin == "Large"), "mean_precision", 0.9), "donors",
+    "Smallest donor count D such that large-effect (|LFC| > 3) precision is above 0.90 at every design with >= D donors in all three cell types; method-pooled, cells mode, all truth genes", src)
 add("precision_medium_min_donors_80_oligo", min_donors(g_oligo("Medium"), "mean_precision", 0.8), "donors",
     paste("Fewest donors at which medium-effect precision reaches 0.80 at any cells-per-donor level;", GRID_DEF), src)
 add("precision_small_min_donors_80_oligo", min_donors(g_oligo("Small"), "mean_precision", 0.8), "donors",
     paste("Fewest donors at which small-effect (|LFC| 1-2) precision reaches 0.80 at any cells-per-donor level;", GRID_DEF), src)
 add("precision_tiny_max_oligo", 100 * max(g_oligo("Tiny")$mean_precision, na.rm = TRUE), "percent",
     paste("Highest tiny-effect precision anywhere in the grid;", GRID_DEF), src)
+tny <- filter(grid, bin == "Tiny")
+add("precision_tiny_max_all", 100 * max(tny$mean_precision, na.rm = TRUE), "percent",
+    "Highest tiny-effect (|LFC| 0.2-1) precision of any grid cell in any cell type; method-pooled, cells mode, all truth genes", src)
+add("precision_tiny_reaches_80_all", as.numeric(any(tny$mean_precision >= 0.8, na.rm = TRUE)), "flag",
+    "1 if any tiny-effect grid cell in any cell type has precision >= 0.80, else 0 (the text claims 0); method-pooled, cells mode, all truth genes", src)
 add("precision_tiny_n_cells_80_oligo", sum(g_oligo("Tiny")$mean_precision >= 0.8, na.rm = TRUE), "grid cells",
     paste("Number of tiny-effect grid cells with precision >= 0.80;", GRID_DEF), src)
 
@@ -210,8 +239,8 @@ uc <- rd(src)
 ulo <- as.numeric(sub("^[\\[(]([0-9.]+),.*", "\\1", uc$pred_bin))
 uhi <- as.numeric(sub(".*,([0-9.]+)\\]$", "\\1", uc$pred_bin))
 umid <- !is.na(ulo) & ulo >= 0.2 - 1e-9 & uhi <= 0.8 + 1e-9 & !is.na(uc$alpha) & uc$alpha > 0
-add("xgb_reweighted_max_underprediction_pp", 100 * max(uc$mean_obs[umid] - uc$mean_pred[umid]), "percentage points",
-    "Largest gap between observed and predicted detection rate (observed minus predicted) in any prediction bin between 0.2 and 0.8, over all configurations with reweighting exponent alpha > 0", src)
+add("xgb_reweighted_max_overprediction_pp", 100 * max(uc$mean_pred[umid] - uc$mean_obs[umid]), "percentage points",
+    "Largest over-prediction (predicted minus observed detection rate) in any prediction bin between 0.2 and 0.8, over all configurations with reweighting exponent alpha > 0", src)
 
 src <- "Power_Curve_Fitting/Fitting_Data/aggregated_fitting_data.qs"
 fd <- qs::qread(dl(src))
