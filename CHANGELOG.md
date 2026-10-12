@@ -24,6 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   instead of the `renv.lock` pin (the 2026-10-01 image had Rcpp 1.1.2 and
   RcppParallel 6.2.1 against pins 1.1.1-1 and 5.1.11-2). The build now
   requests pinned versions and fails on any version mismatch.
+- `renv.lock` pinned Rcpp 1.1.1-1, a GitHub development build that was never
+  released to CRAN, so the lockfile could not be restored by anyone. Repinned
+  to Rcpp 1.1.1-1.1, the nearest CRAN release (2026-04-24).
 
 ### Changed
 - Documentation merged from the PsychAD-only refresh and aligned with the
