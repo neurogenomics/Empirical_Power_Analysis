@@ -119,17 +119,16 @@ add("recall_large_d50_c500_oligo", 100 * cell_at("Large", 50, 500), "percent",
     paste("Large-effect recall at 50 donors x 500 cells per donor;", GRID_DEF), src)
 add("recall_large_d500_c10_oligo", 100 * cell_at("Large", 500, 10), "percent",
     paste("Large-effect recall at 500 donors x 10 cells per donor;", GRID_DEF), src)
+# The 80% frontier for medium effects runs from many donors with few cells to
+# fewer donors with many cells (pre-rerun: 300 x 500, 200 x 750, 150 x >= 1,000).
+# The text quotes the middle point, so the design is fixed at 750 cells per donor.
+med_c750 <- g_oligo("Medium") %>% filter(cells == 750, mean_recall >= 0.8)
 add("recall_medium_min_donors_80_c750_oligo",
-    min_donors(g_oligo("Medium") %>% filter(cells >= 750), "mean_recall", 0.8), "donors",
-    paste("Fewest donors at which medium-effect (|LFC| 2-3) recall reaches 0.80 at any cells-per-donor level >= 750;", GRID_DEF), src)
-all_levels_min_donors <- function(df, col, thr) {
-  d <- df %>% group_by(n_donors) %>% summarise(m = min(.data[[col]], na.rm = TRUE), .groups = "drop") %>%
-    filter(m >= thr)
-  if (nrow(d) == 0) NA_real_ else min(d$n_donors)
-}
-add("recall_medium_min_donors_80_all_c750_oligo",
-    all_levels_min_donors(g_oligo("Medium") %>% filter(cells >= 750 | is.na(cells)), "mean_recall", 0.8), "donors",
-    paste("Fewest donors at which medium-effect (|LFC| 2-3) recall is >= 0.80 at EVERY cells-per-donor level >= 750 (including all cells);", GRID_DEF), src)
+    if (nrow(med_c750) == 0) NA_real_ else min(med_c750$n_donors), "donors",
+    paste("Fewest donors at which medium-effect (|LFC| 2-3) recall reaches 0.80 at exactly 750 cells per donor (middle point of the 80% donors x cells frontier);", GRID_DEF), src)
+add("recall_medium_at_min_donors_c750_oligo",
+    if (nrow(med_c750) == 0) NA_real_ else 100 * med_c750$mean_recall[which.min(med_c750$n_donors)], "percent",
+    paste("Medium-effect recall at that design (fewest donors reaching 0.80 at 750 cells per donor);", GRID_DEF), src)
 add("medium_mean_truth_genes_oligo", mean(g_oligo("Medium")$ref_gt_count), "genes",
     paste("Mean number of medium-effect truth genes per grid cell;", GRID_DEF), src)
 add("recall_max_lfc_lt2", 100 * max(grid$mean_recall[grid$bin %in% c("Tiny", "Small")]), "percent",
