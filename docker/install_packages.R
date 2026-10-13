@@ -282,6 +282,22 @@ for (pkg in bad) {
   try(with_retry(renv::install(sprintf("%s@%s", pkg, pin), prompt = FALSE),
                  attempts = 3, what = sprintf("pin %s@%s", pkg, pin)))
 }
+# Packages that compile against a repaired package (LinkingTo) were built
+# against the wrong headers or libraries (e.g. stringfish against TBB from
+# RcppParallel 6.x fails to load once 5.1.11-2 is restored), so rebuild them.
+if (length(bad) > 0L) {
+  ip_all <- installed.packages(lib.loc = .libPaths()[1])
+  links <- tools:::.extract_dependency_package_names
+  rebuild <- rownames(ip_all)[vapply(ip_all[, "LinkingTo"], function(x)
+    any(links(x) %in% bad), logical(1))]
+  rebuild <- setdiff(intersect(rebuild, names(lock$Packages)), bad)
+  for (pkg in rebuild) {
+    pin <- lock$Packages[[pkg]]$Version
+    cat(sprintf("[pin] rebuilding %s %s against repaired dependencies\n", pkg, pin))
+    try(with_retry(renv::install(sprintf("%s@%s", pkg, pin), rebuild = TRUE, prompt = FALSE),
+                   attempts = 3, what = sprintf("rebuild %s@%s", pkg, pin)))
+  }
+}
 bad <- version_mismatches()
 if (length(bad) > 0L) {
   ip <- installed.packages(lib.loc = .libPaths()[1])[, "Version"]
