@@ -8,7 +8,7 @@ Generates diagnostic visualisations and statistical tests for the full-cohort Ps
 
 4. **DEG Chromosome Grid**: counts of significant DEGs stratified by chromosome type (autosomal/sex) and LFC magnitude bin (Supplementary Figure, DEG chromosome distribution).
 
-5. **Shared Gene Diagnostics**: paired cross-cell-type comparisons of the shared truth genes (from the power curve fitting pipeline), with paired Wilcoxon tests, Pearson correlations, and summary statistics for 5 metrics. Its `Full_Truth_Set_Summary.csv` is packaged as Supplementary Data 3 by `R/supplementary_data/build_supplementary_data.R`.
+5. **Shared Gene Diagnostics**: paired cross-cell-type comparisons of the shared truth genes (from the power curve fitting pipeline), with paired Wilcoxon tests, Pearson correlations, and summary statistics for 5 metrics.
 
 ## Use in the Reproduction Pipeline
 
@@ -54,7 +54,7 @@ Both thresholds below are legacy cut-offs specific to these diagnostics; the pap
 - `Datalink/DE_Diagnostics/Shared_Gene_Diagnostics/Shared_Gene_Comparison_Matrix.csv` (long format)
 - `Datalink/DE_Diagnostics/Shared_Gene_Diagnostics/Shared_Gene_Comparison_Wide.csv` (wide format)
 - `Datalink/DE_Diagnostics/Shared_Gene_Diagnostics/Shared_Gene_Summary.csv` (shared gene medians)
-- `Datalink/DE_Diagnostics/Shared_Gene_Diagnostics/Full_Truth_Set_Summary.csv` (per-cell-type medians for genes with padj < 0.05 and |LFC| > 2, `SHARED_GENE_LFC_MIN`; Supplementary Data 3)
+- `Datalink/DE_Diagnostics/Shared_Gene_Diagnostics/Full_Truth_Set_Summary.csv` (per-cell-type medians for genes with padj < 0.05 and |LFC| > 2, `SHARED_GENE_LFC_MIN`)
 - `Datalink/DE_Diagnostics/Shared_Gene_Diagnostics/Scatter_Plots/Scatter_{metric}_{CT_A}_vs_{CT_B}.png`
 
 **Total outputs:** 5 CSVs + 15 scatter plots (5 metrics × 3 CT pairs)

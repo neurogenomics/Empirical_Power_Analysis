@@ -132,9 +132,9 @@ trades task length against task count.
 | `xgb_real_shap` | xgb_real_select | SHAP figures (Supp. Figs.) | 2-4 h |
 | `xgb_post` | xgb selects | Figure 5, exported `predict_power` bundle | ~3 h |
 | `gene_class` | shard, xgb_post | Figure 6 | ~2 h |
-| `tables` | fgt, pcf_aggregate, cartesian_* | Supp. Table 2, recall grid CSV (numbers in text), Supp. Data 3 | < 1 h |
+| `tables` | fgt, pcf_aggregate, cartesian_* | Supp. Table 2, recall grid CSV (numbers in text) | < 1 h |
 | `compose` | cartesian_*, crossscore | Figures 2-4, cross-method and per-method Supp. Figs. | < 1 h |
-| `supp_data` | several | Supplementary Data 1-4 (+ SD2 zip) | < 1 h |
+| `supp_data` | several | Supplementary Data files (SD1 and SD4 are cited in the manuscript) | < 1 h |
 | `knit` | all of the above | `Manuscript/nature_comms_{draft,supplementary}.html` | < 1 h |
 | `finalise` | knit | `MANIFEST.sha256`, `PROVENANCE.txt` | minutes |
 
