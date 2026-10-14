@@ -425,7 +425,7 @@ knitr::include_graphics(c(
 ## Supplementary Fig. `r SF("xgb_shap_dependence")`. SHAP dependence of detection on design covariates
 
 ```{r SuppFig-SHAP-Dependence, out.width="99%", fig.cap="SHAP dependence plots for the production gradient-boosted-tree (XGBoost) power model (realistic $n_{cells} \\geq 100$ sub-grid). Each panel plots a design covariate (cells per donor, counts per cell, donor count, effect size, mean expression, dispersion) against its SHAP contribution to predicted detection, with points coloured by covariate value. The steeper SHAP response to cells per donor than to counts per cell reproduces, in the boosted model, the diminishing returns of deeper sequencing relative to broader cellular sampling. Replaces the archived logistic depth-decomposition figure."}
-knitr::include_graphics("Datalink/Power_Curve_Fitting/Models/xgboost/realistic/shap_figures/median/shap_dependence.png")
+knitr::include_graphics("Datalink/Power_Curve_Fitting/Models/xgboost/shap_figures/median/shap_dependence.png")
 ```
 
 ## Supplementary Fig. `r SF("recall_chrom_stratified")`. Chromosome-stratified recall heatmaps
@@ -455,16 +455,16 @@ knitr::include_graphics("Datalink/DE_Diagnostics/Chromosome_Grid/DEG_Chr_Grid_Co
 ## Supplementary Fig. `r SF("xgb_shap_violin")`. Distribution of covariate effects across the grid (SHAP violin)
 
 ```{r SuppFig-SHAP-Violin, out.width="99%", fig.cap="SHAP violin summarising the distribution of each covariate's contribution to predicted detection across the full realistic grid for the production XGBoost model. The spread of each violin is the sensitivity of predicted power to that covariate over its observed range: effect size (|LFC|), donor count, and mean expression carry the widest, most skewed distributions, whereas counts per cell, cell type, and DE method are tightly concentrated near zero. Replaces the archived logistic covariate sensitivity grid."}
-knitr::include_graphics("Datalink/Power_Curve_Fitting/Models/xgboost/realistic/shap_figures/median/shap_violin.png")
+knitr::include_graphics("Datalink/Power_Curve_Fitting/Models/xgboost/shap_figures/median/shap_violin.png")
 ```
 
 ## Supplementary Fig. `r SF("xgb_shap_dependence_by_config")`. SHAP dependence across loss-reweighting configurations
 
 ```{r SuppFig-SHAP-Dependence-byConfig, out.width="99%", fig.show='hold', fig.cap="SHAP dependence plots for the three loss-reweighting configurations of the XGBoost power model: unweighted ($\\alpha = 0$; top, the promoted production model), and reweighted ($\\alpha = 0.5$, middle; $\\alpha = 1$, bottom; per-row weight $w = 1/|B|^{\\alpha}$ over observed-power decile bins $B$). Each row shows the same six design covariates against their SHAP contribution to predicted detection. The dependence shapes are stable across reweighting exponents, so the covariate-response relationships the model learns are not artefacts of the loss weighting; the unweighted configuration was promoted on out-of-fold error."}
 knitr::include_graphics(c(
-  "Datalink/Power_Curve_Fitting/Models/xgboost/realistic/shap_figures/winner_alpha_0/shap_dependence.png",
-  "Datalink/Power_Curve_Fitting/Models/xgboost/realistic/shap_figures/winner_alpha_0.5/shap_dependence.png",
-  "Datalink/Power_Curve_Fitting/Models/xgboost/realistic/shap_figures/winner_alpha_1/shap_dependence.png"
+  "Datalink/Power_Curve_Fitting/Models/xgboost/shap_figures/winner_alpha_0/shap_dependence.png",
+  "Datalink/Power_Curve_Fitting/Models/xgboost/shap_figures/winner_alpha_0.5/shap_dependence.png",
+  "Datalink/Power_Curve_Fitting/Models/xgboost/shap_figures/winner_alpha_1/shap_dependence.png"
 ))
 ```
 
