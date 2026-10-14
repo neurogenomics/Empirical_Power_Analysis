@@ -104,6 +104,15 @@ val <- function(key, digits = NULL, pct = FALSE, big = FALSE) {
   x
 }
 
+# check_claim(): stop the knit when a qualitative claim in the prose no longer
+# holds for the current outputs (used by the claim-checks chunk in the draft).
+check_claim <- function(ok, claim) {
+  if (!isTRUE(ok)) {
+    stop(sprintf("Manuscript claim no longer holds: %s", claim), call. = FALSE)
+  }
+  invisible(TRUE)
+}
+
 # =============================================================================
 # EASY TIER — pure single-CSV lookups. High value, low effort, zero risk.
 # =============================================================================
