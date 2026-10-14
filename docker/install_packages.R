@@ -269,6 +269,34 @@ print(renv::status())
 # before restore, can sit at a different version from its pin. Compare every
 # lockfile package with the version in the project library, reinstall any
 # mismatch at its pinned version once, then refuse to build if any remain.
+#
+# The repair uses base install.packages() on the exact source tarball, NOT
+# renv::install(): renv::install("pkg@ver") re-resolves the package's
+# dependencies and upgrades them to the newest version it can find (tested
+# 2026-10-14: installing stringfish@0.16.0 replaced the pinned RcppParallel
+# 5.1.11-2 with 6.2.1 from the renv cache). install.packages(repos = NULL)
+# installs exactly one package and never touches its dependencies.
+install_exact <- function(pkg, version, repository = "CRAN") {
+  urls <- if (identical(repository, "Bioconductor")) {
+    sprintf("https://bioconductor.org/packages/3.22/bioc/src/contrib/%s_%s.tar.gz", pkg, version)
+  } else {
+    c(sprintf("https://cloud.r-project.org/src/contrib/%s_%s.tar.gz", pkg, version),
+      sprintf("%s/%s/%s_%s.tar.gz", cran_archive, pkg, pkg, version))
+  }
+  tarball <- file.path(tempdir(), sprintf("%s_%s.tar.gz", pkg, version))
+  ok <- FALSE
+  for (u in urls) {
+    ok <- tryCatch(utils::download.file(u, tarball, quiet = TRUE, mode = "wb") == 0L,
+                   error = function(e) FALSE, warning = function(w) FALSE)
+    if (ok) break
+  }
+  if (!ok) stop(sprintf("no source tarball found for %s %s", pkg, version))
+  utils::install.packages(tarball, repos = NULL, type = "source",
+                          lib = .libPaths()[1])
+}
+lock_repo <- function(pkg) {
+  if (identical(lock$Packages[[pkg]]$Source, "Bioconductor")) "Bioconductor" else "CRAN"
+}
 version_mismatches <- function() {
   ip <- installed.packages(lib.loc = .libPaths()[1])[, "Version"]
   want <- vapply(lock$Packages, function(x) x$Version, character(1))
@@ -279,7 +307,7 @@ bad <- version_mismatches()
 for (pkg in bad) {
   pin <- lock$Packages[[pkg]]$Version
   cat(sprintf("[pin] reinstalling %s at %s\n", pkg, pin))
-  try(with_retry(renv::install(sprintf("%s@%s", pkg, pin), prompt = FALSE),
+  try(with_retry(install_exact(pkg, pin, lock_repo(pkg)),
                  attempts = 3, what = sprintf("pin %s@%s", pkg, pin)))
 }
 # Packages that compile against a repaired package (LinkingTo) were built
@@ -294,7 +322,7 @@ if (length(bad) > 0L) {
   for (pkg in rebuild) {
     pin <- lock$Packages[[pkg]]$Version
     cat(sprintf("[pin] rebuilding %s %s against repaired dependencies\n", pkg, pin))
-    try(with_retry(renv::install(sprintf("%s@%s", pkg, pin), rebuild = TRUE, prompt = FALSE),
+    try(with_retry(install_exact(pkg, pin, lock_repo(pkg)),
                    attempts = 3, what = sprintf("rebuild %s@%s", pkg, pin)))
   }
 }
