@@ -228,60 +228,73 @@ cat("Wrote shap_importance_pretty.png\n")
 
 # ------------------------------------------------------------------------------
 # PANEL B: hyperparameter bracketing. For each value of each searched
-# hyperparameter, the best bin-balanced MAE among configurations with that
-# value (minimum over every other axis). Every configuration is scored on the
-# same gene-grouped CV folds, so the error bar is the standard error of the
-# fold-PAIRED difference from the selected configuration (the selected value
-# itself has none). If the best value sits strictly inside the searched range,
-# the grid brackets the optimum on that axis.
+# hyperparameter, take the best configuration with that value (minimum
+# bin-balanced MAE over every other axis) and plot how much worse it is than
+# the selected configuration. Every configuration is scored on the same
+# gene-grouped CV folds, so the difference and its standard error are
+# fold-PAIRED (unpaired fold SEs are larger than the gaps between configs).
+# The label above each point counts the folds on which it did worse than the
+# selected configuration. Each hyperparameter gets its own y-scale so the large
+# alpha effect does not flatten the others. If the selected value sits strictly
+# inside the searched range, the grid brackets the optimum on that axis.
+# Drawn narrow (half the figure width) to sit above panel C in the composite.
 # ------------------------------------------------------------------------------
 ms    <- read.csv(file.path(DL, "model_selection.csv"), stringsAsFactors = FALSE)
 folds <- read.csv(file.path(DL, "model_selection_folds.csv"), stringsAsFactors = FALSE)
 win   <- ms[which.min(ms$bin_balanced_MAE), ]
 win_f <- folds[folds$config_index == win$config_index, c("fold", "bin_balanced_MAE")]
-paired_se <- function(cfg) {
+paired_diff <- function(cfg) {
   f <- merge(folds[folds$config_index == cfg, c("fold", "bin_balanced_MAE")], win_f,
              by = "fold", suffixes = c("", "_win"))
   d <- f$bin_balanced_MAE - f$bin_balanced_MAE_win
-  if (cfg == win$config_index) 0 else sd(d) / sqrt(nrow(f))
+  c(diff = mean(d), se = if (cfg == win$config_index) 0 else sd(d) / sqrt(nrow(f)),
+    worse = sum(d > 0), n = nrow(f))
 }
 
 hp_cols <- c(max_depth = "Max tree depth", eta = "Learning rate",
-             min_child_weight = "Min child weight", alpha = "Bin-weight exponent \u03b1")
+             min_child_weight = "Min child weight", alpha = "Reweighting \u03b1")
 bracket <- bind_rows(lapply(names(hp_cols), function(h) {
   ms %>%
     group_by(value = .data[[h]]) %>%
     slice_min(bin_balanced_MAE, n = 1, with_ties = FALSE) %>%
     ungroup() %>%
-    transmute(hp = hp_cols[[h]], value, config_index, bin_balanced_MAE,
-              selected = value == win[[h]])
-})) %>%
-  mutate(se = vapply(config_index, paired_se, numeric(1)),
-         hp = factor(hp, levels = hp_cols))
+    transmute(hp = hp_cols[[h]], value, config_index, selected = value == win[[h]])
+}))
+bracket <- bind_cols(bracket,
+                     as.data.frame(t(vapply(bracket$config_index, paired_diff, numeric(4))))) %>%
+  mutate(hp = factor(hp, levels = hp_cols),
+         d1000 = diff * 1000, se1000 = se * 1000,
+         lbl = ifelse(selected, "", sprintf("%d/%d", worse, n)))
 bracket$value_lbl <- factor(format(bracket$value, drop0trailing = TRUE, trim = TRUE),
                             levels = unique(format(sort(unique(bracket$value)),
                                                    drop0trailing = TRUE, trim = TRUE)))
+# Headroom per facet so the fold-count labels are never clipped.
+headroom <- bracket %>%
+  group_by(hp) %>%
+  summarise(top = max(d1000 + se1000) * 1.3 + 1e-3, value_lbl = value_lbl[1])
 
-p_br <- ggplot(bracket, aes(x = value_lbl, y = bin_balanced_MAE, group = 1)) +
+p_br <- ggplot(bracket, aes(x = value_lbl, y = d1000, group = 1)) +
+  geom_hline(yintercept = 0, linetype = "dashed", colour = "grey60") +
+  geom_blank(data = headroom, aes(x = value_lbl, y = top), inherit.aes = FALSE) +
   geom_line(colour = "grey50") +
   geom_errorbar(data = function(d) d[d$se > 0, ],
-                aes(ymin = bin_balanced_MAE - se, ymax = bin_balanced_MAE + se),
-                width = 0.15, colour = "grey30") +
-  geom_point(aes(fill = selected), shape = 21, size = 3.2, colour = "black") +
-  scale_fill_manual(values = c(`TRUE` = "#D55E00", `FALSE` = "white"),
-                    labels = c(`TRUE` = "Selected", `FALSE` = "Other values"),
-                    breaks = c("TRUE", "FALSE"), name = NULL) +
-  facet_wrap(~ hp, nrow = 1, scales = "free_x") +
-  labs(x = NULL, y = "Best bin-balanced MAE") +
-  theme_bw(base_size = 14) +
-  theme(legend.position = "top",
-        legend.text = element_text(size = 12, colour = "black"),
-        panel.grid.minor = element_blank(),
-        axis.title.y = element_text(size = 14, colour = "black"),
-        axis.text = element_text(size = 12, colour = "black"),
-        strip.text = element_text(size = 12, colour = "black"))
+                aes(ymin = d1000 - se1000, ymax = d1000 + se1000),
+                width = 0.2, colour = "grey30") +
+  geom_point(aes(fill = selected), shape = 21, size = 2.8, colour = "black",
+             show.legend = FALSE) +
+  geom_text(aes(y = d1000 + se1000, label = lbl), vjust = -0.6, size = 3.3,
+            colour = "grey25") +
+  scale_fill_manual(values = c(`TRUE` = "#D55E00", `FALSE` = "white")) +
+  facet_wrap(~ hp, nrow = 1, scales = "free") +
+  labs(x = NULL, y = "Extra MAE vs chosen\nmodel (\u00d71000)") +
+  theme_bw(base_size = 13) +
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.x = element_blank(),
+        axis.text = element_text(size = 11, colour = "black"),
+        strip.text = element_text(size = 11, colour = "black"),
+        plot.margin = margin(4, 6, 2, 4))
 
 ggsave(file.path(out_dir, "hyperparameter_bracketing.png"),
-       p_br, width = 14, height = 5, dpi = 150)
+       p_br, width = 8.5, height = 3.0, dpi = 150)
 cat("Wrote hyperparameter_bracketing.png\n")
 cat("DONE\n")

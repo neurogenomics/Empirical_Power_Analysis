@@ -4,10 +4,12 @@
 #          from the five clean per-panel exports, laid out in manuscript
 #          reading order and labelled A-E.
 #
-#          Layout (reading order A -> B, B is wide at the bottom):
-#            row 1:  A  (top-left)      C  (top-right)
-#            row 2:  D  (mid-left)      E  (mid-right)
-#            row 3:  B  (full width, bottom)
+#          Layout (reading order A -> E):
+#            row 1:  A  (top-left, tall)    B  (top-right)
+#                                           C  (right, below B)
+#            row 2:  D  (bottom-left)       E  (bottom-right)
+#          B is short and wide, so it fills the space beside the tall panel A
+#          instead of taking a full-width row of its own.
 #
 #          Panel -> content -> source PNG mapping. The panel letters were
 #          reassigned to match the order in which they are first referenced in
@@ -85,7 +87,7 @@ A <- rd("xgb_supp_calibration.png")       # A  top-left
 C <- rd("xgb_supp_prf_grid.png")          # C  top-right
 D <- rd("xgb_supp_shap.png")              # D  mid-left
 E <- rd("xgb_supp_meanpower_heatmap.png") # E  mid-right
-B <- rd("xgb_supp_hp_bracketing.png")     # B  bottom, wide
+B <- rd("xgb_supp_hp_bracketing.png")     # B  top-right, above C
 
 # Strip the baked-in title + subtitle off panel E.
 if (nrow(E) > TITLE_STRIP_PX) {
@@ -99,14 +101,12 @@ if (nrow(E) > TITLE_STRIP_PX) {
 asp <- function(im) dim(im)[1] / dim(im)[2]   # height / width
 CW  <- 2 * COL_W                              # full canvas width
 
-hA <- asp(A) * COL_W; hC <- asp(C) * COL_W
+hA <- asp(A) * COL_W; hB <- asp(B) * COL_W; hC <- asp(C) * COL_W
 hD <- asp(D) * COL_W; hE <- asp(E) * COL_W
-hB <- asp(B) * CW
 
-h1 <- max(hA, hC) + PAD   # row 1 height
-h2 <- max(hD, hE) + PAD   # row 2 height
-h3 <- hB + PAD            # row 3 height
-CH <- h1 + h2 + h3
+h1 <- max(hA, hB + PAD + hC) + PAD   # row 1 height (right column: B above C)
+h2 <- max(hD, hE) + PAD              # row 2 height
+CH <- h1 + h2
 
 dir.create(dirname(OUT_FILE), showWarnings = FALSE, recursive = TRUE)
 png(OUT_FILE, width = CW, height = CH, res = 72, bg = "white")
@@ -122,17 +122,16 @@ lett <- function(s, lx, ty) {
     just = c("left", "top"), gp = gpar(fontsize = LETTER_SIZE, fontface = "bold"))
 }
 
-# row 1: A (left), C (right)
+# row 1: A (left); B above C (right)
 draw(A, COL_W / 2,          CH - PAD, COL_W, hA); lett("A", 14,          CH - 8)
-draw(C, COL_W + COL_W / 2,  CH - PAD, COL_W, hC); lett("C", COL_W + 14,  CH - 8)
+draw(B, COL_W + COL_W / 2,  CH - PAD, COL_W, hB); lett("B", COL_W + 14,  CH - 8)
+tC <- CH - PAD - hB
+draw(C, COL_W + COL_W / 2,  tC - PAD, COL_W, hC); lett("C", COL_W + 14,  tC - 8)
 
 # row 2: D (left), E (right)
 t2 <- CH - h1
 draw(D, COL_W / 2,          t2 - PAD, COL_W, hD); lett("D", 14,          t2 - 8)
 draw(E, COL_W + COL_W / 2,  t2 - PAD, COL_W, hE); lett("E", COL_W + 14,  t2 - 8)
-
-# row 3: B (wide)
-draw(B, CW / 2,             h3 - PAD, CW,    hB); lett("B", 14,          h3 - 8)
 
 dev.off()
 cat(sprintf("WROTE %s (%dx%d)\n", OUT_FILE, CW, round(CH)))
