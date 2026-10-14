@@ -87,7 +87,7 @@ FEATURE_LABELS <- c(
   n_cells             = "Cells / donor",
   reads_per_cell      = "Counts / cell",
   abs_gt_lfc          = "|LFC|",
-  gt_basemean         = "Mean expression",
+  gt_basemean         = "Median expression",
   gt_dispersion       = "Dispersion",
   `de_method=deseq2`  = "DESeq2",
   `de_method=edger`   = "edgeR",

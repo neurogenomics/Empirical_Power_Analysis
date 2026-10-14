@@ -86,12 +86,12 @@ prettify_label <- function(x) {
     "log_n_cells" = "Cells per Donor",
     "log_reads_per_cell" = "Counts per Cell",
     "log_abs_gt_lfc" = "|LFC| (Effect Size)",
-    "log_gt_basemean" = "Base Mean Expression",
+    "log_gt_basemean" = "Median Expression",
     "log_gt_dispersion" = "Dispersion",
     
     # Alternative predictor names
     "abs_gt_lfc" = "|LFC| (Effect Size)",
-    "gt_basemean" = "Base Mean Expression",
+    "gt_basemean" = "Median Expression",
     "gt_dispersion" = "Dispersion",
     "reads_per_cell" = "Counts per Cell",
     "abs_lfc" = "|LFC| (Effect Size)",

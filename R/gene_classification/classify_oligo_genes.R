@@ -15,7 +15,7 @@
 #
 # PER-GENE MODEL INPUTS  ── CORRECTED 2026-08-22 ──────────────────────────────
 #   The XGBoost model trained on TWO gene characteristics, defined EXACTLY as:
-#     gt_basemean   = baseMean_raw = Matrix::rowMeans(DESeq2::counts(dds))
+#     gt_basemean   = baseMean_raw = matrixStats::rowMedians(DESeq2::counts(dds))
 #                     (raw pseudobulk mean count; identical across de_methods;
 #                      cartesian_downsampling/utils.R:499).
 #     gt_dispersion = DESeq2::dispersions(dds)  -- the final MAP dispersion from
@@ -119,8 +119,9 @@ if (file.exists(ckpt_file) && !identical(tolower(Sys.getenv("CLASSIFY_FORCE_REFI
                               min_gene_count = MIN_GENE_COUNT)
   dds <- de$dds
 
-  # baseMean_raw = raw pseudobulk mean over the fitted genes (matches training).
-  bm_fit   <- as.numeric(Matrix::rowMeans(DESeq2::counts(dds)))
+  # baseMean_raw = median raw pseudobulk count over donors for the fitted genes
+  # (same definition as the training feature, utils.R median_raw).
+  bm_fit   <- matrixStats::rowMedians(DESeq2::counts(dds))
   disp_fit <- DESeq2::dispersions(dds)
   fit_genes <- rownames(dds)
   log_info("Fitted (post-filter) genes: %d ; NA dispersions: %d",

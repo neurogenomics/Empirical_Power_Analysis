@@ -56,7 +56,7 @@ for (ct in CELL_TYPES) {
 
   for (m in DE_METHODS) {
     r <- as.data.frame(qs::qread(file.path(od, paste0(m, ".qs"))))
-    bm <- if ("baseMean_raw" %in% names(r)) r$baseMean_raw else r$baseMean
+    bm <- if ("median_raw" %in% names(r)) r$median_raw else r$baseMean
     rows[[paste(ct, m)]] <- data.frame(
       contrast = EPA_CONTRAST, cell_type = ct, de_method = m,
       n_donors = length(ids), gene_id = rownames(r),

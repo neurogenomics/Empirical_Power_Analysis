@@ -454,15 +454,16 @@ canonical_de_table <- function(tab,
   tab <- tab[common, , drop = FALSE]
   counts <- counts[common, , drop = FALSE]
 
-  # `baseMean_raw` is the shared cross-method expression ruler: raw pseudobulk
-  # mean counts. For edgeR/limma this equals `baseMean` (both are rowMeans of the
-  # raw filtered counts), but it is emitted as its own named column so all three
-  # DE methods (incl. DESeq2, whose `baseMean` is normalised) carry an identically
-  # defined column to bin/report on.
+  # `median_raw` is the shared cross-method expression ruler: the median raw
+  # pseudobulk count across donors, computed identically for all three DE methods
+  # (see run_deseq_worker). Every per-gene expression comparison (model feature,
+  # expression bins, filters) uses it. `baseMean_raw` (raw mean) is kept only for
+  # the total-reads summary in 03_Aggregate_Results.R.
   raw_mean <- as.numeric(Matrix::rowMeans(counts))
   res <- data.frame(
     baseMean = raw_mean,
     baseMean_raw = raw_mean,
+    median_raw = as.numeric(matrixStats::rowMedians(as.matrix(counts))),
     log2FoldChange = as.numeric(tab[[logfc_col]]),
     padj = as.numeric(tab[[padj_col]]),
     stringsAsFactors = FALSE
@@ -534,13 +535,13 @@ run_deseq_worker <- function(agg_result,
   attr(res, "shrinkage_type") <- "ashr"
   attr(res, "de_method") <- "deseq2"
 
-  # Shared cross-method expression ruler: raw pseudobulk mean counts.
-  # DESeq2's own `baseMean` is median-of-ratios normalised, so it differs from
-  # the edgeR/limma raw rowMeans. `baseMean_raw` is computed identically to those
-  # (rowMeans of the same min-count-filtered raw counts dds already holds) so all
-  # three methods bin/report on one common, directly observable ruler. Additive:
-  # DESeq2's normalised `baseMean` is retained unchanged.
-  res$baseMean_raw <- as.numeric(Matrix::rowMeans(DESeq2::counts(dds))[rownames(res)])
+  # Shared cross-method expression ruler, computed on the same min-count-filtered
+  # raw counts as canonical_de_table(): `median_raw` (median raw pseudobulk count
+  # across donors) for all per-gene comparisons, `baseMean_raw` (raw mean) for the
+  # total-reads summary only. DESeq2's normalised `baseMean` is retained unchanged.
+  raw_counts <- DESeq2::counts(dds)
+  res$baseMean_raw <- as.numeric(Matrix::rowMeans(raw_counts)[rownames(res)])
+  res$median_raw <- matrixStats::rowMedians(raw_counts)[match(rownames(res), rownames(raw_counts))]
 
   dir.create(dirname(save_path_results), recursive = TRUE, showWarnings = FALSE)
   qs::qsave(res, save_path_results)

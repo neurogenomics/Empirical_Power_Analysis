@@ -198,11 +198,11 @@ for (ds_idx in seq_along(DATASET_CONFIGS)) {
       }
       gt_res <- as.data.frame(qs::qread(gt_path))
       gt_res$gene_id <- rownames(gt_res)
-      # Shared cross-method expression ruler: bind the XGBoost mean-expression
-      # feature to raw pseudobulk mean counts (identical across deseq2/edger/limma)
-      # rather than each method's own baseMean (DESeq2's is normalised). Fall back
-      # to baseMean only for any pre-rerun GT that predates the baseMean_raw column.
-      if (is.null(gt_res$baseMean_raw)) gt_res$baseMean_raw <- gt_res$baseMean
+      # Shared cross-method expression ruler: the XGBoost expression feature is
+      # the median raw pseudobulk count across GT-half donors (identical across
+      # deseq2/edger/limma). Fall back to baseMean only for any pre-rerun GT that
+      # predates the median_raw column.
+      if (is.null(gt_res$median_raw)) gt_res$median_raw <- gt_res$baseMean
 
       # Load GT DDS checkpoint (for dispersion)
       dds_path <- file.path(paths$gt_dds_dir, sprintf("GT_DDS_Run_%d.qs", run_id))
@@ -222,12 +222,13 @@ for (ds_idx in seq_along(DATASET_CONFIGS)) {
         mutate(
           gt_lfc = log2FoldChange,
           abs_gt_lfc = abs(log2FoldChange),
-          gt_basemean = baseMean_raw,
+          gt_basemean = median_raw,
           gt_dispersion = gt_dispersions[gene_id]
         ) %>%
+        # A median of 0 is a valid value (most GT donors have no counts), so
+        # those truth genes are kept.
         filter(!is.na(gt_dispersion),
-               gt_dispersion > 0,
-               gt_basemean > 0) %>%
+               gt_dispersion > 0) %>%
         select(gene_id, gt_lfc, abs_gt_lfc, gt_basemean, gt_dispersion)
 
       n_truth <- nrow(truth_genes)

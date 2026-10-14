@@ -181,7 +181,7 @@ sha <- read.csv(file.path(DL, "comparison", "shap_importance_across_models.csv")
 feature_label_map <- c(
   abs_gt_lfc         = "|LFC|",
   n_donors           = "Donors",
-  gt_basemean        = "Mean expression",
+  gt_basemean        = "Median expression",
   gt_dispersion      = "Dispersion",
   n_cells            = "Cells per donor",
   reads_per_cell     = "Counts per cell",

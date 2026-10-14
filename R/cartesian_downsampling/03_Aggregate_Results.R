@@ -123,12 +123,16 @@ for (cell_type in cell_types) {
     gt_res <- as.data.frame(qs::qread(gt_path))
     all_genes_in_run <- rownames(gt_res)
 
-    # Canonical expression ruler: shared raw pseudobulk mean (baseMean_raw), so the
-    # expression axis is identical across DESeq2/edgeR/limma. Fall back to the
-    # normalised baseMean only for pre-rerun outputs that predate baseMean_raw.
-    gt_res$bm_ruler <- if ("baseMean_raw" %in% colnames(gt_res)) gt_res$baseMean_raw else gt_res$baseMean
+    # Canonical expression ruler: median raw pseudobulk count across the
+    # ground-truth half's donors (median_raw), identical across DESeq2/edgeR/limma.
+    # Every expression bin and filter below, on BOTH the recall (GT) and the
+    # precision (subsample) side, looks genes up on this GT-half value, so a gene
+    # sits in the same expression bin at every grid point. Fall back to baseMean
+    # only for pre-rerun outputs that predate median_raw.
+    gt_res$bm_ruler <- if ("median_raw" %in% colnames(gt_res)) gt_res$median_raw else gt_res$baseMean
+    gt_ruler <- setNames(gt_res$bm_ruler, rownames(gt_res))
 
-    # Genes with low ground-truth expression (baseMean < 50) for filtered DEG counts
+    # Genes with low ground-truth expression (median < 50) for filtered DEG counts
     genes_lowexpr <- rownames(gt_res)[!is.na(gt_res$bm_ruler) & gt_res$bm_ruler < 50]
     
     # Get chromosome mapping
@@ -190,14 +194,18 @@ for (cell_type in cell_types) {
       
       if (is.null(sub_res)) next
 
-      # Same shared raw ruler on the subsample table (see gt_res above).
-      sub_res$bm_ruler <- if ("baseMean_raw" %in% colnames(sub_res)) sub_res$baseMean_raw else sub_res$baseMean
+      # Subsample genes are binned on their GT-half median (see gt_res above).
+      # A gene absent from the GT table failed the min-count filter on the whole
+      # GT half, so its GT-half median is 0.
+      sub_res$bm_ruler <- unname(gt_ruler[rownames(sub_res)])
+      sub_res$bm_ruler[is.na(sub_res$bm_ruler)] <- 0
 
       sub_all_genes <- rownames(sub_res)
       sub_all_sig <- rownames(sub_res)[!is.na(sub_res$padj) & sub_res$padj < FDR_THRESHOLD]
       
-      # Total reads (baseMean sum)
-      total_reads_val <- sum(sub_res$bm_ruler, na.rm = TRUE)
+      # Total reads (sum of the subsample's own raw per-gene means)
+      sub_mean <- if ("baseMean_raw" %in% colnames(sub_res)) sub_res$baseMean_raw else sub_res$baseMean
+      total_reads_val <- sum(sub_mean, na.rm = TRUE)
       reads_row <- data.frame(
         Donors = n_donors,
         Y_Value = y_value,
@@ -471,8 +479,8 @@ for (cell_type in cell_types) {
       }
 
       # --- Expression-filtered LFC bins (baseMean > EXPR_FILTER_THRESHOLD) ---
-      # For recall:    only GT genes with GT baseMean > threshold
-      # For precision: only predicted genes with subsample baseMean > threshold
+      # For recall:    only GT genes with GT-half median > threshold
+      # For precision: only predicted genes with GT-half median > threshold
       for (bin_name in names(LFC_INTERVALS)) {
         bounds <- LFC_INTERVALS[[bin_name]]
 

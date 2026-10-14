@@ -163,6 +163,7 @@ for (ct in XS_CELLTYPES) {
 
     # --- load all methods' truth sets for this (cell_type, run) once ---------
     truth <- list()
+    gt_median <- list()
     for (m in XS_METHODS) {
       gt_path <- file.path(CARTESIAN_BASE, ct, SHARD_DATASET, "cells", m,
                            paste0("Run_", run), "Ground_Truth.qs")
@@ -174,6 +175,9 @@ for (ct in XS_CELLTYPES) {
       gt <- tryCatch(as.data.frame(qs::qread(gt_path)), error = function(e) NULL)
       if (is.null(gt) || nrow(gt) == 0) next
       gt$gene_id <- rownames(gt)
+      # GT-half median raw count per gene, used to bin method m's subsample calls.
+      gt_median[[m]] <- setNames(if (!is.null(gt$median_raw)) gt$median_raw else gt$baseMean,
+                                 gt$gene_id)
       tj <- gt[!is.na(gt$padj) &
                  gt$padj < GT_PADJ_THRESHOLD &
                  !is.na(gt$log2FoldChange) &
@@ -226,10 +230,11 @@ for (ct in XS_CELLTYPES) {
                           error = function(e) NULL)
           if (is.null(res) || nrow(res) == 0) next
           gene_id <- rownames(res)
-          # Shared cross-method expression ruler: raw pseudobulk mean counts.
-          # Prefer `baseMean_raw` (identical definition across deseq2/edger/limma);
-          # fall back to `baseMean` only for any pre-rerun outputs that predate it.
-          res_bm_raw <- if (!is.null(res$baseMean_raw)) res$baseMean_raw else res$baseMean
+          # Expression ruler: each called gene's median raw count in method
+          # i_method's ground-truth half (0 if the gene failed the GT min-count
+          # filter), so a gene's expression bin does not change with the grid point.
+          res_bm_raw <- unname(gt_median[[i_method]][gene_id])
+          res_bm_raw[is.na(res_bm_raw)] <- 0
           has_padj <- !is.na(res$padj)
           universe_i <- gene_id[has_padj]
           detected_i <- gene_id[has_padj & res$padj < DETECT_PADJ_THRESHOLD]
@@ -263,9 +268,9 @@ for (ct in XS_CELLTYPES) {
           )
 
           # --- METRIC 2: Tiny-band DEG count (padj < 0.05 AND |LFC| in Tiny),
-          #     split by baseMean_raw expression bin (shared cross-method ruler).
+          #     split by GT-half median expression bin (shared cross-method ruler).
           #     Counts ALL significant Tiny calls regardless of truth membership
-          #     (true+false positives), using the subsample's own LFC + baseMean_raw.
+          #     (true+false positives), using the subsample's own LFC.
           #     Zeros recorded for
           #     every bin so the per-iteration mean stays honest.
           tiny_counts <- setNames(integer(length(BASEMEAN_LABELS)), BASEMEAN_LABELS)

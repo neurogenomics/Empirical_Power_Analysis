@@ -93,7 +93,9 @@ boosters from `booster.ubj` (or the bundle via `xgb.load.raw()`), not from
   (times a normalised inverse-frequency power-bin weight when `alpha > 0`).
 - Continuous features on their raw scale: `n_donors`, `n_cells`,
   `reads_per_cell`, `abs_gt_lfc`, `gt_basemean`, `gt_dispersion`. One-hot
-  `cell_type` and `de_method`. 12 columns in total.
+  `cell_type` and `de_method`. 12 columns in total. `gt_basemean` is the
+  gene's median raw pseudobulk count across the ground-truth-half donors
+  (`median_raw` in the DE result tables).
 - Monotone constraints: increasing in the first five continuous features,
   decreasing in dispersion.
 - Search grid: `max_depth` {3, 4, 6, 10} x `eta` {0.01, 0.03, 0.1} x

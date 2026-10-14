@@ -235,7 +235,7 @@ read_de_table <- function(path) {
   r  <- qs::qread(path)
   df <- as.data.frame(r)
   gene <- rownames(df)
-  bm <- if ("baseMean_raw" %in% names(df)) df$baseMean_raw else df$baseMean
+  bm <- if ("median_raw" %in% names(df)) df$median_raw else df$baseMean
   data.frame(
     gene    = gene,
     baseMean = as.numeric(bm),

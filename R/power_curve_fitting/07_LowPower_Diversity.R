@@ -110,7 +110,7 @@ theme_paper <- function(base_size = 12) {
 
 FEATURES <- c(
   abs_gt_lfc     = "|LFC|",
-  gt_basemean    = "Mean expression (log axis)",
+  gt_basemean    = "Median expression (log axis)",
   n_donors       = "Donors",
   n_cells        = "Cells / donor",
   gt_dispersion  = "Dispersion"
