@@ -134,9 +134,9 @@ its README) are byte-identical across reruns of the same commit.
 | `xgb_shap` | xgb_select | SHAP figures (Supp. Figs.) | 2-4 h |
 | `xgb_post` | xgb_select | Figure 5 (incl. hyperparameter bracketing, per-class precision/recall/F1), exported `predict_power` bundle | ~2 h |
 | `gene_class` | shard, xgb_post | Figure 6 | ~2 h |
-| `tables` | fgt, pcf_aggregate, cartesian_* | Supp. Table 2, recall grid CSV (numbers in text), Supp. Data 3 | < 1 h |
+| `tables` | fgt, pcf_aggregate, cartesian_* | Supp. Table 2, recall grid CSV (numbers in text) | < 1 h |
 | `compose` | cartesian_*, crossscore | Figures 2-4, cross-method and per-method Supp. Figs. | < 1 h |
-| `supp_data` | several | Supplementary Data 1-4 (+ SD2 zip) | < 1 h |
+| `supp_data` | several | Supplementary Data files (SD1 and SD4 are cited in the manuscript) | < 1 h |
 | `paper_values` | eda, tables, deg_loss, pcf_aggregate, xgb_*, gene_class | `Paper_Source_Data/paper_values.csv`: every data-derived number quoted in the text, with its definition and source file | minutes |
 | `knit` | all of the above | `Manuscript/nature_comms_{draft,supplementary}.html` | < 1 h |
 | `ad_shard` | shard | AD vs control donor shards: AD as the only diagnosis vs no diagnosis | < 1 h |
