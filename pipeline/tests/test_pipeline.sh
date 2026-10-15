@@ -97,9 +97,8 @@ check "xgb_search array of 108" grep -q '^#PBS -J 1-108%' "$W/jobs/xgb_search.pb
 check "ad_grid array has AD chunk tasks" grep -q '^#PBS -J 1-2%2$' "$W/jobs/ad_grid.pbs"
 check "ad_grid task list is cells-only" test "$(cat "$W/jobs/ad_grid.todo")" = "$(printf 'cells:1 epa_cells_chunk_1\ncells:2 epa_cells_chunk_2')"
 ok_dep=true
-for s in pcf_aggregate ad_pcf xgb_select xgb_post; do grep -qF "$(id_of "$s")" <<< "$(dep_of ad_validate)" || ok_dep=false; done
-check "ad_validate waits for the sex model and the AD test table" "$ok_dep"
-check "finalise waits for the AD stages" grep -qF "$(id_of ad_validate)" <<< "$(dep_of finalise)"
+for s in ad_cartesian ad_de; do grep -qF "$(id_of "$s")" <<< "$(dep_of finalise)" || ok_dep=false; done
+check "finalise waits for the AD stages" "$ok_dep"
 check "commit time recorded for SOURCE_DATE_EPOCH" grep -Eq '^[0-9]+$' "$W/code/COMMIT_TIME"
 check "no job uses qsub -v" bash -c "! grep -q -- ' -v ' '$QSUB_LOG'"
 check "job scripts carry their resources" grep -q '^#PBS -l select=1:ncpus=24:mem=200gb$' "$W/jobs/shard.pbs"

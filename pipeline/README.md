@@ -142,9 +142,7 @@ its README) are byte-identical across reruns of the same commit.
 | `ad_shard` | shard | AD vs control donor shards: AD as the only diagnosis vs no diagnosis | < 1 h |
 | `ad_gt_manifest`, `ad_grid` (array, `EPA_AD_GRID_CHUNKS`, cells mode) | ad_shard | the AD vs control grid, 10 runs x 3 methods, same seeds | ~5 h per task |
 | `ad_cartesian` | ad_grid | AD recall/precision grids and surfaces (method-pooled), p-value-quartile and expression panels | 2-4 h |
-| `ad_pcf` | ad_grid | AD detection outcomes in the power model's training layout (external test set) | ~8 h |
 | `ad_de` | shard, ad_shard | full-cohort DE for both contrasts; AD vs autosomal sex-biased DEG |LFC| and expression distributions | 1-2 h |
-| `ad_validate` | ad_pcf, xgb_post | the sex-trained power model tested on AD: skewed-trinary precision/recall/F1, calibration, feature shift | < 1 h |
 | `finalise` | knit, AD stages | `MANIFEST.sha256`, `PROVENANCE.txt` | minutes |
 
 **Critical path.** `shard`, then `gt_manifest`, `grid`, `pcf_aggregate`,

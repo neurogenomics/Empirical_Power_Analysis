@@ -42,7 +42,7 @@ fi
 
 order="shard eda fgt deg_loss gt_manifest cartesian_cells cartesian_reads crossscore pcf_aggregate
        xgb_select xgb_shap xgb_post gene_class tables compose supp_data knit
-       ad_shard ad_gt_manifest ad_cartesian ad_pcf ad_de ad_validate"
+       ad_shard ad_gt_manifest ad_cartesian ad_de"
 $WITH_GRID && order="$order grid ad_grid"
 for s in $order; do
   for t in "$RES/$s"/*.tar; do

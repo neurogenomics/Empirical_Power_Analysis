@@ -58,9 +58,7 @@ DE methods).
 | `knit` | `rmarkdown::render()` on `nature_comms_draft.rmd` and `nature_comms_supplementary.rmd` | Manuscript and supplement (HTML) |
 | `ad_shard` | `Rscript R/sharding/Build_AD_Control_Shards.R` | AD vs control donor shards (`Shards/*/Roussos_ADvsCtrl/`) |
 | `ad_gt_manifest`, `ad_grid`, `ad_cartesian` | `R/cartesian_downsampling/run_pipeline.R` steps `1, 1.5`, then `2` (array job), then `3,3.5,4,5,6`, with `EPA_CONTRAST=ad_vs_control`, `SHARD_DATASET=Roussos_ADvsCtrl`, cells mode only; `ad_cartesian` also runs `compose_recall_panels.R` and `compose_precision_panels.R` | AD vs control recall/precision grids and figures |
-| `ad_pcf` | `R/power_curve_fitting/` `00`, `00b`, `01` (once per DE method), `01b`, `01e_Filter_Design.R` with `EPA_CONTRAST=ad_vs_control` | `Datalink/AD_vs_Control/Power_Curve_Fitting/` |
 | `ad_de` | `R/ad_contrast/01_Full_Cohort_DE.R` (sex, then AD vs control), `02_Compare_Effect_Distributions.R` | Full-cohort DE for both contrasts, effect distributions |
-| `ad_validate` | `R/ad_contrast/03_Validate_Power_Model.R` | The sex-trained power model tested on the AD vs control grid |
 | `finalise` | (shell only) | `results/MANIFEST.sha256`, `results/PROVENANCE.txt` |
 
 The order above is a valid topological order; `pipeline/stages.tsv` gives the

@@ -60,10 +60,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - AD vs control contrast (`EPA_CONTRAST=ad_vs_control`, `R/shared/contrast.R`,
   `R/ad_contrast/`, `R/sharding/Build_AD_Control_Shards.R`): AD as the only
   recorded diagnosis vs no recorded diagnosis, sex as a covariate, a
-  cells-mode grid with the same seeds, a full-cohort DE comparison, and a test
-  of the sex-trained power model. Stages `ad_shard`, `ad_gt_manifest`,
-  `ad_grid`, `ad_cartesian`, `ad_pcf`, `ad_de` and `ad_validate`; outputs in
-  `Datalink/AD_vs_Control/`. Its place in the manuscript is not yet decided.
+  cells-mode grid with the same seeds and a full-cohort DE comparison, to show
+  that recall on a disease contrast follows the same pattern as on sex. The
+  power model is not tested on it. Stages `ad_shard`, `ad_gt_manifest`,
+  `ad_grid`, `ad_cartesian` and `ad_de`; outputs in `Datalink/AD_vs_Control/`.
 
 ### Removed
 Everything not on the reproduction path is untracked (commit `f14c924`; the

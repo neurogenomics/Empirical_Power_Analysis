@@ -43,12 +43,6 @@ The XGBoost stages run with 8 threads (`XGB_NTHREAD` and `OMP_NUM_THREADS`).
 The exported bundle is then used by the `gene_class` stage
 (`R/gene_classification/`, Figure 6).
 
-The AD vs control stage `ad_pcf` runs `00`, `00b`, `01`, `01b` and `01e` again
-with `EPA_CONTRAST=ad_vs_control`, writing to
-`Datalink/AD_vs_Control/Power_Curve_Fitting/`. That table is only a test set:
-`R/ad_contrast/03_Validate_Power_Model.R` (stage `ad_validate`) applies the
-sex-trained model to it.
-
 ### Removed
 
 The retired logistic-regression model (v4.0.0 to v4.1.0, including the
@@ -132,8 +126,7 @@ XGBoost scripts are controlled by environment variables: `XGB_FITTING_DATA`
 task, 1 to 108), `XGB_MAX_NROUNDS` (20,000), `XGB_EARLY_STOP` (50) and
 `XGB_NTHREAD` (fixed at 8 in the pipeline, since thread count can change
 floating-point summation order). `XGB_MIN_N_CELLS` sets the 01e threshold
-(default 100). `EPA_CONTRAST=ad_vs_control` (see `R/shared/contrast.R`)
-switches steps 00 to 01e to the AD vs control shards and output tree.
+(default 100).
 
 ## 7. How to run
 

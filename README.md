@@ -35,7 +35,7 @@ Outputs include:
 │   ├── depth_equalization/    #   Depth- and cell-count-equalised truth sets and DEG loss
 │   ├── power_curve_fitting/   #   XGBoost power model: training table, search, selection, SHAP, export
 │   ├── gene_classification/   #   Per-gene power by TF family / protein class (Figure 6)
-│   ├── ad_contrast/           #   AD vs control contrast and the external test of the power model
+│   ├── ad_contrast/           #   AD vs control contrast (same downsampling grid, compared with sex)
 │   ├── figure_data_generation/#   Source CSVs the manuscript reads
 │   ├── figure_composition/    #   Multi-panel figures
 │   ├── supplementary_data/    #   Supplementary Data files

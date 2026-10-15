@@ -106,11 +106,8 @@ the model reported in the paper.
 4. **Sex as the contrast.** The truth set is sex-differential expression,
    used because it gives a known, cohort-wide biological signal. Disease
    contrasts may have a different effect-size and dispersion structure, so
-   predicted power for them is less certain. The pipeline tests the
-   sex-trained model on an AD vs control grid from the same cohort
-   (`R/ad_contrast/03_Validate_Power_Model.R`, outputs in
-   `Datalink/AD_vs_Control/Power_Model_Test/`); where that test goes in the
-   manuscript is not yet decided.
+   predicted power for them is less certain. The model has not been tested
+   on any other contrast.
 5. **Cell type default.** `cell_type` defaults to Oligo, the cell type with
    the least depth-censored truth set. An earlier ICE and swing analysis of
    the `cell_type` input (not part of the reproduction pipeline) found that

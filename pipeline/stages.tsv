@@ -32,7 +32,5 @@ ad_shard	shard	8	64gb	04:00:00	single
 ad_gt_manifest	ad_shard	8	96gb	12:00:00	single
 ad_grid	ad_shard,ad_gt_manifest	24	200gb	24:00:00	array:adgrid
 ad_cartesian	ad_grid	24	200gb	12:00:00	single
-ad_pcf	ad_shard,ad_grid	24	200gb	24:00:00	single
 ad_de	shard,ad_shard	12	200gb	12:00:00	single
-ad_validate	pcf_aggregate,ad_pcf,xgb_select,xgb_post	8	96gb	04:00:00	single
-finalise	knit,ad_cartesian,ad_de,ad_validate	1	4gb	01:00:00	single
+finalise	knit,ad_cartesian,ad_de	1	4gb	01:00:00	single
