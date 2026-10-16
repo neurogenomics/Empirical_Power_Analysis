@@ -16,12 +16,19 @@
 #                  recorded diagnosis). Sex becomes a covariate. Source and
 #                  ethnicity are dropped: every selected donor is from one
 #                  source (MSSM) and four Asian-ancestry donors are all controls.
+#                  The AD group is ~65% female, so the donor split and every
+#                  downsampled cohort are ALSO balanced on real sex within each
+#                  AD/control group (BALANCE_SEX_COL, see generate_job_plan()).
 #
 # Sourced at the end of each pipeline's metadata section, so it overrides the
 # sex defaults only when another contrast is requested.
 # ==============================================================================
 
 EPA_CONTRAST <- Sys.getenv("EPA_CONTRAST", "sex")
+
+# Real-sex column used to balance donors within each contrast group; NULL = off.
+BALANCE_SEX_COL  <- NULL
+BALANCE_SEX_VALS <- c("male", "female")
 
 CONTRAST_SHARD_DATASETS <- c(sex = "Roussos", ad_vs_control = "Roussos_ADvsCtrl")
 if (!EPA_CONTRAST %in% names(CONTRAST_SHARD_DATASETS)) {
@@ -34,6 +41,7 @@ if (EPA_CONTRAST == "ad_vs_control") {
   MALE_VAL         <- "AD"
   FEMALE_VAL       <- "Control"
   CATEGORICAL_VARS <- c("sex")
+  BALANCE_SEX_COL  <- "sex"
 }
 
 #' Stop if a shard dataset does not belong to EPA_CONTRAST (e.g. sex DE run on

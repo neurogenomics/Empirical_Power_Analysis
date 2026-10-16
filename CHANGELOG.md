@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- AD vs control sex balancing. The AD group is about 65% female and controls
+  about 50:50, so with `EPA_CONTRAST=ad_vs_control` the ground-truth split is
+  now stratified by AD status x sex (each of the four groups split 50:50), and
+  every subsample draws each of AD and control half male, half female (the odd
+  donor goes to the sex with more eligible donors; a sex that runs out gives
+  all its eligible donors and the other sex fills the rest). The AD/control
+  split stays proportional, sex stays a covariate, and the same design points
+  run as before. The job manifest records the donors drawn per group x sex
+  (`n_AD_male`, `n_AD_female`, `n_Control_male`, `n_Control_female`). The sex
+  contrast's sampling is unchanged. Test:
+  `R/cartesian_downsampling/tests/test_ad_sex_balance.R`.
 - Stage `paper_values` (`R/figure_data_generation/09_Paper_Values.R`) writes
   `Paper_Source_Data/paper_values.csv`: every data-derived number quoted in
   the text (cohort sizes, grid recall/precision claims, DEG loss, power-model

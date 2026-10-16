@@ -98,13 +98,14 @@ pipeline/run.sh WORK --dry-run             # inspect generated job scripts
 ./docker/docker-smoke.sh                   # environment check of a built image
 ```
 
-Five self-contained unit tests need no data and run inside the container from
+Six self-contained unit tests need no data and run inside the container from
 the repository root:
 
 ```bash
 for t in R/cartesian_downsampling/tests/test_age_parsing.R \
          R/cartesian_downsampling/tests/test_job_planning.R \
          R/cartesian_downsampling/tests/test_reads_sampling.R \
+         R/cartesian_downsampling/tests/test_ad_sex_balance.R \
          R/de_diagnostics/toy/run_toy_test.R \
          R/eda_roussos/tests/test_all_utils.R; do
   apptainer exec --cleanenv --no-home --env HOME=/tmp -B "$PWD":/workspace --pwd /workspace epa.sif Rscript "$t"

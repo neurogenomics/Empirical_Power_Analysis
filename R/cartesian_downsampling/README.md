@@ -140,6 +140,7 @@ Under `{CellType}/Roussos/{mode}/{method or all_methods}/`:
 | `test_deseq_worker.R` | DESeq2 execution, formula construction, LFC shrinkage, result saving |
 | `test_job_planning.R` | Job grid generation, filtering by cell count, file naming |
 | `test_reads_sampling.R` | Reads-mode sampling (multinomial overflow, exact targeting) |
+| `test_ad_sex_balance.R` | AD vs control: AD status x sex ground-truth split, sex-balanced subsamples, sex contrast unchanged |
 | `test_fittype_equivalence.R` | `glmGamPoi` vs `parametric` DESeq2 fits agree (LFC and -log10 padj correlation >= 0.99) |
 
 **Run Stage 1:**

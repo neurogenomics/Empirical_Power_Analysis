@@ -1,7 +1,8 @@
 # shellcheck shell=bash
 # Stage ad_gt_manifest: as gt_manifest, for the AD vs control contrast and
-# cells mode only. The ground truth for run r is an AD/control-stratified 50%
-# donor split with the same seed (1234 + r) as the sex grid.
+# cells mode only. The ground truth for run r is a 50% donor split stratified
+# by AD status x sex, with the same seed (1234 + r) as the sex grid; each
+# subsample then draws each group as close to 50:50 male/female as it can.
 source "$(dirname "${BASH_SOURCE[0]}")/_cartesian_env.sh"
 
 stage_main() {

@@ -155,15 +155,26 @@ for (cell_type in cell_types) {
     set.seed(run_seed)
     
     # Sample ground truth donors (GT_SPLIT proportion)
-    n_gt_male <- floor(length(m_pool) * GT_SPLIT)
-    n_gt_female <- floor(length(f_pool) * GT_SPLIT)
-    
-    gt_males <- sample(m_pool, n_gt_male)
-    gt_females <- sample(f_pool, n_gt_female)
-    gt_ids <- c(gt_males, gt_females)
-    
-    log_info("Ground truth: %d donors (%d M, %d F)", 
-             length(gt_ids), length(gt_males), length(gt_females))
+    if (balance_sex_active()) {
+      # Stratified by contrast group x real sex (AD vs control)
+      gt_ids <- split_gt_donors_sex_balanced(donor_meta, GT_SPLIT)
+      gt_meta <- donor_meta[donor_meta$donor_id %in% gt_ids, ]
+      tab <- table(factor(gt_meta$sex, c(MALE_VAL, FEMALE_VAL)),
+                   factor(gt_meta$balance_sex, BALANCE_SEX_VALS))
+      log_info("Ground truth: %d donors (%s %d M / %d F, %s %d M / %d F)",
+               length(gt_ids), MALE_VAL, tab[1, 1], tab[1, 2],
+               FEMALE_VAL, tab[2, 1], tab[2, 2])
+    } else {
+      n_gt_male <- floor(length(m_pool) * GT_SPLIT)
+      n_gt_female <- floor(length(f_pool) * GT_SPLIT)
+
+      gt_males <- sample(m_pool, n_gt_male)
+      gt_females <- sample(f_pool, n_gt_female)
+      gt_ids <- c(gt_males, gt_females)
+
+      log_info("Ground truth: %d donors (%d M, %d F)",
+               length(gt_ids), length(gt_males), length(gt_females))
+    }
     
     # Aggregate from shards (use all cells for ground truth)
     log_info("Aggregating pseudobulk counts...")

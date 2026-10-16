@@ -140,7 +140,7 @@ its README) are byte-identical across reruns of the same commit.
 | `paper_values` | eda, tables, deg_loss, pcf_aggregate, xgb_*, gene_class | `Paper_Source_Data/paper_values.csv`: every data-derived number quoted in the text, with its definition and source file | minutes |
 | `knit` | all of the above | `Manuscript/nature_comms_{draft,supplementary}.html` | < 1 h |
 | `ad_shard` | shard | AD vs control donor shards: AD as the only diagnosis vs no diagnosis | < 1 h |
-| `ad_gt_manifest`, `ad_grid` (array, `EPA_AD_GRID_CHUNKS`, cells mode) | ad_shard | the AD vs control grid, 10 runs x 3 methods, same seeds | ~5 h per task |
+| `ad_gt_manifest`, `ad_grid` (array, `EPA_AD_GRID_CHUNKS`, cells mode) | ad_shard | the AD vs control grid, 10 runs x 3 methods, same seeds; split and subsamples sex-balanced within AD and control | ~5 h per task |
 | `ad_cartesian` | ad_grid | AD recall/precision grids and surfaces (method-pooled), p-value-quartile and expression panels | 2-4 h |
 | `ad_de` | shard, ad_shard | full-cohort DE for both contrasts; AD vs autosomal sex-biased DEG |LFC| and expression distributions | 1-2 h |
 | `finalise` | knit, AD stages | `MANIFEST.sha256`, `PROVENANCE.txt` | minutes |

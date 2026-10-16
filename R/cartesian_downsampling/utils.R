@@ -737,13 +737,17 @@ load_donor_metadata <- function(manifest_path, shard_dir) {
       # This adds ~1 second per shard but keeps logic simple
       total_reads <- sum(SummarizedExperiment::assay(tmp, "counts"))
       
-      data.frame(
+      row <- data.frame(
         donor_id = as.character(cd[[DONOR_ID_COL]][1]),
         sex = as.character(cd[[SEX_COL]][1]),
         cell_count = ncol(tmp),
         total_reads = total_reads,
         stringsAsFactors = FALSE
       )
+      if (balance_sex_active()) {
+        row$balance_sex <- as.character(cd[[BALANCE_SEX_COL]][1])
+      }
+      row
     }, error = function(e) {
       log_error("Failed to read shard %s: %s", f, e$message)
       return(NULL)
@@ -753,6 +757,14 @@ load_donor_metadata <- function(manifest_path, shard_dir) {
   if (is.null(donor_meta) || nrow(donor_meta) == 0) {
     log_error("No valid donor metadata loaded")
     return(NULL)
+  }
+
+  if (balance_sex_active()) {
+    bad <- !donor_meta$balance_sex %in% BALANCE_SEX_VALS
+    if (any(bad)) {
+      stop(sprintf("Column '%s' has values outside %s for %d donors",
+                   BALANCE_SEX_COL, paste(BALANCE_SEX_VALS, collapse = "/"), sum(bad)))
+    }
   }
 
   # MINI_RUN: trim to a deterministic, sex-balanced universe of MINI_MAX_DONORS.
@@ -798,6 +810,73 @@ get_sex_proportions <- function(donor_meta) {
   )
 }
 
+#' TRUE when donors are also balanced on real sex within each contrast group
+#' (EPA_CONTRAST=ad_vs_control, see R/shared/contrast.R). The sex contrast
+#' never sets BALANCE_SEX_COL, so its sampling is unchanged.
+balance_sex_active <- function() {
+  exists("BALANCE_SEX_COL") && !is.null(BALANCE_SEX_COL)
+}
+
+#' Ground-truth donors for the sex-balanced contrast: GT_SPLIT of each
+#' contrast group x real sex stratum (floor), drawn in a fixed order. The
+#' caller sets the seed.
+#'
+#' @param donor_meta Data frame from load_donor_metadata() with balance_sex
+#' @param gt_split Proportion of each stratum assigned to the ground truth
+#' @return Character vector of ground-truth donor IDs
+split_gt_donors_sex_balanced <- function(donor_meta, gt_split = GT_SPLIT) {
+  gt_ids <- character(0)
+  for (g in c(MALE_VAL, FEMALE_VAL)) {
+    for (s in BALANCE_SEX_VALS) {
+      pool <- donor_meta$donor_id[donor_meta$sex == g & donor_meta$balance_sex == s]
+      gt_ids <- c(gt_ids, pool[sample.int(length(pool), floor(length(pool) * gt_split))])
+    }
+  }
+  gt_ids
+}
+
+#' Split n donors of one contrast group between the sexes: half each, the odd
+#' donor to the sex with more eligible donors (ties to BALANCE_SEX_VALS[1]); a
+#' sex with too few eligible donors gives all it has and the other fills the rest.
+#'
+#' @param n Donors to draw from the group
+#' @param avail Named integer vector of eligible donors per sex (BALANCE_SEX_VALS order)
+#' @return Named integer vector of donors to draw per sex, or NULL if sum(avail) < n
+alloc_sex_balanced <- function(n, avail) {
+  if (sum(avail) < n) return(NULL)
+  take <- setNames(rep(n %/% 2, length(avail)), names(avail))
+  if (n %% 2 == 1) {
+    extra <- which.max(avail)
+    take[extra] <- take[extra] + 1
+  }
+  short <- take > avail
+  if (any(short)) {
+    take[short] <- avail[short]
+    take[!short] <- n - sum(take[short])
+  }
+  take
+}
+
+#' Draw strata for one job of the sex-balanced contrast: contrast group
+#' (MALE_VAL then FEMALE_VAL) x real sex (BALANCE_SEX_VALS order).
+#'
+#' @param eligible Eligible validation donors for this grid point
+#' @param n_by_group Donors to draw per contrast group, named MALE_VAL/FEMALE_VAL
+#' @return List of strata, each list(group, sex, pool, n)
+sex_balanced_strata <- function(eligible, n_by_group) {
+  strata <- list()
+  for (g in c(MALE_VAL, FEMALE_VAL)) {
+    pools <- lapply(setNames(BALANCE_SEX_VALS, BALANCE_SEX_VALS), function(s) {
+      eligible$donor_id[eligible$sex == g & eligible$balance_sex == s]
+    })
+    take <- alloc_sex_balanced(n_by_group[[g]], lengths(pools))
+    for (s in BALANCE_SEX_VALS) {
+      strata[[length(strata) + 1]] <- list(group = g, sex = s, pool = pools[[s]], n = take[[s]])
+    }
+  }
+  strata
+}
+
 # ==============================================================================
 # 5. JOB PLANNING FUNCTIONS
 # ==============================================================================
@@ -824,6 +903,10 @@ generate_job_plan <- function(val_df,
                                run_dir,
                                shard_dir) {
   
+  if (balance_sex_active() && !"balance_sex" %in% names(val_df)) {
+    stop("Validation donors have no balance_sex column; rerun step 1 (ground truth)")
+  }
+
   # Select Y-axis steps based on mode
   y_steps <- if (mode == "reads") read_steps else cell_steps
   y_col_name <- if (mode == "reads") "n_reads" else "n_cells"
@@ -898,6 +981,11 @@ generate_job_plan <- function(val_df,
       mode = mode
     )
     
+    # Sex-balanced contrast: draw each contrast group half male, half female
+    if (balance_sex_active()) {
+      job_spec$strata <- sex_balanced_strata(eligible, setNames(c(n_m, n_f), c(MALE_VAL, FEMALE_VAL)))
+    }
+
     # Add mode-specific field
     if (mode == "reads") {
       job_spec$target_reads <- row$n_reads
@@ -923,6 +1011,10 @@ generate_job_plan <- function(val_df,
 #' @return Character vector of sampled donor IDs
 sample_donors_for_job <- function(job, seed) {
   set.seed(seed)
+  if (!is.null(job$strata)) {
+    return(unlist(lapply(job$strata, function(s) s$pool[sample.int(length(s$pool), s$n)]),
+                  use.names = FALSE))
+  }
   c(
     sample(job$male_pool, job$n_male),
     sample(job$female_pool, job$n_female)
@@ -1046,6 +1138,10 @@ build_job_manifest <- function(cell_types = get_cell_types(),
           est_cost = estimate_job_cost(job),
           stringsAsFactors = FALSE
         )
+        # Sex-balanced contrast: record the donors drawn per group x sex
+        for (s in job$strata) {
+          rows[[row_i]][[paste("n", s$group, s$sex, sep = "_")]] <- s$n
+        }
       }
 
       log_info("  run %d: %d manifest jobs", run_id, length(plan))
