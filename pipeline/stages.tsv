@@ -25,7 +25,7 @@ xgb_post	pcf_aggregate,xgb_select	8	64gb	08:00:00	single
 gene_class	shard,xgb_post	12	96gb	12:00:00	single
 tables	fgt,pcf_aggregate,cartesian_cells,cartesian_reads	8	64gb	04:00:00	single
 compose	cartesian_cells,cartesian_reads,crossscore	4	32gb	04:00:00	single
-supp_data	eda,fgt,tables,cartesian_cells,cartesian_reads,xgb_select	2	32gb	02:00:00	single
+supp_data	eda,fgt,xgb_select	2	32gb	02:00:00	single
 paper_values	eda,tables,deg_loss,pcf_aggregate,xgb_select,xgb_post,gene_class	2	64gb	01:00:00	single
 knit	eda,fgt,deg_loss,cartesian_cells,cartesian_reads,compose,xgb_select,xgb_shap,xgb_post,gene_class,tables,supp_data,paper_values	4	32gb	04:00:00	single
 ad_shard	shard	8	64gb	04:00:00	single

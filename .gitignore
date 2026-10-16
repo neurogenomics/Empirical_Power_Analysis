@@ -207,17 +207,12 @@ Datalink/**/.*_complete
 
 # =============================================================================
 # Supplementary Data package (journal / bioRxiv deliverables)
-# EXPLICITLY SHIP the four external Supplementary Data files. The broad
-# Datalink/**/*.csv rule above ignores SD3/SD4, so re-include them here.
-# SD1 (.xlsx) and SD2 (.zip) match no rule but are listed for explicitness.
+# EXPLICITLY SHIP the Supplementary Data files cited in the manuscript (SD1, SD4).
+# The broad Datalink/**/*.csv rule above ignores SD4, so re-include it here.
 # =============================================================================
 !Datalink/Supplementary_Data/Supplementary_Data_1_dataset_summary.xlsx
-!Datalink/Supplementary_Data/Supplementary_Data_2_cartesian_downsampling.zip
-!Datalink/Supplementary_Data/Supplementary_Data_3_truth_gene_characteristics.csv
 !Datalink/Supplementary_Data/Supplementary_Data_4_xgboost_hyperparameters.csv
 
-# Unpacked SD2 staging folder - regenerable from the .zip; never ship the loose .qs.
-Datalink/Supplementary_Data/Supplementary_Data_2_cartesian_downsampling/
 
 # Helper scripts used to BUILD the Supplementary Data - kept for provenance,
 # hidden from the public release.

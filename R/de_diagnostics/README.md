@@ -15,7 +15,7 @@ Generates diagnostic visualisations and statistical tests for the full-cohort Ps
 The canonical end-to-end route is `pipeline/` (see `pipeline/README.md`):
 
 - Stage `fgt` runs `Rscript R/de_diagnostics/run_pipeline.R 4` (after `R/full_ground_truth` steps 1 and 4), with `BIOMART_OFFLINE=true` and the shipped `gene_biotype_cache.csv`.
-- Stage `tables` runs `Rscript R/de_diagnostics/run_pipeline.R 5` (needs `shared_truth_genes.qs` from stage `pcf_aggregate`).
+- Step 5 is not run by the reproduction pipeline: none of its outputs are used in the manuscript. Run it by hand with `Rscript R/de_diagnostics/run_pipeline.R 5` (needs `shared_truth_genes.qs` from stage `pcf_aggregate`).
 
 Both thresholds below are legacy cut-offs specific to these diagnostics; the paper truth set uses |LFC| > 0.2 (`GT_LFC_THRESHOLD` in `R/power_curve_fitting/config.R`).
 

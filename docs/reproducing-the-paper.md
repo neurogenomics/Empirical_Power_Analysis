@@ -52,7 +52,7 @@ DE methods).
 | `xgb_shap` | `R/power_curve_fitting/04_SHAP_Figures.R` | SHAP figures |
 | `xgb_post` | `04_Export_XGBoost.R`, `07_LowPower_Diversity.R`, `08_Compare_Reweighted.R`, `09_Trinary_Classification.R` (`XGB_TRINARY_MODE=oof`), `_regenerate_xgb_panels.R`, `R/figure_composition/compose_xgb_panels.R` | Exported model bundle, Figure 5 |
 | `gene_class` | `R/gene_classification/classify_oligo_genes.R`, `annotate_oligo_genes.R`, `classify_oligo_multi_lfc.R`, `plot_oligo_expr_disp_panels.py` | Figure 6 |
-| `tables` | `Rscript R/figure_data_generation/run_pipeline.R 6,8`; `Rscript R/de_diagnostics/run_pipeline.R 5` | Paper source CSVs |
+| `tables` | `Rscript R/figure_data_generation/run_pipeline.R 6,8` | Paper source CSVs |
 | `compose` | `R/figure_composition/compose_figures.py --only figure_cartesian_oligo`, `compose_recall_panels.R --cell Oligo --mode cells`, `compose_crossscore.R`, `compose_supplementary.py` | Figures 2-4, composed supplementary figures |
 | `supp_data` | `Rscript R/supplementary_data/build_supplementary_data.R` | `Datalink/Supplementary_Data/` |
 | `knit` | `rmarkdown::render()` on `nature_comms_draft.rmd` and `nature_comms_supplementary.rmd` | Manuscript and supplement (HTML) |
