@@ -210,14 +210,14 @@ def main():
                 if k == 0:
                     ax.text(len(groups) - 0.55, 15 * 1.15, "mean expression 15 (approx. power floor)",
                             ha="right", va="bottom", fontsize=9, color="#777777")
-                ax.set_ylabel("Mean expression\n(log)", fontsize=15)
+                ax.set_ylabel("Gene counts\n(log)", fontsize=15)
             else:
                 draw_panel(ax, groups, "dispersion", tag, label, floor_y=0.5 * d_lo,
                            line_y=0.8 * d_lo, ylim=(0.42 * d_lo, 1.3 * d_hi), clip=(d_lo, d_hi))
                 ax.set_ylabel("DESeq2 dispersion\n(log)", fontsize=15)
             ax.set_xticks(range(len(groups)))
             if k == 0:
-                title = "Expression" if block == "A" else "Dispersion"
+                title = "Gene counts" if block == "A" else "Dispersion"
                 ax.set_title(title, fontsize=19, fontweight="bold", y=1.075)
                 ax.text(-0.075, 1.12, block, transform=ax.transAxes, fontsize=24,
                         fontweight="bold", ha="left", va="bottom")

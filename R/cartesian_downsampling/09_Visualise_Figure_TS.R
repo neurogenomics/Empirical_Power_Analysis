@@ -224,7 +224,7 @@ for (cell_type in cell_types) {
       fig_tag <- figure_tag_for_bin(fc_lfc)
 
       for (m in metrics_to_plot) {
-        title_str <- sprintf("%s across expression (%s): %s [%s]",
+        title_str <- sprintf("%s across gene counts (%s): %s [%s]",
                              m$desc, fc_lfc, prettify_label(cell_type), method)
         p <- plot_ts_facet(df_lfc, m$col, title_str)
 

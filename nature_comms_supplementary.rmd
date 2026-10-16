@@ -154,11 +154,11 @@ knitr::include_graphics(c(
 ))
 ```
 
-## Supplementary Fig. `r SF("crossmethod_recall_reads")`. Cross-method recall grids (counts-based mode)
+## Supplementary Fig. `r SF("crossmethod_recall_reads")`. Cross-method recall grids (UMI-budget mode)
 
-Same layout as Supplementary Fig. `r SF("crossmethod_recall_cells")`, with counts per cell on the x-axis instead of cells per donor. Counts-based sampling mode.
+Same layout as Supplementary Fig. `r SF("crossmethod_recall_cells")`, with UMIs per cell on the x-axis instead of cells per donor. UMI-budget sampling mode.
 
-```{r SuppFig19-CrossRecall-reads, out.width="90%", fig.show="hold", fig.cap="Cross-method recall grids (counts-based mode) for astrocytes (left), microglia (centre), and oligodendrocytes (right)."}
+```{r SuppFig19-CrossRecall-reads, out.width="90%", fig.show="hold", fig.cap="Cross-method recall grids (UMI-budget mode) for astrocytes (left), microglia (centre), and oligodendrocytes (right)."}
 knitr::include_graphics(c(
   "Datalink/Composed_Figures/Cross_Score/crossscore_recall_mega_Astro_reads_discrete_raw.png",
   "Datalink/Composed_Figures/Cross_Score/crossscore_recall_mega_Micro_reads_discrete_raw.png",
@@ -178,11 +178,11 @@ knitr::include_graphics(c(
 ))
 ```
 
-## Supplementary Fig. `r SF("crossmethod_precision_reads")`. Cross-method precision grids (counts-based mode)
+## Supplementary Fig. `r SF("crossmethod_precision_reads")`. Cross-method precision grids (UMI-budget mode)
 
-Same layout as Supplementary Fig. `r SF("crossmethod_precision_cells")`, counts-based sampling mode.
+Same layout as Supplementary Fig. `r SF("crossmethod_precision_cells")`, UMI-budget sampling mode.
 
-```{r SuppFig21-CrossPrecision-reads, out.width="90%", fig.show="hold", fig.cap="Cross-method precision grids (counts-based mode) for astrocytes (left), microglia (centre), and oligodendrocytes (right)."}
+```{r SuppFig21-CrossPrecision-reads, out.width="90%", fig.show="hold", fig.cap="Cross-method precision grids (UMI-budget mode) for astrocytes (left), microglia (centre), and oligodendrocytes (right)."}
 knitr::include_graphics(c(
   "Datalink/Composed_Figures/Cross_Score/crossscore_precision_mega_Astro_reads_discrete_raw.png",
   "Datalink/Composed_Figures/Cross_Score/crossscore_precision_mega_Micro_reads_discrete_raw.png",
@@ -194,11 +194,11 @@ knitr::include_graphics(c(
 
 # Supplementary Figures: per-method downsampling grids
 
-The following figures decompose the method-pooled Cartesian downsampling results (Supplementary Figs. `r SF("recall_continuous_surfaces")`-`r SF("recall_discrete_heatmaps")`) by the three differential-expression methods, showing DESeq2, edgeR, limma-voom, and the pooled all-methods result side by side (2×2 panel per figure) for a single cell type. They complement the cross-method comparison grids (Supplementary Figs. `r SF("crossmethod_recall_cells")`-`r SF("crossmethod_precision_reads")`), which instead cross each method's truth set against each method's detection step. For every figure the cells-based sampling mode is shown on top and the counts-based mode below. Three views are provided per cell type and metric: the continuous semi-log surface across the full donor grid, and the recall/precision-versus-mean-expression curves within the tiny (|LFC| 0.2-1.0) and small (|LFC| 1.0-2.0) effect-size bins that the paper identifies as the underpowered regime.
+The following figures decompose the method-pooled Cartesian downsampling results (Supplementary Figs. `r SF("recall_continuous_surfaces")`-`r SF("recall_discrete_heatmaps")`) by the three differential-expression methods, showing DESeq2, edgeR, limma-voom, and the pooled all-methods result side by side (2×2 panel per figure) for a single cell type. They complement the cross-method comparison grids (Supplementary Figs. `r SF("crossmethod_recall_cells")`-`r SF("crossmethod_precision_reads")`), which instead cross each method's truth set against each method's detection step. For every figure the cells-based sampling mode is shown on top and the UMI-budget mode below. Three views are provided per cell type and metric: the continuous semi-log surface across the full donor grid, and the recall/precision-versus-gene-count curves within the tiny (|LFC| 0.2-1.0) and small (|LFC| 1.0-2.0) effect-size bins that the paper identifies as the underpowered regime.
 
 ## Supplementary Fig. `r SF("bymethod_astro_recall_surface")`. Astrocytes: recall surface across the downsampling grid, by DE method
 
-```{r SuppFig27-AstroRecallSurface-bymethod, out.width="99%", fig.show='hold', fig.cap="Astrocyte continuous recall surfaces (semi-log scale) split by DE method (DESeq2, edgeR, limma-voom, all-methods pooled). Cells-based sampling mode (top) and counts-based sampling mode (bottom). Each panel tiles the four methods in a 2×2 grid."}
+```{r SuppFig27-AstroRecallSurface-bymethod, out.width="99%", fig.show='hold', fig.cap="Astrocyte continuous recall surfaces (semi-log scale) split by DE method (DESeq2, edgeR, limma-voom, all-methods pooled). Cells-based sampling mode (top) and UMI-budget sampling mode (bottom). Each panel tiles the four methods in a 2×2 grid."}
 knitr::include_graphics(c(
   "Datalink/Composed_Figures/Supplementary/supp_astro_recall_surface_bymethod_cells.png",
   "Datalink/Composed_Figures/Supplementary/supp_astro_recall_surface_bymethod_reads.png"
@@ -207,43 +207,43 @@ knitr::include_graphics(c(
 
 ## Supplementary Fig. `r SF("bymethod_astro_precision_surface")`. Astrocytes: precision surface across the downsampling grid, by DE method
 
-```{r SuppFig28-AstroPrecisionSurface-bymethod, out.width="99%", fig.show='hold', fig.cap="Astrocyte continuous precision surfaces (semi-log scale) split by DE method. Cells-based sampling mode (top) and counts-based sampling mode (bottom)."}
+```{r SuppFig28-AstroPrecisionSurface-bymethod, out.width="99%", fig.show='hold', fig.cap="Astrocyte continuous precision surfaces (semi-log scale) split by DE method. Cells-based sampling mode (top) and UMI-budget sampling mode (bottom)."}
 knitr::include_graphics(c(
   "Datalink/Composed_Figures/Supplementary/supp_astro_precision_surface_bymethod_cells.png",
   "Datalink/Composed_Figures/Supplementary/supp_astro_precision_surface_bymethod_reads.png"
 ))
 ```
 
-## Supplementary Fig. `r SF("bymethod_astro_recall_tiny")`. Astrocytes: tiny-effect (|LFC| 0.2-1.0) recall versus mean expression, by DE method
+## Supplementary Fig. `r SF("bymethod_astro_recall_tiny")`. Astrocytes: tiny-effect (|LFC| 0.2-1.0) recall versus gene counts, by DE method
 
-```{r SuppFig29-AstroRecallTiny-bymethod, out.width="99%", fig.show='hold', fig.cap="Astrocyte recall across mean expression within the tiny effect-size bin (|LFC| 0.2-1.0), split by DE method. Cells-based sampling mode (top) and counts-based sampling mode (bottom)."}
+```{r SuppFig29-AstroRecallTiny-bymethod, out.width="99%", fig.show='hold', fig.cap="Astrocyte recall across gene counts within the tiny effect-size bin (|LFC| 0.2-1.0), split by DE method. Cells-based sampling mode (top) and UMI-budget sampling mode (bottom)."}
 knitr::include_graphics(c(
   "Datalink/Composed_Figures/Supplementary/supp_astro_recall_tiny_bymethod_cells.png",
   "Datalink/Composed_Figures/Supplementary/supp_astro_recall_tiny_bymethod_reads.png"
 ))
 ```
 
-## Supplementary Fig. `r SF("bymethod_astro_precision_tiny")`. Astrocytes: tiny-effect (|LFC| 0.2-1.0) precision versus mean expression, by DE method
+## Supplementary Fig. `r SF("bymethod_astro_precision_tiny")`. Astrocytes: tiny-effect (|LFC| 0.2-1.0) precision versus gene counts, by DE method
 
-```{r SuppFig30-AstroPrecisionTiny-bymethod, out.width="99%", fig.show='hold', fig.cap="Astrocyte precision across mean expression within the tiny effect-size bin (|LFC| 0.2-1.0), split by DE method. Cells-based sampling mode (top) and counts-based sampling mode (bottom)."}
+```{r SuppFig30-AstroPrecisionTiny-bymethod, out.width="99%", fig.show='hold', fig.cap="Astrocyte precision across gene counts within the tiny effect-size bin (|LFC| 0.2-1.0), split by DE method. Cells-based sampling mode (top) and UMI-budget sampling mode (bottom)."}
 knitr::include_graphics(c(
   "Datalink/Composed_Figures/Supplementary/supp_astro_precision_tiny_bymethod_cells.png",
   "Datalink/Composed_Figures/Supplementary/supp_astro_precision_tiny_bymethod_reads.png"
 ))
 ```
 
-## Supplementary Fig. `r SF("bymethod_astro_recall_small")`. Astrocytes: small-effect (|LFC| 1.0-2.0) recall versus mean expression, by DE method
+## Supplementary Fig. `r SF("bymethod_astro_recall_small")`. Astrocytes: small-effect (|LFC| 1.0-2.0) recall versus gene counts, by DE method
 
-```{r SuppFig31-AstroRecallSmall-bymethod, out.width="99%", fig.show='hold', fig.cap="Astrocyte recall across mean expression within the small effect-size bin (|LFC| 1.0-2.0), split by DE method. Cells-based sampling mode (top) and counts-based sampling mode (bottom)."}
+```{r SuppFig31-AstroRecallSmall-bymethod, out.width="99%", fig.show='hold', fig.cap="Astrocyte recall across gene counts within the small effect-size bin (|LFC| 1.0-2.0), split by DE method. Cells-based sampling mode (top) and UMI-budget sampling mode (bottom)."}
 knitr::include_graphics(c(
   "Datalink/Composed_Figures/Supplementary/supp_astro_recall_small_bymethod_cells.png",
   "Datalink/Composed_Figures/Supplementary/supp_astro_recall_small_bymethod_reads.png"
 ))
 ```
 
-## Supplementary Fig. `r SF("bymethod_astro_precision_small")`. Astrocytes: small-effect (|LFC| 1.0-2.0) precision versus mean expression, by DE method
+## Supplementary Fig. `r SF("bymethod_astro_precision_small")`. Astrocytes: small-effect (|LFC| 1.0-2.0) precision versus gene counts, by DE method
 
-```{r SuppFig32-AstroPrecisionSmall-bymethod, out.width="99%", fig.show='hold', fig.cap="Astrocyte precision across mean expression within the small effect-size bin (|LFC| 1.0-2.0), split by DE method. Cells-based sampling mode (top) and counts-based sampling mode (bottom)."}
+```{r SuppFig32-AstroPrecisionSmall-bymethod, out.width="99%", fig.show='hold', fig.cap="Astrocyte precision across gene counts within the small effect-size bin (|LFC| 1.0-2.0), split by DE method. Cells-based sampling mode (top) and UMI-budget sampling mode (bottom)."}
 knitr::include_graphics(c(
   "Datalink/Composed_Figures/Supplementary/supp_astro_precision_small_bymethod_cells.png",
   "Datalink/Composed_Figures/Supplementary/supp_astro_precision_small_bymethod_reads.png"
@@ -252,7 +252,7 @@ knitr::include_graphics(c(
 
 ## Supplementary Fig. `r SF("bymethod_micro_recall_surface")`. Microglia: recall surface across the downsampling grid, by DE method
 
-```{r SuppFig33-MicroRecallSurface-bymethod, out.width="99%", fig.show='hold', fig.cap="Microglia continuous recall surfaces (semi-log scale) split by DE method. Cells-based sampling mode (top) and counts-based sampling mode (bottom)."}
+```{r SuppFig33-MicroRecallSurface-bymethod, out.width="99%", fig.show='hold', fig.cap="Microglia continuous recall surfaces (semi-log scale) split by DE method. Cells-based sampling mode (top) and UMI-budget sampling mode (bottom)."}
 knitr::include_graphics(c(
   "Datalink/Composed_Figures/Supplementary/supp_micro_recall_surface_bymethod_cells.png",
   "Datalink/Composed_Figures/Supplementary/supp_micro_recall_surface_bymethod_reads.png"
@@ -261,43 +261,43 @@ knitr::include_graphics(c(
 
 ## Supplementary Fig. `r SF("bymethod_micro_precision_surface")`. Microglia: precision surface across the downsampling grid, by DE method
 
-```{r SuppFig34-MicroPrecisionSurface-bymethod, out.width="99%", fig.show='hold', fig.cap="Microglia continuous precision surfaces (semi-log scale) split by DE method. Cells-based sampling mode (top) and counts-based sampling mode (bottom)."}
+```{r SuppFig34-MicroPrecisionSurface-bymethod, out.width="99%", fig.show='hold', fig.cap="Microglia continuous precision surfaces (semi-log scale) split by DE method. Cells-based sampling mode (top) and UMI-budget sampling mode (bottom)."}
 knitr::include_graphics(c(
   "Datalink/Composed_Figures/Supplementary/supp_micro_precision_surface_bymethod_cells.png",
   "Datalink/Composed_Figures/Supplementary/supp_micro_precision_surface_bymethod_reads.png"
 ))
 ```
 
-## Supplementary Fig. `r SF("bymethod_micro_recall_tiny")`. Microglia: tiny-effect (|LFC| 0.2-1.0) recall versus mean expression, by DE method
+## Supplementary Fig. `r SF("bymethod_micro_recall_tiny")`. Microglia: tiny-effect (|LFC| 0.2-1.0) recall versus gene counts, by DE method
 
-```{r SuppFig35-MicroRecallTiny-bymethod, out.width="99%", fig.show='hold', fig.cap="Microglia recall across mean expression within the tiny effect-size bin (|LFC| 0.2-1.0), split by DE method. Cells-based sampling mode (top) and counts-based sampling mode (bottom)."}
+```{r SuppFig35-MicroRecallTiny-bymethod, out.width="99%", fig.show='hold', fig.cap="Microglia recall across gene counts within the tiny effect-size bin (|LFC| 0.2-1.0), split by DE method. Cells-based sampling mode (top) and UMI-budget sampling mode (bottom)."}
 knitr::include_graphics(c(
   "Datalink/Composed_Figures/Supplementary/supp_micro_recall_tiny_bymethod_cells.png",
   "Datalink/Composed_Figures/Supplementary/supp_micro_recall_tiny_bymethod_reads.png"
 ))
 ```
 
-## Supplementary Fig. `r SF("bymethod_micro_precision_tiny")`. Microglia: tiny-effect (|LFC| 0.2-1.0) precision versus mean expression, by DE method
+## Supplementary Fig. `r SF("bymethod_micro_precision_tiny")`. Microglia: tiny-effect (|LFC| 0.2-1.0) precision versus gene counts, by DE method
 
-```{r SuppFig36-MicroPrecisionTiny-bymethod, out.width="99%", fig.show='hold', fig.cap="Microglia precision across mean expression within the tiny effect-size bin (|LFC| 0.2-1.0), split by DE method. Cells-based sampling mode (top) and counts-based sampling mode (bottom)."}
+```{r SuppFig36-MicroPrecisionTiny-bymethod, out.width="99%", fig.show='hold', fig.cap="Microglia precision across gene counts within the tiny effect-size bin (|LFC| 0.2-1.0), split by DE method. Cells-based sampling mode (top) and UMI-budget sampling mode (bottom)."}
 knitr::include_graphics(c(
   "Datalink/Composed_Figures/Supplementary/supp_micro_precision_tiny_bymethod_cells.png",
   "Datalink/Composed_Figures/Supplementary/supp_micro_precision_tiny_bymethod_reads.png"
 ))
 ```
 
-## Supplementary Fig. `r SF("bymethod_micro_recall_small")`. Microglia: small-effect (|LFC| 1.0-2.0) recall versus mean expression, by DE method
+## Supplementary Fig. `r SF("bymethod_micro_recall_small")`. Microglia: small-effect (|LFC| 1.0-2.0) recall versus gene counts, by DE method
 
-```{r SuppFig37-MicroRecallSmall-bymethod, out.width="99%", fig.show='hold', fig.cap="Microglia recall across mean expression within the small effect-size bin (|LFC| 1.0-2.0), split by DE method. Cells-based sampling mode (top) and counts-based sampling mode (bottom)."}
+```{r SuppFig37-MicroRecallSmall-bymethod, out.width="99%", fig.show='hold', fig.cap="Microglia recall across gene counts within the small effect-size bin (|LFC| 1.0-2.0), split by DE method. Cells-based sampling mode (top) and UMI-budget sampling mode (bottom)."}
 knitr::include_graphics(c(
   "Datalink/Composed_Figures/Supplementary/supp_micro_recall_small_bymethod_cells.png",
   "Datalink/Composed_Figures/Supplementary/supp_micro_recall_small_bymethod_reads.png"
 ))
 ```
 
-## Supplementary Fig. `r SF("bymethod_micro_precision_small")`. Microglia: small-effect (|LFC| 1.0-2.0) precision versus mean expression, by DE method
+## Supplementary Fig. `r SF("bymethod_micro_precision_small")`. Microglia: small-effect (|LFC| 1.0-2.0) precision versus gene counts, by DE method
 
-```{r SuppFig38-MicroPrecisionSmall-bymethod, out.width="99%", fig.show='hold', fig.cap="Microglia precision across mean expression within the small effect-size bin (|LFC| 1.0-2.0), split by DE method. Cells-based sampling mode (top) and counts-based sampling mode (bottom)."}
+```{r SuppFig38-MicroPrecisionSmall-bymethod, out.width="99%", fig.show='hold', fig.cap="Microglia precision across gene counts within the small effect-size bin (|LFC| 1.0-2.0), split by DE method. Cells-based sampling mode (top) and UMI-budget sampling mode (bottom)."}
 knitr::include_graphics(c(
   "Datalink/Composed_Figures/Supplementary/supp_micro_precision_small_bymethod_cells.png",
   "Datalink/Composed_Figures/Supplementary/supp_micro_precision_small_bymethod_reads.png"
@@ -306,7 +306,7 @@ knitr::include_graphics(c(
 
 ## Supplementary Fig. `r SF("bymethod_oligo_recall_surface")`. Oligodendrocytes: recall surface across the downsampling grid, by DE method
 
-```{r SuppFig39-OligoRecallSurface-bymethod, out.width="99%", fig.show='hold', fig.cap="Oligodendrocyte continuous recall surfaces (semi-log scale) split by DE method. Cells-based sampling mode (top) and counts-based sampling mode (bottom)."}
+```{r SuppFig39-OligoRecallSurface-bymethod, out.width="99%", fig.show='hold', fig.cap="Oligodendrocyte continuous recall surfaces (semi-log scale) split by DE method. Cells-based sampling mode (top) and UMI-budget sampling mode (bottom)."}
 knitr::include_graphics(c(
   "Datalink/Composed_Figures/Supplementary/supp_oligo_recall_surface_bymethod_cells.png",
   "Datalink/Composed_Figures/Supplementary/supp_oligo_recall_surface_bymethod_reads.png"
@@ -315,43 +315,43 @@ knitr::include_graphics(c(
 
 ## Supplementary Fig. `r SF("bymethod_oligo_precision_surface")`. Oligodendrocytes: precision surface across the downsampling grid, by DE method
 
-```{r SuppFig40-OligoPrecisionSurface-bymethod, out.width="99%", fig.show='hold', fig.cap="Oligodendrocyte continuous precision surfaces (semi-log scale) split by DE method. Cells-based sampling mode (top) and counts-based sampling mode (bottom)."}
+```{r SuppFig40-OligoPrecisionSurface-bymethod, out.width="99%", fig.show='hold', fig.cap="Oligodendrocyte continuous precision surfaces (semi-log scale) split by DE method. Cells-based sampling mode (top) and UMI-budget sampling mode (bottom)."}
 knitr::include_graphics(c(
   "Datalink/Composed_Figures/Supplementary/supp_oligo_precision_surface_bymethod_cells.png",
   "Datalink/Composed_Figures/Supplementary/supp_oligo_precision_surface_bymethod_reads.png"
 ))
 ```
 
-## Supplementary Fig. `r SF("bymethod_oligo_recall_tiny")`. Oligodendrocytes: tiny-effect (|LFC| 0.2-1.0) recall versus mean expression, by DE method
+## Supplementary Fig. `r SF("bymethod_oligo_recall_tiny")`. Oligodendrocytes: tiny-effect (|LFC| 0.2-1.0) recall versus gene counts, by DE method
 
-```{r SuppFig41-OligoRecallTiny-bymethod, out.width="99%", fig.show='hold', fig.cap="Oligodendrocyte recall across mean expression within the tiny effect-size bin (|LFC| 0.2-1.0), split by DE method. Cells-based sampling mode (top) and counts-based sampling mode (bottom)."}
+```{r SuppFig41-OligoRecallTiny-bymethod, out.width="99%", fig.show='hold', fig.cap="Oligodendrocyte recall across gene counts within the tiny effect-size bin (|LFC| 0.2-1.0), split by DE method. Cells-based sampling mode (top) and UMI-budget sampling mode (bottom)."}
 knitr::include_graphics(c(
   "Datalink/Composed_Figures/Supplementary/supp_oligo_recall_tiny_bymethod_cells.png",
   "Datalink/Composed_Figures/Supplementary/supp_oligo_recall_tiny_bymethod_reads.png"
 ))
 ```
 
-## Supplementary Fig. `r SF("bymethod_oligo_precision_tiny")`. Oligodendrocytes: tiny-effect (|LFC| 0.2-1.0) precision versus mean expression, by DE method
+## Supplementary Fig. `r SF("bymethod_oligo_precision_tiny")`. Oligodendrocytes: tiny-effect (|LFC| 0.2-1.0) precision versus gene counts, by DE method
 
-```{r SuppFig42-OligoPrecisionTiny-bymethod, out.width="99%", fig.show='hold', fig.cap="Oligodendrocyte precision across mean expression within the tiny effect-size bin (|LFC| 0.2-1.0), split by DE method. Cells-based sampling mode (top) and counts-based sampling mode (bottom)."}
+```{r SuppFig42-OligoPrecisionTiny-bymethod, out.width="99%", fig.show='hold', fig.cap="Oligodendrocyte precision across gene counts within the tiny effect-size bin (|LFC| 0.2-1.0), split by DE method. Cells-based sampling mode (top) and UMI-budget sampling mode (bottom)."}
 knitr::include_graphics(c(
   "Datalink/Composed_Figures/Supplementary/supp_oligo_precision_tiny_bymethod_cells.png",
   "Datalink/Composed_Figures/Supplementary/supp_oligo_precision_tiny_bymethod_reads.png"
 ))
 ```
 
-## Supplementary Fig. `r SF("bymethod_oligo_recall_small")`. Oligodendrocytes: small-effect (|LFC| 1.0-2.0) recall versus mean expression, by DE method
+## Supplementary Fig. `r SF("bymethod_oligo_recall_small")`. Oligodendrocytes: small-effect (|LFC| 1.0-2.0) recall versus gene counts, by DE method
 
-```{r SuppFig43-OligoRecallSmall-bymethod, out.width="99%", fig.show='hold', fig.cap="Oligodendrocyte recall across mean expression within the small effect-size bin (|LFC| 1.0-2.0), split by DE method. Cells-based sampling mode (top) and counts-based sampling mode (bottom)."}
+```{r SuppFig43-OligoRecallSmall-bymethod, out.width="99%", fig.show='hold', fig.cap="Oligodendrocyte recall across gene counts within the small effect-size bin (|LFC| 1.0-2.0), split by DE method. Cells-based sampling mode (top) and UMI-budget sampling mode (bottom)."}
 knitr::include_graphics(c(
   "Datalink/Composed_Figures/Supplementary/supp_oligo_recall_small_bymethod_cells.png",
   "Datalink/Composed_Figures/Supplementary/supp_oligo_recall_small_bymethod_reads.png"
 ))
 ```
 
-## Supplementary Fig. `r SF("bymethod_oligo_precision_small")`. Oligodendrocytes: small-effect (|LFC| 1.0-2.0) precision versus mean expression, by DE method
+## Supplementary Fig. `r SF("bymethod_oligo_precision_small")`. Oligodendrocytes: small-effect (|LFC| 1.0-2.0) precision versus gene counts, by DE method
 
-```{r SuppFig44-OligoPrecisionSmall-bymethod, out.width="99%", fig.show='hold', fig.cap="Oligodendrocyte precision across mean expression within the small effect-size bin (|LFC| 1.0-2.0), split by DE method. Cells-based sampling mode (top) and counts-based sampling mode (bottom)."}
+```{r SuppFig44-OligoPrecisionSmall-bymethod, out.width="99%", fig.show='hold', fig.cap="Oligodendrocyte precision across gene counts within the small effect-size bin (|LFC| 1.0-2.0), split by DE method. Cells-based sampling mode (top) and UMI-budget sampling mode (bottom)."}
 knitr::include_graphics(c(
   "Datalink/Composed_Figures/Supplementary/supp_oligo_precision_small_bymethod_cells.png",
   "Datalink/Composed_Figures/Supplementary/supp_oligo_precision_small_bymethod_reads.png"
@@ -360,9 +360,9 @@ knitr::include_graphics(c(
 
 # Supplementary Figures: method-pooled downsampling surfaces
 
-## Supplementary Fig. `r SF("recall_continuous_surfaces")`. Continuous recall surfaces (cells-based and counts-based modes)
+## Supplementary Fig. `r SF("recall_continuous_surfaces")`. Continuous recall surfaces (cells-based and UMI-budget modes)
 
-Continuous recall surfaces for astrocytes, microglia, and oligodendrocytes under both cells-based sampling, and counts-based sampling. The same qualitative patterns are observed across all three cell types: large-effect genes are readily detected at modest sample sizes, while small-effect genes remain below 80% recall across the entire experimental space. The apparent power ordering (microglia > astrocytes > oligodendrocytes) is an artefact of ground-truth censorship, as explained in the main text.
+Continuous recall surfaces for astrocytes, microglia, and oligodendrocytes under both cells-based sampling, and UMI-budget sampling. The same qualitative patterns are observed across all three cell types: large-effect genes are readily detected at modest sample sizes, while small-effect genes remain below 80% recall across the entire experimental space. The apparent power ordering (microglia > astrocytes > oligodendrocytes) is an artefact of ground-truth censorship, as explained in the main text.
 
 ```{r SuppFig1a-AstroMicro-cells, out.width="99%", fig.show='hold', fig.cap="Continuous recall surfaces (semi-log scale, cells-based mode) for astrocytes (top), microglia (middle), and oligodendrocytes (bottom)."}
 knitr::include_graphics(c(
@@ -372,7 +372,7 @@ knitr::include_graphics(c(
 ))
 ```
 
-```{r SuppFig1b-AstroMicro-reads, out.width="99%", fig.show='hold', fig.cap="Continuous recall surfaces (semi-log scale, counts-based mode) for astrocytes (top), microglia (middle), and oligodendrocytes (bottom). Same layout as cells-based version above, with counts per cell on the x-axis."}
+```{r SuppFig1b-AstroMicro-reads, out.width="99%", fig.show='hold', fig.cap="Continuous recall surfaces (semi-log scale, UMI-budget mode) for astrocytes (top), microglia (middle), and oligodendrocytes (bottom). Same layout as cells-based version above, with UMIs per cell on the x-axis."}
 knitr::include_graphics(c(
   "Datalink/Cartesian_Downsampling/Astro/Roussos/reads/all_methods/Continuous_Viz_Log/Mean_Recall_Total_Continuous_SemiLog.png",
   "Datalink/Cartesian_Downsampling/Micro/Roussos/reads/all_methods/Continuous_Viz_Log/Mean_Recall_Total_Continuous_SemiLog.png",
@@ -380,7 +380,7 @@ knitr::include_graphics(c(
 ))
 ```
 
-## Supplementary Fig. `r SF("precision_heatmaps")`. Precision heatmaps (cells-based and counts-based modes)
+## Supplementary Fig. `r SF("precision_heatmaps")`. Precision heatmaps (cells-based and UMI-budget modes)
 
 Astrocyte, microglial, and oligodendrocyte precision heatmaps.
 
@@ -392,7 +392,7 @@ knitr::include_graphics(c(
 ))
 ```
 
-```{r SuppFig4b-Precision-reads, out.width="99%", fig.show="hold", fig.cap="Precision heatmaps for counts-based downsampling, astrocytes (top), microglia (middle), and oligodendrocytes (bottom). Layout identical to cells-based mode, but columns represent counts per cell rather than cells per donor."}
+```{r SuppFig4b-Precision-reads, out.width="99%", fig.show="hold", fig.cap="Precision heatmaps for UMI-budget downsampling, astrocytes (top), microglia (middle), and oligodendrocytes (bottom). Layout identical to cells-based mode, but columns represent UMIs per cell rather than cells per donor."}
 knitr::include_graphics(c(
   "Datalink/Cartesian_Downsampling/Astro/Roussos/reads/all_methods/Plots/Mean_Precision_Total.png",
   "Datalink/Cartesian_Downsampling/Micro/Roussos/reads/all_methods/Plots/Mean_Precision_Total.png",
@@ -400,9 +400,9 @@ knitr::include_graphics(c(
 ))
 ```
 
-## Supplementary Fig. `r SF("recall_discrete_heatmaps")`. Discrete recall heatmaps (cells-based and counts-based modes)
+## Supplementary Fig. `r SF("recall_discrete_heatmaps")`. Discrete recall heatmaps (cells-based and UMI-budget modes)
 
-Discrete recall grids for astrocytes, microglia, and oligodendrocytes under both cells-based sampling, and counts-based sampling. The same qualitative patterns are observed across all three cell types: large-effect genes are readily detected at modest sample sizes, while small-effect genes remain below 80% recall across the entire experimental space. The apparent power ordering (microglia > astrocytes > oligodendrocytes) is an artefact of ground-truth censorship, as explained in the main text.
+Discrete recall grids for astrocytes, microglia, and oligodendrocytes under both cells-based sampling, and UMI-budget sampling. The same qualitative patterns are observed across all three cell types: large-effect genes are readily detected at modest sample sizes, while small-effect genes remain below 80% recall across the entire experimental space. The apparent power ordering (microglia > astrocytes > oligodendrocytes) is an artefact of ground-truth censorship, as explained in the main text.
 
 ```{r SuppFig2a-Discrete-cells, out.width="99%", fig.show='hold', fig.cap="Discrete recall heatmaps from Cartesian downsampling (cells-based mode) for astrocytes (top), microglia (middle), and oligodendrocytes (bottom)."}
 knitr::include_graphics(c(
@@ -412,7 +412,7 @@ knitr::include_graphics(c(
 ))
 ```
 
-```{r SuppFig2b-Discrete-reads, out.width="99%", fig.show="hold", fig.cap="Discrete recall heatmaps from Cartesian downsampling (counts-based mode) for astrocytes (top), microglia (middle), and oligodendrocytes (bottom)."}
+```{r SuppFig2b-Discrete-reads, out.width="99%", fig.show="hold", fig.cap="Discrete recall heatmaps from Cartesian downsampling (UMI-budget mode) for astrocytes (top), microglia (middle), and oligodendrocytes (bottom)."}
 knitr::include_graphics(c(
   "Datalink/Cartesian_Downsampling/Astro/Roussos/reads/all_methods/Plots/Mean_Recall_Total.png",
   "Datalink/Cartesian_Downsampling/Micro/Roussos/reads/all_methods/Plots/Mean_Recall_Total.png",
@@ -424,7 +424,7 @@ knitr::include_graphics(c(
 
 ## Supplementary Fig. `r SF("xgb_shap_dependence")`. SHAP dependence of detection on design covariates
 
-```{r SuppFig-SHAP-Dependence, out.width="99%", fig.cap="SHAP dependence plots for the production gradient-boosted-tree (XGBoost) power model (realistic $n_{cells} \\geq 100$ sub-grid). Each panel plots a design covariate (cells per donor, counts per cell, donor count, effect size, mean expression, dispersion) against its SHAP contribution to predicted detection, with points coloured by covariate value. The steeper SHAP response to cells per donor than to counts per cell reproduces, in the boosted model, the diminishing returns of deeper sequencing relative to broader cellular sampling. Replaces the archived logistic depth-decomposition figure."}
+```{r SuppFig-SHAP-Dependence, out.width="99%", fig.cap="SHAP dependence plots for the production gradient-boosted-tree (XGBoost) power model (realistic $n_{cells} \\geq 100$ sub-grid). Each panel plots a design covariate (cells per donor, UMIs per cell, donor count, effect size, gene counts, dispersion) against its SHAP contribution to predicted detection, with points coloured by covariate value. The steeper SHAP response to cells per donor than to UMIs per cell reproduces, in the boosted model, the diminishing returns of deeper sequencing relative to broader cellular sampling. Replaces the archived logistic depth-decomposition figure."}
 knitr::include_graphics("Datalink/Power_Curve_Fitting/Models/xgboost/shap_figures/median/shap_dependence.png")
 ```
 
@@ -432,7 +432,7 @@ knitr::include_graphics("Datalink/Power_Curve_Fitting/Models/xgboost/shap_figure
 
 Recall heatmaps stratified by chromosome type and LFC magnitude bin. Rows are cell types (astrocytes, microglia, oligodendrocytes); columns are sex-chromosome genes (left) and autosomal genes (right). Autosomal genes show substantially lower recall than sex-chromosome genes at matched effect sizes, reflecting both their rarity and smaller effect sizes. See Supplementary Table 2 for the per-gene characteristics that underlie this difference.
 
-```{r SuppFig3-ChromStratified, out.width="48%", fig.show="hold", fig.cap="Chromosome-stratified recall heatmaps (cells-based mode). Rows are cell types (astrocytes, microglia, oligodendrocytes); columns are sex-chromosome genes (left) and autosomal genes (right). Sex-chromosome genes dominate the large-LFC bin and are detected with high recall at moderate sample sizes, driving the overall pattern in the total heatmaps. Autosomal sex-biased genes do not show large effect sizes but contribute the majority of tiny-effect genes, with substantially lower recall owing to larger per-gene dispersion and lower mean expression, as explained in the main text."}
+```{r SuppFig3-ChromStratified, out.width="48%", fig.show="hold", fig.cap="Chromosome-stratified recall heatmaps (cells-based mode). Rows are cell types (astrocytes, microglia, oligodendrocytes); columns are sex-chromosome genes (left) and autosomal genes (right). Sex-chromosome genes dominate the large-LFC bin and are detected with high recall at moderate sample sizes, driving the overall pattern in the total heatmaps. Autosomal sex-biased genes do not show large effect sizes but contribute the majority of tiny-effect genes, with substantially lower recall owing to larger per-gene dispersion and lower gene counts, as explained in the main text."}
 knitr::include_graphics(c(
   # Astrocytes: SexChr, Autosomal
   "Datalink/Cartesian_Downsampling/Astro/Roussos/cells/all_methods/Plots/Mean_Recall_SexChr.png",
@@ -454,7 +454,7 @@ knitr::include_graphics("Datalink/DE_Diagnostics/Chromosome_Grid/DEG_Chr_Grid_Co
 
 ## Supplementary Fig. `r SF("xgb_shap_violin")`. Distribution of covariate effects across the grid (SHAP violin)
 
-```{r SuppFig-SHAP-Violin, out.width="99%", fig.cap="SHAP violin summarising the distribution of each covariate's contribution to predicted detection across the full realistic grid for the production XGBoost model. The spread of each violin is the sensitivity of predicted power to that covariate over its observed range: effect size (|LFC|), donor count, and mean expression carry the widest, most skewed distributions, whereas counts per cell, cell type, and DE method are tightly concentrated near zero. Replaces the archived logistic covariate sensitivity grid."}
+```{r SuppFig-SHAP-Violin, out.width="99%", fig.cap="SHAP violin summarising the distribution of each covariate's contribution to predicted detection across the full realistic grid for the production XGBoost model. The spread of each violin is the sensitivity of predicted power to that covariate over its observed range: effect size (|LFC|), donor count, and gene counts carry the widest, most skewed distributions, whereas UMIs per cell, cell type, and DE method are tightly concentrated near zero. Replaces the archived logistic covariate sensitivity grid."}
 knitr::include_graphics("Datalink/Power_Curve_Fitting/Models/xgboost/shap_figures/median/shap_violin.png")
 ```
 
@@ -641,9 +641,9 @@ autosomal_vs_sexchr <- autosomal_vs_sexchr[
         autosomal_vs_sexchr$chr_group), ]
 
 knitr::kable(autosomal_vs_sexchr,
-             caption = "Autosomal versus sex-chromosome gene properties in the PsychAD truth set, stratified by cell type and |LFC| bin. Within each bin, sex-chromosome genes show systematically higher baseMean and lower dispersion than autosomal genes, placing them in a favourable region of the power surface at equivalent fold change. Rows with n < 5 are suppressed.",
+             caption = "Autosomal versus sex-chromosome gene properties in the PsychAD truth set, stratified by cell type and |LFC| bin. Within each bin, sex-chromosome genes show systematically higher gene counts and lower dispersion than autosomal genes, placing them in a favourable region of the power surface at equivalent fold change. Rows with n < 5 are suppressed.",
              col.names = c("Cell Type", "|LFC| Bin", "Group", "N",
-                           "Median BaseMean", "Median Dispersion", "Median |LFC|"),
+                           "Median gene counts", "Median Dispersion", "Median |LFC|"),
              row.names = FALSE,
              escape = FALSE,
              digits = c(0, 0, 0, 0, 1, 3, 2))
@@ -651,7 +651,7 @@ knitr::kable(autosomal_vs_sexchr,
 
 ## Supplementary Table 3. DEG loss under depth and cell-count equalisation, across DE methods and |LFC| thresholds {#supp-table-3}
 
-Mean number of ground-truth sex-biased DEGs recovered in the PsychAD astrocyte truth set under a 2x2 grid of sequencing-depth and cell-count equalisation, computed independently for each of the three DE methods at two effect-size thresholds. Each cell reports the mean DEG count over 10 robustness runs (50% donor split) with, in parentheses, that count as a percentage of the native (full depth, full cells) count for the same method and threshold. "Depth-equalised" multinomially downsamples every astrocyte to microglia-equivalent counts per cell (factor `r val("depth_eq_factor_astro", digits = 4)`); "Cell-count-equalised" randomly subsamples each donor's astrocytes to microglia-equivalent cell counts at native depth; "Depth + cell equalised" applies both. At the strict |LFC| > 1 threshold all three methods behave consistently, losing DEGs monotonically as cells and depth are reduced. At the permissive |LFC| > 0.2 threshold DESeq2 and edgeR remain well behaved (roughly 55% of DEGs lost under full equalisation), but limma-voom becomes numerically unstable under cell downsampling, inflating its DEG count to several times the native value (327% and 525% of native). The contrast between the two thresholds is the reason limma-voom is excluded from the permissive-threshold analysis.
+Mean number of ground-truth sex-biased DEGs recovered in the PsychAD astrocyte truth set under a 2x2 grid of sequencing-depth and cell-count equalisation, computed independently for each of the three DE methods at two effect-size thresholds. Each cell reports the mean DEG count over 10 robustness runs (50% donor split) with, in parentheses, that count as a percentage of the native (full depth, full cells) count for the same method and threshold. "Depth-equalised" multinomially downsamples every astrocyte to microglia-equivalent UMIs per cell (factor `r val("depth_eq_factor_astro", digits = 4)`); "Cell-count-equalised" randomly subsamples each donor's astrocytes to microglia-equivalent cell counts at native depth; "Depth + cell equalised" applies both. At the strict |LFC| > 1 threshold all three methods behave consistently, losing DEGs monotonically as cells and depth are reduced. At the permissive |LFC| > 0.2 threshold DESeq2 and edgeR remain well behaved (roughly 55% of DEGs lost under full equalisation), but limma-voom becomes numerically unstable under cell downsampling, inflating its DEG count to several times the native value (327% and 525% of native). The contrast between the two thresholds is the reason limma-voom is excluded from the permissive-threshold analysis.
 
 ```{r supptable3-deg-loss, echo=FALSE}
 deg_loss_table <- read.csv(

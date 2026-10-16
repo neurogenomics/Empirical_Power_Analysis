@@ -94,7 +94,7 @@ long <- degs %>%
   select(cell_type, de_method, group, abs_lfc, base_mean) %>%
   pivot_longer(c(abs_lfc, base_mean), names_to = "variable", values_to = "value") %>%
   mutate(variable = factor(variable, levels = c("abs_lfc", "base_mean"),
-                           labels = c("|log2 fold change|", "Mean expression (raw counts)")))
+                           labels = c("|log2 fold change|", "Gene counts (median raw count)")))
 
 hist_plot <- function(d, facet_formula, ncol) {
   ggplot(d, aes(x = value, fill = group)) +

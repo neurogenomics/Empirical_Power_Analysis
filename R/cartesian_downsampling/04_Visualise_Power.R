@@ -545,7 +545,7 @@ for (cell_type in cell_types) {
 
       for (m in metrics_to_plot) {
         cat_suffix <- if (cat == "Total") "" else paste0(" - ", cat)
-        plot_title <- paste0(m$desc, " by Expression: ", prettify_label(cell_type), cat_suffix)
+        plot_title <- paste0(m$desc, " by Gene Counts: ", prettify_label(cell_type), cat_suffix)
 
         p <- plot_metric_heatmap(
           data = df_bm_cat,
@@ -593,7 +593,7 @@ for (cell_type in cell_types) {
 
       for (m in metrics_to_plot) {
         cat_suffix <- if (cat == "Total") "" else paste0(" - ", cat)
-        plot_title <- paste0(m$desc, " (LFC x Expression): ", prettify_label(cell_type), cat_suffix)
+        plot_title <- paste0(m$desc, " (LFC x Gene Counts): ", prettify_label(cell_type), cat_suffix)
 
         p <- plot_metric_heatmap(
           data = df_cart_cat,

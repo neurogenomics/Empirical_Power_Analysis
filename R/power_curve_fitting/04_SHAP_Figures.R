@@ -85,9 +85,9 @@ if (!dir.exists(model_base))
 FEATURE_LABELS <- c(
   n_donors            = "Donors",
   n_cells             = "Cells / donor",
-  reads_per_cell      = "Counts / cell",
+  reads_per_cell      = "UMIs / cell",
   abs_gt_lfc          = "|LFC|",
-  gt_basemean         = "Median expression",
+  gt_basemean         = "Gene counts",
   gt_dispersion       = "Dispersion",
   `de_method=deseq2`  = "DESeq2",
   `de_method=edger`   = "edgeR",

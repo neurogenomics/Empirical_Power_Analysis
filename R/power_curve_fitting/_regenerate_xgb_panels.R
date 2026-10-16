@@ -181,10 +181,10 @@ sha <- read.csv(file.path(DL, "comparison", "shap_importance_across_models.csv")
 feature_label_map <- c(
   abs_gt_lfc         = "|LFC|",
   n_donors           = "Donors",
-  gt_basemean        = "Median expression",
+  gt_basemean        = "Gene counts",
   gt_dispersion      = "Dispersion",
   n_cells            = "Cells per donor",
-  reads_per_cell     = "Counts per cell",
+  reads_per_cell     = "UMIs per cell",
   `de_method=deseq2` = "DE method: DESeq2",
   `de_method=edger`  = "DE method: edgeR",
   `de_method=limma`  = "DE method: limma",

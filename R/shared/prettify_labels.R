@@ -76,7 +76,7 @@ prettify_label <- function(x) {
     "cell_type" = "Cell Type",
     "n_donors" = "Number of Donors",
     "n_cells" = "Cells per Donor",
-    "n_reads" = "Counts per Cell",
+    "n_reads" = "UMIs per Cell",
     "Age_Years" = "Age (Years)",
     "self_reported_ethnicity" = "Self-Reported Ethnicity",
     "Log2_Cells" = "Log2(Cells per Donor)",
@@ -84,18 +84,18 @@ prettify_label <- function(x) {
     # Model predictors (log-transformed)
     "log_donors" = "Number of Donors",
     "log_n_cells" = "Cells per Donor",
-    "log_reads_per_cell" = "Counts per Cell",
+    "log_reads_per_cell" = "UMIs per Cell",
     "log_abs_gt_lfc" = "|LFC| (Effect Size)",
-    "log_gt_basemean" = "Median Expression",
+    "log_gt_basemean" = "Gene Counts",
     "log_gt_dispersion" = "Dispersion",
     
     # Alternative predictor names
     "abs_gt_lfc" = "|LFC| (Effect Size)",
-    "gt_basemean" = "Median Expression",
+    "gt_basemean" = "Gene Counts",
     "gt_dispersion" = "Dispersion",
-    "reads_per_cell" = "Counts per Cell",
+    "reads_per_cell" = "UMIs per Cell",
     "abs_lfc" = "|LFC| (Effect Size)",
-    "basemean" = "Base Mean Expression",
+    "basemean" = "Gene Counts",
     "dispersion" = "Dispersion"
   )
   

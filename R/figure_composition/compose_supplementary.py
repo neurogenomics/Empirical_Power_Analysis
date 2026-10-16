@@ -223,7 +223,7 @@ class SuppFig:
         if self.kind == "surface":
             what = f"{self.metric} across the {axis} grid (semi-log surface)"
         else:
-            what = f"{self.metric} across mean-expression, {BIN_LABEL[self.bin_tag]} ({axis})"
+            what = f"{self.metric} across gene counts, {BIN_LABEL[self.bin_tag]} ({axis})"
         if self.grid_by == "method":
             return f"{CELL_LABEL[self.fixed_cell]}: {what}, by DE method"
         return f"{METHOD_LABEL[self.fixed_method]}: {what}, by cell type"

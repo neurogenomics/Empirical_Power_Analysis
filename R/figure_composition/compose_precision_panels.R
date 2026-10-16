@@ -283,8 +283,8 @@ build_finecross_panel <- function(lfc_bin) {
     complete(Donors, !!sym(Y_COL), BaseMean_Bin)
 
   lfc_titles <- c(
-    "Tiny (0.2-1.0)" = "Precision across expression, tiny effect sizes (|LFC| 0.2\u20131.0)",
-    "Small (1.0-2.0)" = "Precision across expression, small effect sizes (|LFC| 1.0\u20132.0)"
+    "Tiny (0.2-1.0)" = "Precision across gene counts, tiny effect sizes (|LFC| 0.2\u20131.0)",
+    "Small (1.0-2.0)" = "Precision across gene counts, small effect sizes (|LFC| 1.0\u20132.0)"
   )
   build_precision_grid(df_fc, "BaseMean_Bin", BASEMEAN_ORDER, unname(lfc_titles[lfc_bin]))
 }
