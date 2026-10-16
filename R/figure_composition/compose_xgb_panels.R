@@ -5,11 +5,10 @@
 #          reading order and labelled A-E.
 #
 #          Layout (reading order A -> E):
-#            row 1:  A  (top-left, tall)    B  (top-right)
-#                                           C  (right, below B)
-#            row 2:  D  (bottom-left)       E  (bottom-right)
-#          B is short and wide, so it fills the space beside the tall panel A
-#          instead of taking a full-width row of its own.
+#            left column:   A (tall), then D directly below it
+#            right column:  B, then C, then E
+#          The two columns stack independently, so D rises to sit under A
+#          instead of waiting for the taller right column (B + C) to end.
 #
 #          Panel -> content -> source PNG mapping. The panel letters were
 #          reassigned to match the order in which they are first referenced in
@@ -104,34 +103,35 @@ CW  <- 2 * COL_W                              # full canvas width
 hA <- asp(A) * COL_W; hB <- asp(B) * COL_W; hC <- asp(C) * COL_W
 hD <- asp(D) * COL_W; hE <- asp(E) * COL_W
 
-h1 <- max(hA, hB + PAD + hC) + PAD   # row 1 height (right column: B above C)
-h2 <- max(hD, hE) + PAD              # row 2 height
-CH <- h1 + h2
+# Each column stacks independently, so D sits directly under A and E
+# directly under C (no shared row 2 boundary leaving a gap under the
+# shorter column). Positions below are measured down from the top edge.
+topA <- PAD;                 topD <- topA + hA + PAD
+topB <- PAD;                 topC <- topB + hB + PAD
+topE <- topC + hC + PAD
+CH   <- max(topD + hD, topE + hE)
 
 dir.create(dirname(OUT_FILE), showWarnings = FALSE, recursive = TRUE)
 png(OUT_FILE, width = CW, height = CH, res = 72, bg = "white")
 pushViewport(viewport(xscale = c(0, CW), yscale = c(0, CH)))
 
-draw <- function(im, cx, top_y, w, h) {
+draw <- function(im, cx, top, w, h) {
   grid.raster(im,
-    x = unit(cx, "native"), y = unit(top_y - h / 2, "native"),
+    x = unit(cx, "native"), y = unit(CH - top - h / 2, "native"),
     width = unit(w, "native"), height = unit(h, "native"))
 }
-lett <- function(s, lx, ty) {
-  grid.text(s, x = unit(lx, "native"), y = unit(ty, "native"),
+lett <- function(s, lx, top) {
+  grid.text(s, x = unit(lx, "native"), y = unit(CH - top, "native"),
     just = c("left", "top"), gp = gpar(fontsize = LETTER_SIZE, fontface = "bold"))
 }
 
-# row 1: A (left); B above C (right)
-draw(A, COL_W / 2,          CH - PAD, COL_W, hA); lett("A", 14,          CH - 8)
-draw(B, COL_W + COL_W / 2,  CH - PAD, COL_W, hB); lett("B", COL_W + 14,  CH - 8)
-tC <- CH - PAD - hB
-draw(C, COL_W + COL_W / 2,  tC - PAD, COL_W, hC); lett("C", COL_W + 14,  tC - 8)
-
-# row 2: D (left), E (right)
-t2 <- CH - h1
-draw(D, COL_W / 2,          t2 - PAD, COL_W, hD); lett("D", 14,          t2 - 8)
-draw(E, COL_W + COL_W / 2,  t2 - PAD, COL_W, hE); lett("E", COL_W + 14,  t2 - 8)
+# Each letter sits PAD - 8 px above the top of its panel.
+lx_l <- 14; lx_r <- COL_W + 14; cx_l <- COL_W / 2; cx_r <- COL_W + COL_W / 2
+draw(A, cx_l, topA, COL_W, hA); lett("A", lx_l, topA - PAD + 8)
+draw(D, cx_l, topD, COL_W, hD); lett("D", lx_l, topD - PAD + 8)
+draw(B, cx_r, topB, COL_W, hB); lett("B", lx_r, topB - PAD + 8)
+draw(C, cx_r, topC, COL_W, hC); lett("C", lx_r, topC - PAD + 8)
+draw(E, cx_r, topE, COL_W, hE); lett("E", lx_r, topE - PAD + 8)
 
 dev.off()
 cat(sprintf("WROTE %s (%dx%d)\n", OUT_FILE, CW, round(CH)))
