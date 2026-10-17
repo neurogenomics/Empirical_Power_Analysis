@@ -213,6 +213,8 @@ The 50:50 ground truth split (half of the donors for establishing truth, half fo
 
 Sex-stratified sampling was adopted because, without stratification, random splits in small-denominator cell types would occasionally produce sex-imbalanced halves that distort the truth set. Stratifying by the target case-control variable (here, sex) is standard practice in case-control power analyses and eliminates this source of iteration noise.
 
+For the AD versus control contrast, AD donors were more often female than controls (65% versus 49% in astrocytes), so the ground-truth split was stratified by diagnosis and sex, and each subsample drew equal numbers of males and females within each diagnosis group wherever enough eligible donors were available; when one sex ran out, all of its eligible donors were used and the rest were drawn from the other sex. Sex was included as a covariate in every model.
+
 ### Grid design
 
 The validation set was downsampled across a grid of 12 donor counts by 14 cell counts per donor, with 20 iterations per grid point. The donor counts were 5, 10, 15, 25, 50, 75, 100, 150, 200, 300, 500, and 600. The cell counts per donor were 5, 10, 20, 50, 75, 100, 250, 500, 750, 1,000, 1,500, 2,000, 3,000, and a "Max" level representing the all-available-cells configuration. Iteration seeds were derived deterministically from the robustness run, number of donors, number of cells (or read budget), and iteration index. This enables precise debugging and guarantees reproducibility.
