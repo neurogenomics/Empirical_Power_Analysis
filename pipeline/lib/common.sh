@@ -38,7 +38,7 @@ epa_init_ws() {
   : "${EPA_WORK:?}" "${EPA_STAGE:?}"
   local scratch="${TMPDIR:-}"
   [ -n "$scratch" ] || epa_die "TMPDIR is not set (expected node-local scratch inside a PBS job)"
-  WS="$scratch/epa-${EPA_STAGE}${EPA_TASK:+-$EPA_TASK}"
+  WS="$scratch/epa-${EPA_STAGE}${EPA_TASK:+-${EPA_TASK//:/-}}"
   rm -rf "$WS"
   mkdir -p "$WS"
   tar -xf "$EPA_WORK/code/code.tar" -C "$WS"

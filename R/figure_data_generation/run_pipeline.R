@@ -96,7 +96,8 @@ for (step in steps) {
 
   t0 <- Sys.time()
   status <- tryCatch({
-    source(step$script, local = TRUE)
+    step_env <- new.env(parent = environment())
+    source(step$script, local = step_env)
     "SUCCESS"
   }, error = function(e) {
     message(sprintf("[ERROR] Step %d failed: %s", step$id, conditionMessage(e)))

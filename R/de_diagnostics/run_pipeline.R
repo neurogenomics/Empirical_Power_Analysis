@@ -135,6 +135,9 @@ message(sprintf("\n========================================"))
 message(sprintf("PIPELINE SUMMARY"))
 message(sprintf("========================================\n"))
 
+# Drop steps that were not run (results[[id]] is NULL for skipped steps)
+results <- results[!sapply(results, is.null)]
+
 n_success <- sum(sapply(results, function(x) x$status == "SUCCESS"))
 n_failed <- sum(sapply(results, function(x) x$status == "FAILED"))
 n_total <- length(results)
