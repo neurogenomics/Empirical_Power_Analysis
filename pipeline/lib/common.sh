@@ -61,8 +61,11 @@ epa_init_ws() {
   epa_env OMP_NUM_THREADS 1
   epa_env OPENBLAS_NUM_THREADS 1
   epa_env MKL_NUM_THREADS 1
-  # Number of cores this job may use (PBS exports NCPUS; local mode sets it).
-  EPA_NCPUS="${NCPUS:-${EPA_LOCAL_NCPUS:-1}}"
+  # Number of cores this job may use. EPA_LOCAL_NCPUS is set by run.sh from
+  # stages.tsv and is authoritative; NCPUS (PBS Pro default) is only a fallback
+  # for interactive/manual runs. On Imperial CX3 PBS sets NCPUS=1 for the task,
+  # not the ncpus-per-chunk, so trusting NCPUS first silently drops parallelism.
+  EPA_NCPUS="${EPA_LOCAL_NCPUS:-${NCPUS:-1}}"
   epa_log "workspace $WS  (ncpus=$EPA_NCPUS, host=$(hostname))"
   trap 'epa_cleanup_ws' EXIT
 }
