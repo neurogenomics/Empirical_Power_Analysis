@@ -11,6 +11,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/_cartesian_env.sh"
 cartesian_post() {
   local mode="$1"
   epa_init_ws
+  epa_in shard shards_Roussos
   epa_in_array grid "epa_${mode}_"
   epa_cartesian_env
   epa_env DOWNSAMPLE_MODE "$mode"

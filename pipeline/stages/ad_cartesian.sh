@@ -9,6 +9,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/_cartesian_env.sh"
 
 stage_main() {
   epa_init_ws
+  epa_in ad_shard shards_Roussos_ADvsCtrl
   epa_in_array ad_grid
   epa_cartesian_env ad
   epa_env DOWNSAMPLE_MODE cells

@@ -19,7 +19,7 @@ cartesian_reads	grid	24	200gb	24:00:00	single
 crossscore	grid	24	200gb	24:00:00	single
 pcf_aggregate	shard,grid	24	200gb	36:00:00	single
 xgb_search	pcf_aggregate	8	64gb	03:00:00	array:108
-xgb_select	pcf_aggregate,xgb_search	8	64gb	03:00:00	single
+xgb_select	pcf_aggregate,xgb_search	8	64gb	06:00:00	single
 xgb_shap	pcf_aggregate,xgb_select	8	64gb	02:00:00	single
 xgb_post	pcf_aggregate,xgb_select	8	64gb	03:00:00	single
 gene_class	shard,xgb_post	12	96gb	12:00:00	single
