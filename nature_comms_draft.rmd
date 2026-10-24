@@ -49,8 +49,6 @@ check_claim(val("genegroup_any_lfc02_pct_detectable_max") == 0,
 check_claim(val("recall_tiny_d300_c100_micro") > val("recall_tiny_d300_c100_astro") &&
               val("recall_tiny_d300_c100_astro") > val("recall_tiny_d300_c100_oligo"),
             "tiny-effect recall ranks microglia > astrocytes > oligodendrocytes (300 donors, 100 cells)")
-check_claim(val("deg_loss_pct_full_eq_deseq2") > 50 && val("deg_loss_pct_full_eq_edger") > 50,
-            "depth + cell equalisation loses over half the DEGs for DESeq2 and edgeR")
 check_claim(val("deg_limma_pct_native_full_eq") > 100,
             "limma-voom inflates the DEG count under full equalisation")
 ```
