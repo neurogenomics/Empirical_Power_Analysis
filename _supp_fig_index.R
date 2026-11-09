@@ -66,15 +66,7 @@ supp_fig_keys <- c(
   "recall_discrete_heatmaps",         # discrete recall heatmaps, cells+counts
 
   # --- AD versus control contrast (referenced) --------------------------------
-  "ad_detection_trends",              # AD oligo panels: recall/precision, padj quartile, counts
-
-  # --- XGBoost power-model interpretation / diagnostics (referenced) ---------
-  "xgb_shap_dependence",              # SHAP dependence on design covariates
-
-  # --- Not referenced from main text (kept; appended after referenced set) ---
-  "recall_chrom_stratified",          # chromosome-stratified recall heatmaps
-  "xgb_shap_violin",                  # SHAP violin: covariate-effect distribution
-  "xgb_shap_dependence_by_config"     # SHAP dependence across reweighting configs
+  "ad_detection_trends"               # AD oligo panels: recall/precision, padj quartile, counts
 )
 
 # Resolve a key to its 1-based supplementary-figure number.

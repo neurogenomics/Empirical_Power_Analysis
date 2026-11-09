@@ -32,6 +32,8 @@ library(knitr)
 # number. Single source of truth for numbering across this document and the
 # main manuscript. To reorder/add/drop a figure, edit supp_fig_keys in the file.
 source("_supp_fig_index.R")
+# Same for supplementary tables: ST("key") resolves to the current table number.
+source("_supp_table_index.R")
 # Shared numeric-reference registry: val("key") resolves a data-derived
 # statistic to its current value, read live from the source CSV at knit time
 # (the number-analogue of SF()). Single source of truth for quoted numbers.
@@ -420,46 +422,16 @@ knitr::include_graphics(c(
 ))
 ```
 
-# Supplementary Figures: power-model diagnostics and additional analyses
+# Supplementary Figures: Alzheimer's disease versus control
 
-## Supplementary Fig. `r SF("xgb_shap_dependence")`. SHAP dependence of detection on design covariates
+## Supplementary Fig. `r SF("ad_detection_trends")`. Detection of Alzheimer's disease effects follows the same trends as sex
 
-```{r SuppFig-SHAP-Dependence, out.width="99%", fig.cap="SHAP dependence plots for the production gradient-boosted-tree (XGBoost) power model (realistic $n_{cells} \\geq 100$ sub-grid). Each panel plots a design covariate (cells per donor, UMIs per cell, donor count, effect size, gene counts, dispersion) against its SHAP contribution to predicted detection, with points coloured by covariate value. The steeper SHAP response to cells per donor than to UMIs per cell reproduces, in the boosted model, the diminishing returns of deeper sequencing relative to broader cellular sampling. Replaces the archived logistic depth-decomposition figure."}
-knitr::include_graphics("Datalink/Power_Curve_Fitting/Models/xgboost/shap_figures/median/shap_dependence.png")
-```
+In oligodendrocytes, detection of tiny Alzheimer's disease effects follows the same trends as for sex: recall rises with the number of donors, and the genes recovered are those with the most extreme ground-truth adjusted p-values and the highest counts. (A) Recall (left) and precision (right) of tiny-effect AD genes (|LFC| 0.2-1) across donors (x-axis) and cells per donor (y-axis; "Max" uses every available cell); the number in each tile is the value as a percentage. (B) Recall split into quartiles of the genes' ground-truth adjusted p-value, from the most significant quartile (Q1) to the least (Q4). (C) Recall split by gene counts (median raw pseudobulk count across ground-truth donors): high (200 or more), medium (50-200), low (10-50) and very low (under 10). Grey tiles are designs the data cannot supply, either because the validation half has too few donors (about 320, so 500 and 600 donors are not possible) or too few donors with that many cells.
 
-## Supplementary Fig. `r SF("recall_chrom_stratified")`. Chromosome-stratified recall heatmaps
+The split-half downsampling of the main analysis was repeated with AD status in place of sex (Methods). In each of ten random splits, half the donors formed the ground truth, stratified by diagnosis and sex, and subsamples were drawn from the other half with equal numbers of males and females within each diagnosis group where enough donors were available. Each package's ground-truth genes are those with adjusted p-value below 0.05 and absolute log2 fold change above 0.2 in the ground-truth half; recall and precision are pooled over the three packages and the ten splits. The medium and large effect bins are not shown because they hold fewer than two ground-truth genes on average. Values are not comparable with the sex contrast: the AD ground truth comes from about half as many donors and the effects are of a different kind.
 
-Recall heatmaps stratified by chromosome type and LFC magnitude bin. Rows are cell types (astrocytes, microglia, oligodendrocytes); columns are sex-chromosome genes (left) and autosomal genes (right). Autosomal genes show substantially lower recall than sex-chromosome genes at matched effect sizes, reflecting both their rarity and smaller effect sizes. See Supplementary Table 2 for the per-gene characteristics that underlie this difference.
-
-```{r SuppFig3-ChromStratified, out.width="48%", fig.show="hold", fig.cap="Chromosome-stratified recall heatmaps (cells-based mode). Rows are cell types (astrocytes, microglia, oligodendrocytes); columns are sex-chromosome genes (left) and autosomal genes (right). Sex-chromosome genes dominate the large-LFC bin and are detected with high recall at moderate sample sizes, driving the overall pattern in the total heatmaps. Autosomal sex-biased genes do not show large effect sizes but contribute the majority of tiny-effect genes, with substantially lower recall owing to larger per-gene dispersion and lower gene counts, as explained in the main text."}
-knitr::include_graphics(c(
-  # Astrocytes: SexChr, Autosomal
-  "Datalink/Cartesian_Downsampling/Astro/Roussos/cells/all_methods/Plots/Mean_Recall_SexChr.png",
-  "Datalink/Cartesian_Downsampling/Astro/Roussos/cells/all_methods/Plots/Mean_Recall_Autosomal.png",
-  # Microglia: SexChr, Autosomal
-  "Datalink/Cartesian_Downsampling/Micro/Roussos/cells/all_methods/Plots/Mean_Recall_SexChr.png",
-  "Datalink/Cartesian_Downsampling/Micro/Roussos/cells/all_methods/Plots/Mean_Recall_Autosomal.png",
-  # Oligodendrocytes: SexChr, Autosomal
-  "Datalink/Cartesian_Downsampling/Oligo/Roussos/cells/all_methods/Plots/Mean_Recall_SexChr.png",
-  "Datalink/Cartesian_Downsampling/Oligo/Roussos/cells/all_methods/Plots/Mean_Recall_Autosomal.png"
-))
-```
-
-## Supplementary Fig. `r SF("xgb_shap_violin")`. Distribution of covariate effects across the grid (SHAP violin)
-
-```{r SuppFig-SHAP-Violin, out.width="99%", fig.cap="SHAP violin summarising the distribution of each covariate's contribution to predicted detection across the full realistic grid for the production XGBoost model. The spread of each violin is the sensitivity of predicted power to that covariate over its observed range: effect size (|LFC|), donor count, and gene counts carry the widest, most skewed distributions, whereas UMIs per cell, cell type, and DE method are tightly concentrated near zero. Replaces the archived logistic covariate sensitivity grid."}
-knitr::include_graphics("Datalink/Power_Curve_Fitting/Models/xgboost/shap_figures/median/shap_violin.png")
-```
-
-## Supplementary Fig. `r SF("xgb_shap_dependence_by_config")`. SHAP dependence across loss-reweighting configurations
-
-```{r SuppFig-SHAP-Dependence-byConfig, out.width="99%", fig.show='hold', fig.cap="SHAP dependence plots for the three loss-reweighting configurations of the XGBoost power model: unweighted ($\\alpha = 0$; top, the promoted production model), and reweighted ($\\alpha = 0.5$, middle; $\\alpha = 1$, bottom; per-row weight $w = 1/|B|^{\\alpha}$ over observed-power decile bins $B$). Each row shows the same six design covariates against their SHAP contribution to predicted detection. The dependence shapes are stable across reweighting exponents, so the covariate-response relationships the model learns are not artefacts of the loss weighting; the unweighted configuration was promoted on out-of-fold error."}
-knitr::include_graphics(c(
-  "Datalink/Power_Curve_Fitting/Models/xgboost/shap_figures/winner_alpha_0/shap_dependence.png",
-  "Datalink/Power_Curve_Fitting/Models/xgboost/shap_figures/winner_alpha_0.5/shap_dependence.png",
-  "Datalink/Power_Curve_Fitting/Models/xgboost/shap_figures/winner_alpha_1/shap_dependence.png"
-))
+```{r SuppFig-AD-Panels, out.width="99%", fig.cap="Recall and precision of tiny-effect AD versus control genes in oligodendrocytes across the donor and cells-per-donor grid (A), recall by ground-truth adjusted p-value quartile (B) and by gene counts (C)."}
+knitr::include_graphics("Datalink/AD_vs_Control/Composed_Figures/figure_ad_panels_oligo_cells.png")
 ```
 
 <!-- COMMENTED OUT 2026-09-04: GTEx bulk RNA-seq validation removed from the paper.
@@ -548,9 +520,9 @@ pD <- wrap_elements(full = read_png_grob(file.path(micro_root, "Expanded_IoU_Mat
 
 # Supplementary Tables
 
-## Supplementary Table 1. Human brain sc/snRNA-seq DE studies surveyed (2022-2026) {#supp-table-1}
+## Supplementary Table `r ST("study_survey")`. Human brain sc/snRNA-seq DE studies surveyed (2022-2026) {#supp-table-study-survey}
 
-```{r supp-table-1, message=FALSE}
+```{r supptable-study-survey, message=FALSE}
 library(knitr)
 
 supp_tab2 <- tibble::tribble(
@@ -616,34 +588,7 @@ Comparison of raw and universe-controlled IoU values. Universe-controlled IoU re
 | Oligodendrocytes | Rexach-PsychAD     | 0.38    | 0.78                    | +105%       |
 -->
 
-## Supplementary Table 2. Autosomal versus sex-chromosome truth-gene characteristics {#supp-table-2}
-
-```{r supp-table-2, message=FALSE}
-autosomal_vs_sexchr <- read.csv(
-  here::here("Datalink", "_scratch_autosomal_vs_sexchr_summary.csv")
-)
-
-autosomal_vs_sexchr <- autosomal_vs_sexchr[
-  autosomal_vs_sexchr$n >= 5,
-  c("cell_type", "bin", "chr_group", "n",
-    "baseMean_median", "dispersion_median", "absLFC_median")
-]
-autosomal_vs_sexchr$chr_group <- gsub("_", " ", autosomal_vs_sexchr$chr_group)
-autosomal_vs_sexchr <- autosomal_vs_sexchr[
-  order(autosomal_vs_sexchr$cell_type,
-        autosomal_vs_sexchr$bin,
-        autosomal_vs_sexchr$chr_group), ]
-
-knitr::kable(autosomal_vs_sexchr,
-             caption = "Autosomal versus sex-chromosome gene properties in the PsychAD truth set, stratified by cell type and |LFC| bin. Within each bin, sex-chromosome genes show systematically higher gene counts and lower dispersion than autosomal genes, placing them in a favourable region of the power surface at equivalent fold change. Rows with n < 5 are suppressed.",
-             col.names = c("Cell Type", "|LFC| Bin", "Group", "N",
-                           "Median gene counts", "Median Dispersion", "Median |LFC|"),
-             row.names = FALSE,
-             escape = FALSE,
-             digits = c(0, 0, 0, 0, 1, 3, 2))
-```
-
-## Supplementary Table 3. DEG loss under depth and cell-count equalisation, across DE methods and |LFC| thresholds {#supp-table-3}
+## Supplementary Table `r ST("deg_loss_equalisation")`. DEG loss under depth and cell-count equalisation, across DE methods and |LFC| thresholds {#supp-table-deg-loss}
 
 Mean number of ground-truth sex-biased DEGs recovered in the PsychAD astrocyte and oligodendrocyte truth sets under a 2x2 grid of sequencing-depth and cell-count equalisation to microglia, computed independently for each cell type, each of the three DE methods and two effect-size thresholds. Each cell reports the mean DEG count over 10 robustness runs (50% donor split) with, in parentheses, that count as a percentage of the native (full depth, full cells) count for the same cell type, method and threshold. "Depth-equalised" multinomially downsamples every cell to microglia-equivalent UMIs per cell (factor `r val("depth_eq_factor_astro", digits = 4)` for astrocytes and `r val("depth_eq_factor_oligo", digits = 4)` for oligodendrocytes); "Cell-count-equalised" randomly subsamples each donor's cells to microglia-equivalent cell counts at native depth; "Depth + cell equalised" applies both. At the strict |LFC| > 1 threshold all three methods behave consistently in both cell types, losing DEGs as cells and depth are reduced, and losing the most when both are reduced. At the permissive |LFC| > 0.2 threshold DESeq2 and edgeR remain well behaved, losing `r val("deg_loss_pct_full_eq_deseq2", digits = 0)`% and `r val("deg_loss_pct_full_eq_edger", digits = 0)`% of astrocyte DEGs and `r val("deg_loss_pct_full_eq_deseq2_oligo", digits = 0)`% and `r val("deg_loss_pct_full_eq_edger_oligo", digits = 0)`% of oligodendrocyte DEGs under full equalisation, but limma-voom becomes numerically unstable. In astrocytes it inflates its DEG count under cell downsampling (`r val("deg_limma_pct_native_cell_eq", digits = 0)`% of native, and `r val("deg_limma_pct_native_full_eq", digits = 0)`% with depth equalisation as well); in oligodendrocytes it inflates under depth equalisation alone (`r val("deg_limma_pct_native_depth_eq_oligo", digits = 0)`%) but shrinks under cell downsampling (`r val("deg_limma_pct_native_cell_eq_oligo", digits = 0)`%, and `r val("deg_limma_pct_native_full_eq_oligo", digits = 0)`% with both). The contrast between the two thresholds is the reason limma-voom is excluded from the permissive-threshold analysis.
 
@@ -659,7 +604,23 @@ knitr::kable(deg_loss_table,
              align = c("l", "l", rep("r", 6)))
 ```
 
-## Supplementary Table 4. Sex label validation by chromosomal marker expression {#supp-table-4}
+## Supplementary Table `r ST("de_package_agreement")`. Agreement between DE packages on full-cohort sex-biased DEGs {#supp-table-de-package-agreement}
+
+DESeq2, edgeR and limma-voom called different sets of sex-biased genes from the same donors but agreed on the direction of almost every effect. Each package was run on the full filtered PsychAD cohort for each cell type with the same genes tested, and a gene was called when its BH-adjusted p-value was below 0.05 and its |log2 fold change| above 0.2 (the truth-set rule used throughout). "Called by any" and "Called by all three" are the union and intersection of the three packages' calls; "All three / any" is their ratio. "Same direction in all three" is the percentage of genes in the union whose log2 fold change has the same sign in all three packages, whether or not each package called the gene.
+
+```{r supptable-de-package-agreement, echo=FALSE}
+de_package_agreement <- read.csv(
+  here::here("Datalink", "Paper_Source_Data", "de_package_agreement.csv"),
+  stringsAsFactors = FALSE, check.names = FALSE
+)
+
+knitr::kable(de_package_agreement,
+             caption = "Full-cohort sex-biased DEGs (padj < 0.05, |LFC| > 0.2) per DE package, their overlap, and agreement in effect direction.",
+             row.names = FALSE,
+             align = c("l", rep("r", 7)))
+```
+
+## Supplementary Table `r ST("sex_label_validation")`. Sex label validation by chromosomal marker expression {#supp-table-sex-validation}
 
 Sex labels for all donors were validated by comparing annotated sex against pseudobulk expression of *XIST* (X-inactivation transcript, expected in females) and two Y-chromosome markers (*DDX3Y*, *KDM5D*) using logistic regression on library-size-normalised expression (counts per million, CPM). Expression was aggregated to the donor level before modelling to avoid single-cell noise [@kover2026pituitary]. In total, `r val("n_sex_discordant_donors")` donors (`r val("pct_sex_discordant_donors", digits = 1)`% of the cohort) showed strong discordance between their assigned sex and chromosomal marker expression; their statistics are shown below. All flagged donors were retained in the main analyses, as the ambiguity speaks to population-level variability, not a labeling error.
 
@@ -706,202 +667,54 @@ knitr::kable(
 )
 ```
 
-<!-- ------------------------------------------------------------------------ -->
+## Supplementary Table `r ST("autosomal_vs_sexchr")`. Autosomal versus sex-chromosome truth-gene characteristics {#supp-table-autosomal-vs-sexchr}
+<!-- Not cited from the main text since the chromosome-stratified recall figure was dropped (2026-11-09). Cite it (e.g. from the sex-biased gene characteristics paragraph) or delete it. -->
 
-<!-- # Supplementary Data (external files) -->
 
-<!-- Per Nature Communications requirements, large tabular datasets are provided as separate files rather than embedded in this PDF. Each is listed below with its source path and descriptive caption. -->
-
-<!-- ## Supplementary Data 1. Dataset summary and gene-universe composition -->
-
-<!-- **File:** `Supplementary_Data_1_dataset_summary.xlsx` (generated from `Datalink/Paper_Source_Data/dataset_statistics.csv` and `Datalink/Full_Ground_Truth/Gene_Audit_Full_Universe_Combined.csv`) -->
-
-<!-- Two linked tables. (1) Dataset characteristics for the PsychAD dataset, including donor counts, cell counts, brain region, covariates, download URL, and mean/median cells-per-donor, UMIs-per-cell, and genes-per-cell after filtering (age $\geq$ 40, $\geq$ 30 cells per donor). (2) Gene-composition audit for the full PsychAD astrocyte gene universe, showing total genes and the breakdown by biotype (protein-coding, lncRNA, pseudogene) and chromosome (X, Y, autosomal, PAR). -->
-
-<!-- ```{r suppdata1-preview} -->
-<!-- source_data_1 <- read.csv( -->
-<!--   here::here("Datalink", "Paper_Source_Data", "dataset_statistics.csv"), -->
-<!--   stringsAsFactors = FALSE, check.names = FALSE -->
-<!-- ) -->
-<!-- source_data_1 <- source_data_1[source_data_1$Dataset == "PsychAD", ] -->
-<!-- source_data_1 <- source_data_1[, c( -->
-<!--   "Dataset", "Brain_Region", "Cell_Type", "N_Donors", "N_Cells", -->
-<!--   "Mean_Cells_Per_Donor", "Median_Cells_Per_Donor", -->
-<!--   "Mean_UMIs_Per_Cell", "Median_UMIs_Per_Cell", -->
-<!--   "Mean_Genes_Per_Cell", "Median_Genes_Per_Cell" -->
-<!-- )] -->
-
-<!-- knitr::kable( -->
-<!--   source_data_1, -->
-<!--   col.names = c("Dataset", "Brain Region", "Cell Type", "N Donors", "N Cells", -->
-<!--                 "Mean Cells/Donor", "Median Cells/Donor", "Mean UMIs/Cell", -->
-<!--                 "Median UMIs/Cell", "Mean Genes/Cell", "Median Genes/Cell"), -->
-<!--   digits = c(0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0) -->
-<!-- ) -->
-
-<!-- gene_audit <- read.csv( -->
-<!--   here::here("Datalink", "Full_Ground_Truth", -->
-<!--              "Gene_Audit_Full_Universe_Combined.csv"), -->
-<!--   stringsAsFactors = FALSE, check.names = FALSE -->
-<!-- ) -->
-
-<!-- # Restrict to the PsychAD gene universe (stored under its legacy lab name "Roussos") -->
-<!-- gene_audit <- gene_audit[gene_audit$Dataset == "Roussos", ] -->
-<!-- gene_audit$Dataset <- "PsychAD" -->
-
-<!-- # Pivot to (CellType, Dataset) rows, key biotype/chromosome columns -->
-<!-- gene_audit_display <- gene_audit[, c( -->
-<!--   "CellType", "Dataset", "Total", -->
-<!--   "protein_coding", "lncRNA", "pseudogene", -->
-<!--   "X_chr", "Y_chr", "autosomal", "PAR" -->
-<!-- )] -->
-
-<!-- knitr::kable( -->
-<!--   gene_audit_display, -->
-<!--   col.names = c("Cell Type", "Dataset", "Total genes", -->
-<!--                 "Protein-coding", "lncRNA", "Pseudogene", -->
-<!--                 "X", "Y", "Autosomal", "PAR"), -->
-<!--   digits = 0 -->
-<!-- ) -->
-<!-- ``` -->
-<!-- ```{r sourcedata-table1, echo=FALSE} -->
-<!-- source_data_1 <- read.csv( -->
-<!--   here::here("Datalink", "Paper_Source_Data", "dataset_statistics.csv"), -->
-<!--   stringsAsFactors = FALSE, -->
-<!--   check.names = FALSE -->
-<!-- ) -->
-<!-- source_data_1 <- source_data_1[source_data_1$Dataset == "PsychAD", ] -->
-
-<!-- # Preserve the paper's reduced column set (drop the SD columns the CSV carries) -->
-<!-- source_data_1 <- source_data_1[, c( -->
-<!--   "Dataset", "Brain_Region", "Cell_Type", "N_Donors", "N_Cells", -->
-<!--   "Mean_Cells_Per_Donor", "Median_Cells_Per_Donor", -->
-<!--   "Mean_UMIs_Per_Cell", "Median_UMIs_Per_Cell", -->
-<!--   "Mean_Genes_Per_Cell", "Median_Genes_Per_Cell" -->
-<!-- )] -->
-
-<!-- knitr::kable( -->
-<!--   source_data_1, -->
-<!--   caption = "Dataset characteristics for PsychAD, the primary power analysis dataset (single-nucleus RNA-seq, Dorsolateral Prefrontal Cortex). Mean and median cells per donor, UMIs per cell, and genes per cell computed after filtering (age ≥40 years, cells ≥30 per donor).", -->
-<!--   col.names = c("Dataset", "Brain Region", "Cell Type", "N Donors", "N Cells", -->
-<!--                 "Mean Cells/Donor", "Median Cells/Donor", "Mean UMIs/Cell", -->
-<!--                 "Median UMIs/Cell", "Mean Genes/Cell", "Median Genes/Cell"), -->
-<!--   digits = c(0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0) -->
-<!-- ) -->
-
-<!-- fig1_source_data_1 <- data.frame( -->
-<!--   Dataset = "PsychAD", -->
-<!--   Type = "snRNA-seq", -->
-<!--   `Brain Region` = "Dorsolateral Prefrontal Cortex", -->
-<!--   `Num Donors` = paste0(val("n_donors_micro", big = TRUE), "-", val("n_donors_oligo", big = TRUE)), -->
-<!--   Covariates = "Source, ethnicity, disease", -->
-<!--   Availability = "[CELLxGENE](https://cellxgene.cziscience.com/collections/84ce6837-548d-4a1f-919f-0bc0d9a3952f)", -->
-<!--   check.names = FALSE -->
-<!-- ) -->
-
-<!-- knitr::kable(fig1_source_data_1) -->
-<!-- ``` -->
-
-<!-- COMMENTED OUT 2026-09-04: cross-dataset universe-controlled IoU matrices removed from the paper.
-## Supplementary Data (cross-dataset). Universe-controlled IoU matrices
-
-**Files:** Three matrices, one per cell type:
-- `Datalink/Full_Ground_Truth/Astro/Diagnostic_Results/Expanded_IoU_Matrix_Universe_Controlled.csv`
-- `Datalink/Full_Ground_Truth/Micro/Diagnostic_Results/Expanded_IoU_Matrix_Universe_Controlled.csv`
-- `Datalink/Full_Ground_Truth/Oligo/Diagnostic_Results/Expanded_IoU_Matrix_Universe_Controlled.csv`
-
-Pairwise universe-controlled IoU values for all dataset pairs (PsychAD, SEA-AD, ROSMAP, Johansen, Rexach, 3 PsychAD split-halves, 3 null permutation runs; 15 x 15 matrix per cell type). IoU = |A cap B| / |A cup B| where A and B are sets of significant genes (padj < 0.05, |LFC| > 1) restricted to genes present in both datasets' count matrices.
-
-## Supplementary Data (cross-dataset). False discovery proportion (FDP) summary
-
-**File:** `Datalink/Full_Ground_Truth/FDP_Summary.csv`
-
-FDP per query source relative to the full PsychAD ground truth. Columns: `CellType`, `Source`, `Group` (Cross-Dataset / Split-Half / Null), `FDP`, `N_Sig` (significant genes in query), `N_In_Universe` (query significant genes in PsychAD universe), `N_Disagreed` (deemed insignificant by PsychAD). Cross-dataset FDP 0.00-0.33 (mean 0.15); split-half baseline 0.02-0.27 (mean 0.09).
-
-# ```{r suppdata3-preview, eval=FALSE, include=FALSE}
-fdp_summary <- read.csv(
-  here::here("Datalink", "Paper_Source_Data", "fdp_summary.csv"),
-  stringsAsFactors = FALSE
+```{r supptable-autosomal-vs-sexchr, message=FALSE}
+autosomal_vs_sexchr <- read.csv(
+  here::here("Datalink", "_scratch_autosomal_vs_sexchr_summary.csv")
 )
-fdp_display <- fdp_summary[, c("Cell_Type", "Source", "Group",
-                               "FDP", "N_Sig", "N_Disagreed")]
 
-knitr::kable(
-  fdp_display,
-  caption = "Preview: false discovery proportion by cell type and query source.",
-  col.names = c("Cell Type", "Source", "Group", "FDP", "N Significant", "N Disagreed"),
-  digits = c(0, 0, 0, 2, 0, 0)
-)
-# ```
--->
+autosomal_vs_sexchr <- autosomal_vs_sexchr[
+  autosomal_vs_sexchr$n >= 5,
+  c("cell_type", "bin", "chr_group", "n",
+    "baseMean_median", "dispersion_median", "absLFC_median")
+]
+autosomal_vs_sexchr$chr_group <- gsub("_", " ", autosomal_vs_sexchr$chr_group)
+autosomal_vs_sexchr <- autosomal_vs_sexchr[
+  order(autosomal_vs_sexchr$cell_type,
+        autosomal_vs_sexchr$bin,
+        autosomal_vs_sexchr$chr_group), ]
 
-<!-- ## Supplementary Data 2. Cartesian downsampling results (per grid point) -->
+knitr::kable(autosomal_vs_sexchr,
+             caption = "Autosomal versus sex-chromosome gene properties in the PsychAD truth set, stratified by cell type and |LFC| bin. Within each bin, sex-chromosome genes show systematically higher gene counts and lower dispersion than autosomal genes, placing them in a favourable region of the power surface at equivalent fold change. Rows with n < 5 are suppressed.",
+             col.names = c("Cell Type", "|LFC| Bin", "Group", "N",
+                           "Median gene counts", "Median Dispersion", "Median |LFC|"),
+             row.names = FALSE,
+             escape = FALSE,
+             digits = c(0, 0, 0, 0, 1, 3, 2))
+```
 
-<!-- **Files:** -->
-<!-- - `Datalink/Cartesian_Downsampling/{Astro,Micro,Oligo}/Roussos/cells/Plots/Aggregated_Summary_Data.qs` -->
-<!-- - `Datalink/Cartesian_Downsampling/{Astro,Micro,Oligo}/Roussos/reads/Plots/Aggregated_Summary_Data.qs` -->
+------------------------------------------------------------------------
 
-<!-- Aggregated precision and recall for all 12 $\times$ 14 grid points across ten robustness runs, stratified by LFC magnitude bin (Tiny 0.2-1.0, Small 1.0-2.0, Medium 2.0-3.0, Large >3.0) and chromosome type. Serialized R objects (qs format). Load with `qs::qread()`. Columns: `n_donors`, `n_cells`, `run_id`, `iteration_id`, `mean_recall`, `mean_precision`, and stratified metrics by LFC bin and chromosome type. -->
+# Supplementary Data (external files)
 
-<!-- ## Supplementary Data 3. Truth-set gene characteristics -->
+Large tables are provided as separate files rather than in this document.
 
-<!-- **File:** `Datalink/DE_Diagnostics/Shared_Gene_Diagnostics/Full_Truth_Set_Summary.csv` -->
+## Supplementary Data 1. PsychAD cohort characteristics and gene-universe composition
 
-<!-- Gene-level characteristics of truth sets across cell types at |LFC| > 1 threshold, giving both median (robust) and mean (skew-reflective) values for |LFC|, baseMean, dispersion, and signal-to-noise ratio (|LFC|/SE). -->
+**File:** `Supplementary_Data_1_dataset_summary.xlsx` (two sheets).
 
-<!-- ```{r suppdata7-preview-median} -->
-<!-- truth_chars <- read.csv( -->
-<!--   here::here("Datalink", "Paper_Source_Data", "truth_gene_characteristics.csv") -->
-<!-- ) -->
-<!-- truth_chars_median <- truth_chars[, c( -->
-<!--   "Cell_Type", "N_Genes", -->
-<!--   "Median_LFC", "Median_SNR", "Median_BaseMean", "Median_Dispersion" -->
-<!-- )] -->
-<!-- knitr::kable(truth_chars_median, -->
-<!--              caption = "Preview: median truth-gene characteristics by cell type. LFC = log~2~ fold change, SNR = signal-to-noise ratio (|LFC|/SE). Full data provided as Supplementary Data 3.", -->
-<!--              col.names = c("Cell Type", "N Genes", "Median |LFC|", "Median SNR", -->
-<!--                            "Median BaseMean", "Median Dispersion"), -->
-<!--              escape = FALSE, -->
-<!--              digits = c(0, 0, 3, 2, 2, 3)) -->
-<!-- ``` -->
+*Dataset_Characteristics* gives, for each of the three cell types analysed (astrocytes, microglia and oligodendrocytes), the PsychAD cohort after filtering (donors aged 40 or over with at least 30 cells of that type): brain region (dorsolateral prefrontal cortex), number of donors, total number of cells, and the mean, standard deviation and median of cells per donor, UMIs per cell and genes detected per cell. The data are public on CELLxGENE Discover (collection `84ce6837-548d-4a1f-919f-0bc0d9a3952f`) [@fullard2025].
 
-<!-- ```{r suppdata7-preview-mean} -->
-<!-- truth_chars_mean <- truth_chars[, c( -->
-<!--   "Cell_Type", "N_Genes", -->
-<!--   "Mean_LFC", "Mean_SNR", "Mean_BaseMean", "Mean_Dispersion" -->
-<!-- )] -->
-<!-- knitr::kable(truth_chars_mean, -->
-<!--              caption = "Preview: mean truth-gene characteristics by cell type. Means reflect the right-skewed distribution of expression levels.", -->
-<!--              col.names = c("Cell Type", "N Genes", "Mean |LFC|", "Mean SNR", -->
-<!--                            "Mean BaseMean", "Mean Dispersion"), -->
-<!--              escape = FALSE, -->
-<!--              digits = c(0, 0, 3, 2, 2, 3)) -->
-<!-- ``` -->
+*Gene_Universe_Composition* breaks down the full set of genes in the PsychAD count matrices (before any expression filtering) for each cell type: total genes, genes on the X chromosome, the Y chromosome, the autosomes, the mitochondrial genome and the pseudoautosomal regions, and the number of protein-coding genes, pseudogenes, long non-coding RNAs and genes with no biotype annotation. "Roussos" in the Dataset column is the internal name for the PsychAD cohort.
 
-<!-- ## Supplementary Data 4. XGBoost hyperparameter configuration ranking -->
+## Supplementary Data 4. Performance of every XGBoost power-model configuration
 
-<!-- **File:** `Datalink/Power_Curve_Fitting/Models/xgboost/realistic/model_selection.csv` -->
+**File:** `Supplementary_Data_4_xgboost_hyperparameters.csv`
 
-<!-- Out-of-fold performance for all 36 gradient-boosted-tree (XGBoost) configurations of the production (realistic, $n_{\text{cells}} \geq 100$) power model: every combination of loss-reweighting exponent ($\alpha \in \{0, 0.5, 1\}$), maximum tree depth, learning rate, and minimum child weight, ranked by out-of-fold bin-balanced mean absolute error (MAE). The promoted production configuration is the top-ranked row. -->
-
-<!-- ```{r suppdata4-configs} -->
-<!-- config_ranking <- read.csv( -->
-<!--   here::here("Datalink", "Power_Curve_Fitting", "Models", "xgboost", -->
-<!--              "realistic", "model_selection.csv"), -->
-<!--   stringsAsFactors = FALSE, check.names = FALSE -->
-<!-- ) -->
-<!-- config_ranking <- config_ranking[order(config_ranking$bin_balanced_MAE), ] -->
-
-<!-- knitr::kable( -->
-<!--   config_ranking, -->
-<!--   caption = "All 36 XGBoost hyperparameter configurations for the realistic power model, ranked by out-of-fold bin-balanced MAE (best first). The top row is the promoted production model. Columns: reweighting exponent (alpha), maximum tree depth, learning rate (eta), minimum child weight, row- and column-subsample fractions, selected number of boosting rounds, cross-validated log loss, bin-balanced MAE, and its 90th-percentile absolute error.", -->
-<!--   col.names = c("Config", "$\\alpha$", "Max depth", "$\\eta$", "Min child weight", -->
-<!--                 "Subsample", "Colsample", "Best nrounds", "CV logloss", -->
-<!--                 "Bin-balanced MAE", "Bin-balanced p90 err"), -->
-<!--   row.names = FALSE, -->
-<!--   digits = c(0, 1, 0, 2, 0, 1, 1, 0, 4, 4, 4) -->
-<!-- ) -->
-<!-- ``` -->
+Cross-validated performance of all `r val("xgb_n_configs")` XGBoost configurations tested for the power model, trained on designs with at least 100 cells per donor. Configurations are every combination of the loss-reweighting exponent $\alpha \in \{0, 0.5, 1\}$, maximum tree depth (3, 4, 6 or 10), learning rate (0.01, 0.03 or 0.1) and minimum child weight (1, 10 or 25); row and column subsampling were fixed at 0.8. Each training row (one gene at one design) is weighted by its number of pseudo-experiments, multiplied by $(1/p_B)^{\alpha}$, where $p_B$ is the fraction of rows whose observed detection rate falls in the same tenth of the 0 to 1 range; $\alpha = 0$ is no reweighting. Rows are ordered from best to worst by bin-balanced mean absolute error (MAE): predictions are grouped into ten equal-width bins of predicted detection rate, the mean absolute difference between predicted and observed detection rate is taken within each bin, and these are averaged across bins, so the many designs with detection near 0 or 1 do not dominate. The first row is the selected model. Columns: configuration index, $\alpha$, maximum depth, learning rate, minimum child weight, row and column subsample fractions, number of boosting rounds chosen by early stopping, cross-validated log loss, bin-balanced MAE, the bin-balanced 90th percentile of the absolute error, and the standard deviation of bin-balanced MAE across cross-validation folds.
 
 ------------------------------------------------------------------------
 
