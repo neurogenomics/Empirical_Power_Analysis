@@ -23,6 +23,8 @@
 #   AD_vs_Control/Full_Cohort_DE/sex_de_results.csv                    (ad_de)
 #   Power_Curve_Fitting/Fitting_Data/aggregated_fitting_data_all.qs    (pcf_aggregate)
 #   Cartesian_Downsampling/Cross_Score/cross_score_matrix.csv          (crossscore)
+#   AD_vs_Control/Full_Cohort_DE/ad_vs_control_de_results.csv          (ad_de)
+#   Cartesian_Downsampling/<CT>/Roussos_ADvsCtrl/cells/all_methods/Plots/Aggregated_Summary_Data.qs (ad_cartesian)
 # Also writes Paper_Source_Data/de_package_agreement.csv (Supplementary Table).
 #   R/depth_equalization/config.R (the downsampling factor actually used)
 # ==============================================================================
@@ -409,6 +411,62 @@ add("depkg_xs_precision_large_min", min(lg$value[lg$metric == "precision"], na.r
 
 # Supplementary table: full-cohort agreement between packages.
 write.csv(bind_rows(agreement), file.path(OUTPUT_BASE, "de_package_agreement.csv"), row.names = FALSE)
+
+
+# --- 9. AD versus control (validation that the sex-contrast trends replicate) --
+# Full-cohort AD DE: MSSM donors whose only diagnosis is AD versus donors with no
+# diagnosis (Roussos_ADvsCtrl shards). "AD DEGs" here = padj < 0.05 with no LFC
+# filter, matching the published PsychAD AD lists (Lee et al. 2025) they are
+# compared with in the text; the tiny-bin share uses the truth-set rule.
+src <- "AD_vs_Control/Full_Cohort_DE/ad_vs_control_de_results.csv"
+ad <- rd(src) %>% filter(contrast == "ad_vs_control")
+sx_donors <- rd("AD_vs_Control/Full_Cohort_DE/sex_de_results.csv") %>%
+  filter(contrast == "sex") %>% distinct(cell_type, n_donors)
+ratios <- c()
+for (ct in names(cts)) {
+  n <- unique(ad$n_donors[ad$cell_type == ct])
+  n_sex <- unique(sx_donors$n_donors[sx_donors$cell_type == ct])
+  stopifnot(length(n) == 1, length(n_sex) == 1)
+  add(sprintf("ad_n_donors_%s", cts[[ct]]), n, "donors",
+      sprintf("Donors in the full-cohort AD versus control analysis, %s: Mount Sinai (MSSM) donors whose only diagnosis is AD, plus donors with no diagnosis, after the cohort filters", ct), src)
+  ratios[ct] <- n / n_sex
+}
+add("ad_n_donors_ratio_to_sex_min", min(ratios), "ratio",
+    "Smallest ratio, over cell types, of AD versus control donors to sex-contrast donors (full cohort). The ground-truth half is 50% of each, so this is also the ratio of ground-truth sizes", src)
+add("ad_n_donors_ratio_to_sex_max", max(ratios), "ratio",
+    "Largest ratio, over cell types, of AD versus control donors to sex-contrast donors (full cohort); see ad_n_donors_ratio_to_sex_min", src)
+
+ad_sig <- ad %>% filter(!is.na(padj), padj < 0.05) %>% mutate(a = abs(log2FoldChange))
+eff <- ad_sig %>% group_by(cell_type, de_method) %>%
+  summarise(med = median(a), lt1 = 100 * mean(a < 1), .groups = "drop")
+stopifnot(nrow(eff) == 9)
+add("ad_fc_median_abs_lfc_min", min(eff$med), "log2FC",
+    "Lowest median |LFC| of full-cohort AD DEGs (padj < 0.05, no LFC filter) over the three DE packages and three cell types", src)
+add("ad_fc_median_abs_lfc_max", max(eff$med), "log2FC",
+    "Highest median |LFC| of full-cohort AD DEGs (padj < 0.05, no LFC filter) over the three DE packages and three cell types", src)
+add("ad_fc_pct_abs_lfc_lt1_min", min(eff$lt1), "percent",
+    "Lowest percentage of full-cohort AD DEGs (padj < 0.05, no LFC filter) with |LFC| < 1, over the three DE packages and three cell types", src)
+tiny <- ad_sig %>% filter(a > 0.2) %>% group_by(cell_type, de_method) %>%
+  summarise(p = 100 * mean(a <= 1), .groups = "drop")
+add("ad_fc_pct_tiny_min", min(tiny$p), "percent",
+    "Lowest percentage, over the three DE packages and three cell types, of full-cohort AD DEGs passing the truth-set rule (padj < 0.05, |LFC| > 0.2) that fall in the tiny bin (|LFC| 0.2-1)", src)
+
+# AD downsampling grid (method-pooled, cells-per-donor mode): truth-set sizes per
+# effect-size bin and the donor trend in tiny-bin recall with all cells.
+med_large <- c()
+donor_trend <- c()
+for (ct in names(cts)) {
+  src <- sprintf("Cartesian_Downsampling/%s/Roussos_ADvsCtrl/cells/all_methods/Plots/Aggregated_Summary_Data.qs", ct)
+  s <- qs::qread(dl(src))$df_summary %>% filter(Gene_Category == "Total")
+  med_large[ct] <- max(s$Ref_GT_Count[s$LFC_Bin %in% c("Medium (2.0-3.0)", "Large (3.0+)")], na.rm = TRUE)
+  t <- s %>% filter(LFC_Bin == "Tiny (0.2-1.0)", Cells == "Max", !is.na(Mean_Recall)) %>% arrange(Donors)
+  donor_trend[ct] <- all(t$Mean_Recall[nrow(t)] > t$Mean_Recall[-nrow(t)])
+}
+src <- "Cartesian_Downsampling/<CT>/Roussos_ADvsCtrl/cells/all_methods/Plots/Aggregated_Summary_Data.qs"
+add("ad_gt_medlarge_mean_genes_max", max(med_large), "genes",
+    "Largest mean number of AD ground-truth genes (averaged over the ten split-half runs, method-pooled) in the medium (|LFC| 2-3) or large (|LFC| > 3) bin, over cell types and design points", src)
+add("ad_recall_tiny_max_donors_highest_all", as.numeric(all(donor_trend)), "flag",
+    "1 if, in every cell type, AD tiny-bin recall (method-pooled, all available cells per donor) is higher at the largest donor count than at every smaller donor count", src)
 
 # --- write ----------------------------------------------------------------------
 out <- bind_rows(values)

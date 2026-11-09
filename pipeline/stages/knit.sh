@@ -6,7 +6,7 @@
 stage_main() {
   epa_init_ws
   local s
-  for s in eda fgt deg_loss cartesian_cells cartesian_reads compose xgb_shap xgb_post gene_class tables supp_data paper_values; do
+  for s in eda fgt deg_loss cartesian_cells cartesian_reads compose xgb_shap xgb_post gene_class tables supp_data paper_values ad_de ad_cartesian; do
     epa_in "$s"
   done
   epa_in xgb_select model

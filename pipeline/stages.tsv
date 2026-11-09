@@ -31,6 +31,6 @@ ad_gt_manifest	ad_shard	8	96gb	12:00:00	single
 ad_grid	ad_shard,ad_gt_manifest	24	200gb	24:00:00	array:adgrid
 ad_cartesian	ad_grid	24	200gb	12:00:00	single
 ad_de	shard,ad_shard	12	200gb	12:00:00	single
-paper_values	eda,tables,deg_loss,crossscore,pcf_aggregate,xgb_select,xgb_post,gene_class,ad_de	2	64gb	01:00:00	single
-knit	eda,fgt,deg_loss,cartesian_cells,cartesian_reads,compose,xgb_select,xgb_shap,xgb_post,gene_class,tables,supp_data,paper_values	4	32gb	04:00:00	single
+paper_values	eda,tables,deg_loss,crossscore,pcf_aggregate,xgb_select,xgb_post,gene_class,ad_de,ad_cartesian	2	64gb	01:00:00	single
+knit	eda,fgt,deg_loss,cartesian_cells,cartesian_reads,compose,xgb_select,xgb_shap,xgb_post,gene_class,tables,supp_data,paper_values,ad_de,ad_cartesian	4	32gb	04:00:00	single
 finalise	knit,ad_cartesian,ad_de	1	4gb	01:00:00	single

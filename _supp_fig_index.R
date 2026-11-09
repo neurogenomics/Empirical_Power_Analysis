@@ -65,6 +65,10 @@ supp_fig_keys <- c(
   "precision_heatmaps",               # precision heatmaps, cells+counts
   "recall_discrete_heatmaps",         # discrete recall heatmaps, cells+counts
 
+  # --- AD versus control contrast (referenced) --------------------------------
+  "ad_effect_sizes",                  # AD vs autosomal sex DEG |LFC| and gene counts
+  "ad_detection_trends",              # AD oligo panels: recall/precision, padj quartile, counts
+
   # --- XGBoost power-model interpretation / diagnostics (referenced) ---------
   "xgb_shap_dependence",              # SHAP dependence on design covariates
 
