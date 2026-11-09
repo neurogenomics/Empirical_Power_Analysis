@@ -289,7 +289,7 @@ src <- "Gene_Classification/oligo_gene_group_power_summary.csv"
 gs <- rd(src)
 sets <- list(
   easy = c("Chromatin regulator", "Ubiquitin ligase", "LoF-intolerant"),
-  hard = c("Intermediate filament", "Forkhead", "Cytokine")
+  hard = c("Cytokine", "Homeodomain", "Growth factor")
 )
 for (s in names(sets)) {
   for (l in c(2, 1)) {
