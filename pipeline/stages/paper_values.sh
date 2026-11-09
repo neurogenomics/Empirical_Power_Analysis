@@ -13,9 +13,12 @@ stage_main() {
   epa_in xgb_select model
   epa_in xgb_post
   epa_in gene_class
+  epa_in crossscore
+  epa_in ad_de
   epa_step "figure data step 9: paper values"
   epa_R R/figure_data_generation/run_pipeline.R 9
   epa_require Paper_Source_Data/paper_values.csv
-  epa_out paper_values Paper_Source_Data/paper_values.csv
+  epa_require Paper_Source_Data/de_package_agreement.csv
+  epa_out paper_values Paper_Source_Data/paper_values.csv Paper_Source_Data/de_package_agreement.csv
   epa_complete
 }

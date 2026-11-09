@@ -20,12 +20,17 @@
 #   Power_Curve_Fitting/Models/xgboost/comparison/unified_calibration_table.csv   (xgb_post)
 #   Power_Curve_Fitting/Fitting_Data/aggregated_fitting_data.qs        (pcf_aggregate)
 #   Gene_Classification/oligo_gene_group_power_summary.csv             (gene_class)
+#   AD_vs_Control/Full_Cohort_DE/sex_de_results.csv                    (ad_de)
+#   Power_Curve_Fitting/Fitting_Data/aggregated_fitting_data_all.qs    (pcf_aggregate)
+#   Cartesian_Downsampling/Cross_Score/cross_score_matrix.csv          (crossscore)
+# Also writes Paper_Source_Data/de_package_agreement.csv (Supplementary Table).
 #   R/depth_equalization/config.R (the downsampling factor actually used)
 # ==============================================================================
 
 suppressPackageStartupMessages({
   library(dplyr)
   library(qs)
+  library(tidyr)
 })
 
 if (!exists("PROJECT_ROOT")) source("config.R")
@@ -273,6 +278,137 @@ for (s in names(sets)) {
 }
 add("genegroup_any_lfc02_pct_detectable_max", max(gs$pct_detectable[abs(gs$abs_lfc - 0.2) < 1e-9], na.rm = TRUE),
     "percent", "Highest % Detectable over all Figure 6 groups at |LFC| = 0.2", src)
+
+# --- 8. DE package differences (sex contrast; DESeq2, edgeR, limma-voom) ------
+# Truth-set rule throughout: padj < 0.05 and |LFC| > 0.2 (as GT_LFC_THRESHOLD).
+PKG <- c(deseq2 = "DESeq2", edger = "edgeR", limma = "limma-voom")
+
+# 8a. Full cohort: every post-filter donor, all three packages on the same genes.
+src <- "AD_vs_Control/Full_Cohort_DE/sex_de_results.csv"
+fc <- rd(src) %>% filter(contrast == "sex")
+fc_sig <- fc %>% filter(!is.na(padj), padj < 0.05, abs(log2FoldChange) > 0.2)
+agreement <- list()
+flips <- list()
+for (ct in names(cts)) {
+  sets <- lapply(names(PKG), function(m) unique(fc_sig$gene_id[fc_sig$cell_type == ct & fc_sig$de_method == m]))
+  names(sets) <- names(PKG)
+  called <- Reduce(union, sets)
+  shared3 <- Reduce(intersect, sets)
+  only_limma <- setdiff(sets$limma, union(sets$deseq2, sets$edger))
+  for (m in names(PKG)) {
+    add(sprintf("depkg_fc_n_%s_%s", m, cts[[ct]]), length(sets[[m]]), "genes",
+        sprintf("Full-cohort sex DEGs (padj < 0.05, |LFC| > 0.2) called by %s, %s, all post-filter donors", PKG[[m]], ct), src)
+  }
+  add(paste0("depkg_fc_pct_shared3_", cts[[ct]]), 100 * length(shared3) / length(called), "percent",
+      sprintf("Genes called by all three packages as a %% of genes called by at least one (full-cohort sex DE, %s)", ct), src)
+  add(paste0("depkg_fc_n_limma_only_", cts[[ct]]), length(only_limma), "genes",
+      sprintf("Full-cohort sex DEGs called by limma-voom and by neither DESeq2 nor edgeR, %s", ct), src)
+  add(paste0("depkg_fc_median_count_limma_only_", cts[[ct]]),
+      median(fc$base_mean[fc$cell_type == ct & fc$de_method == "limma" & fc$gene_id %in% only_limma]), "count",
+      sprintf("Median gene count (median raw pseudobulk count across donors) of the limma-voom-only full-cohort DEGs, %s", ct), src)
+
+  # Direction: LFC sign of every package, over genes called by at least one.
+  lfc <- fc %>% filter(cell_type == ct, gene_id %in% called) %>%
+    select(gene_id, de_method, log2FoldChange) %>%
+    tidyr::pivot_wider(names_from = de_method, values_from = log2FoldChange) %>%
+    filter(!is.na(deseq2), !is.na(edger), !is.na(limma)) %>%
+    mutate(agree = sign(deseq2) == sign(edger) & sign(edger) == sign(limma),
+           all_gt02 = pmin(abs(deseq2), abs(edger), abs(limma)) > 0.2,
+           shared3 = gene_id %in% shared3)
+  add(paste0("depkg_fc_pct_sign_agree_", cts[[ct]]), 100 * mean(lfc$agree), "percent",
+      sprintf("Genes called by at least one package whose LFC has the same sign in all three packages, %% (full-cohort sex DE, %s)", ct), src)
+  agreement[[ct]] <- data.frame(
+    `Cell type` = ct, `DESeq2 DEGs` = length(sets$deseq2), `edgeR DEGs` = length(sets$edger),
+    `limma-voom DEGs` = length(sets$limma), `Called by any` = length(called),
+    `Called by all three` = length(shared3), `All three / any (%)` = round(100 * length(shared3) / length(called), 1),
+    `Same direction in all three (%)` = round(100 * mean(lfc$agree), 1), check.names = FALSE)
+  d <- lfc %>% filter(!agree) %>%
+    mutate(dissent = ifelse(sign(deseq2) == sign(edger), "limma", ifelse(sign(deseq2) == sign(limma), "edger", "deseq2")),
+           min_abs = pmin(abs(deseq2), abs(edger), abs(limma)))
+  flips[[ct]] <- list(shared3 = lfc[lfc$shared3, ], all_gt02 = lfc[lfc$all_gt02, ], d = d)
+}
+fl_d <- bind_rows(lapply(flips, `[[`, "d"))
+add("depkg_fc_pct_sign_agree_shared3_min", 100 * min(sapply(flips, function(x) mean(x$shared3$agree))), "percent",
+    "Lowest, over the three cell types, % of genes called by all three packages whose LFC has the same sign in all three (full-cohort sex DE; the text claims 100)", src)
+add("depkg_fc_pct_sign_agree_all_lfc_gt02_min", 100 * min(sapply(flips, function(x) mean(x$all_gt02$agree))), "percent",
+    "Lowest, over the three cell types, % same LFC sign among called genes where all three packages estimate |LFC| > 0.2 (full-cohort sex DE; the text claims 100)", src)
+add("depkg_fc_n_sign_flips", nrow(fl_d), "genes",
+    "Called genes (any package, any cell type) whose LFC sign differs between packages, full-cohort sex DE", src)
+add("depkg_fc_n_sign_flips_limma", sum(fl_d$dissent == "limma"), "genes",
+    "Of those sign flips, the number where limma-voom is the package that disagrees with the other two", src)
+add("depkg_fc_max_min_abs_lfc_flips", max(fl_d$min_abs), "|LFC|",
+    "Over all sign flips, the largest value of the smallest |LFC| any package estimates for that gene (full-cohort sex DE; < 0.2 means every flip involves a package estimating |LFC| below 0.2)", src)
+
+# 8b. Per run: truth sets of the ten ground-truth halves, per package.
+src <- "Power_Curve_Fitting/Fitting_Data/aggregated_fitting_data_all.qs"
+fa <- qs::qread(dl(src))
+gt_n <- as.data.frame(fa) %>% filter(mode == "cells") %>%
+  distinct(cell_type, de_method, run_id, gene_id) %>%
+  count(cell_type, de_method, run_id, name = "n")
+rm(fa)
+for (ct in names(cts)) {
+  for (m in names(PKG)) {
+    v <- gt_n$n[gt_n$cell_type == ct & gt_n$de_method == m]
+    stopifnot(length(v) == 10)
+    add(sprintf("depkg_run_n_min_%s_%s", m, cts[[ct]]), min(v), "genes",
+        sprintf("Smallest %s truth set (padj < 0.05, |LFC| > 0.2) over the ten ground-truth halves, %s", PKG[[m]], ct), src)
+    add(sprintf("depkg_run_n_max_%s_%s", m, cts[[ct]]), max(v), "genes",
+        sprintf("Largest %s truth set (padj < 0.05, |LFC| > 0.2) over the ten ground-truth halves, %s", PKG[[m]], ct), src)
+  }
+}
+
+# 8c. Cross-scoring: each package's subsample calls against each package's truth
+# set, cells mode, one reference design, pooled over effect-size bins
+# (sum of numerators / sum of denominators).
+src <- "Cartesian_Downsampling/Cross_Score/cross_score_matrix.csv"
+XS_DONORS <- 200; XS_CELLS <- 250
+XS_DEF <- sprintf("cells mode, %d donors x %d cells per donor, 10 runs", XS_DONORS, XS_CELLS)
+xs <- rd(src) %>% filter(mode == "cells", n_donors == XS_DONORS, as.character(y_value) == as.character(XS_CELLS))
+stopifnot(nrow(xs) > 0)
+xp <- xs %>% group_by(cell_type, metric, subsample_method, truth_method) %>%
+  summarise(v = sum(numerator) / sum(denom_raw), .groups = "drop")
+rc <- filter(xp, metric == "recall"); pr <- filter(xp, metric == "precision")
+stopifnot(nrow(rc) == 27, nrow(pr) == 27)
+add("depkg_xs_recall_spread_within_truth_max",
+    max((rc %>% group_by(cell_type, truth_method) %>% summarise(s = max(v) - min(v), .groups = "drop"))$s), "recall",
+    paste("Largest difference in recall between the three calling packages scored against the same truth set, any cell type, pooled over effect sizes;", XS_DEF), src)
+add("depkg_xs_recall_spread_between_truth_max",
+    max((rc %>% group_by(cell_type, subsample_method) %>% summarise(s = max(v) - min(v), .groups = "drop"))$s), "recall",
+    paste("Largest difference in one calling package's recall between the three truth sets, any cell type, pooled over effect sizes;", XS_DEF), src)
+am <- filter(rc, cell_type %in% c("Astro", "Micro"))
+add("depkg_xs_recall_vs_limma_min_astro_micro", min(am$v[am$truth_method == "limma"]), "recall",
+    paste("Lowest recall of any package against the limma-voom truth set, astrocytes and microglia, pooled over effect sizes;", XS_DEF), src)
+add("depkg_xs_recall_vs_limma_max_astro_micro", max(am$v[am$truth_method == "limma"]), "recall",
+    paste("Highest recall of any package against the limma-voom truth set, astrocytes and microglia, pooled over effect sizes;", XS_DEF), src)
+add("depkg_xs_recall_vs_other_min_astro_micro", min(am$v[am$truth_method != "limma"]), "recall",
+    paste("Lowest recall of any package against the DESeq2 or edgeR truth sets, astrocytes and microglia, pooled over effect sizes;", XS_DEF), src)
+add("depkg_xs_recall_vs_other_max_astro_micro", max(am$v[am$truth_method != "limma"]), "recall",
+    paste("Highest recall of any package against the DESeq2 or edgeR truth sets, astrocytes and microglia, pooled over effect sizes;", XS_DEF), src)
+ol <- filter(rc, cell_type == "Oligo")
+add("depkg_xs_recall_vs_limma_max_oligo", max(ol$v[ol$truth_method == "limma"]), "recall",
+    paste("Highest recall of any package against the limma-voom truth set, oligodendrocytes, pooled over effect sizes;", XS_DEF), src)
+# Claim flags (1 = holds): limma-voom truth easiest for every package in Astro
+# and Micro, hardest for every package in Oligo; edgeR calls least precise
+# against every truth set in every cell type.
+rank_flag <- function(d, fn) all(sapply(split(d, d$subsample_method), function(s) s$truth_method[fn(s$v)] == "limma"))
+add("depkg_xs_limma_truth_easiest_astro_micro",
+    as.numeric(all(sapply(split(am, am$cell_type), rank_flag, fn = which.max))), "flag",
+    paste("1 if, in both astrocytes and microglia, every package has its highest recall against the limma-voom truth set;", XS_DEF), src)
+add("depkg_xs_limma_truth_hardest_oligo", as.numeric(rank_flag(ol, which.min)), "flag",
+    paste("1 if, in oligodendrocytes, every package has its lowest recall against the limma-voom truth set;", XS_DEF), src)
+add("depkg_xs_edger_least_precise_all",
+    as.numeric(all(sapply(split(pr, list(pr$cell_type, pr$truth_method)),
+                          function(s) s$subsample_method[which.min(s$v)] == "edger"))), "flag",
+    paste("1 if edgeR's calls have the lowest precision against every truth set in every cell type, pooled over effect sizes;", XS_DEF), src)
+lg <- xs %>% filter(lfc_bin == "Large")
+stopifnot(nrow(lg) == 54)
+add("depkg_xs_recall_large_min", min(lg$value[lg$metric == "recall"], na.rm = TRUE), "recall",
+    paste("Lowest large-effect (|LFC| > 3) recall over all nine calling x truth package pairs and three cell types;", XS_DEF), src)
+add("depkg_xs_precision_large_min", min(lg$value[lg$metric == "precision"], na.rm = TRUE), "precision",
+    paste("Lowest large-effect (|LFC| > 3) precision over all nine calling x truth package pairs and three cell types;", XS_DEF), src)
+
+# Supplementary table: full-cohort agreement between packages.
+write.csv(bind_rows(agreement), file.path(OUTPUT_BASE, "de_package_agreement.csv"), row.names = FALSE)
 
 # --- write ----------------------------------------------------------------------
 out <- bind_rows(values)

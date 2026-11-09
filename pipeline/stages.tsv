@@ -26,11 +26,11 @@ gene_class	shard,xgb_post	12	96gb	12:00:00	single
 tables	fgt,pcf_aggregate,cartesian_cells,cartesian_reads	8	64gb	04:00:00	single
 compose	cartesian_cells,cartesian_reads,crossscore	4	32gb	04:00:00	single
 supp_data	eda,fgt,xgb_select	2	32gb	02:00:00	single
-paper_values	eda,tables,deg_loss,pcf_aggregate,xgb_select,xgb_post,gene_class	2	64gb	01:00:00	single
-knit	eda,fgt,deg_loss,cartesian_cells,cartesian_reads,compose,xgb_select,xgb_shap,xgb_post,gene_class,tables,supp_data,paper_values	4	32gb	04:00:00	single
 ad_shard	shard	8	64gb	04:00:00	single
 ad_gt_manifest	ad_shard	8	96gb	12:00:00	single
 ad_grid	ad_shard,ad_gt_manifest	24	200gb	24:00:00	array:adgrid
 ad_cartesian	ad_grid	24	200gb	12:00:00	single
 ad_de	shard,ad_shard	12	200gb	12:00:00	single
+paper_values	eda,tables,deg_loss,crossscore,pcf_aggregate,xgb_select,xgb_post,gene_class,ad_de	2	64gb	01:00:00	single
+knit	eda,fgt,deg_loss,cartesian_cells,cartesian_reads,compose,xgb_select,xgb_shap,xgb_post,gene_class,tables,supp_data,paper_values	4	32gb	04:00:00	single
 finalise	knit,ad_cartesian,ad_de	1	4gb	01:00:00	single
