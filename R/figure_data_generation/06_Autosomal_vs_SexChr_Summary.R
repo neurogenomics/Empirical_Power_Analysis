@@ -1,7 +1,8 @@
 # ==============================================================================
 # STEP 06: Autosomal vs Sex-Chromosome Truth Gene Properties
 # ==============================================================================
-# Diagnostic: are autosomal truth genes lower-expressed (baseMean) or more
+# Diagnostic: are autosomal truth genes lower-count (median raw pseudobulk
+# count, stored as baseMean) or more
 # variable (dispersion) than sex chromosome truth genes, within the same
 # |LFC| bin?
 #
@@ -13,7 +14,8 @@
 # Inputs:
 #   - Datalink/Power_Curve_Fitting/GT_DDS_Checkpoints/{CellType}/GT_DDS_Run_*.qs
 #     (produced by power_curve_fitting/00_Generate_GT_DDS_Checkpoints.R)
-#   - Datalink/Full_Ground_Truth/{CellType}/Roussos_DE_results.csv
+#   - Datalink/Full_Ground_Truth/{CellType}/Roussos_DE_results.csv and
+#     Roussos_dds_checkpoint.qs (full-cohort DESeq2 object, raw counts)
 #     (produced by full_ground_truth/01_Run_DE_All_Datasets.R)
 #   - Datalink/Full_Ground_Truth/gene_audit_biomart_cache.csv
 #     (produced by full_ground_truth/04_Gene_Audit_Matrix.R)
@@ -125,6 +127,17 @@ for (ct in cell_types) {
   de$chr_group <- unname(chr_lookup[de$gene])
   de$chr_group[is.na(de$chr_group)] <- "Unannotated"
   de$bin <- bin_lfc(de$log2FoldChange)
+
+  # Gene counts = median raw pseudobulk count across all full-cohort donors (the
+  # Methods definition and the power-model feature), replacing the DESeq2
+  # normalised mean. The column keeps the name baseMean so downstream readers
+  # are unchanged. Genes with a median of 0 are dropped by the baseMean > 0
+  # filter below (Chris, 2026-11-09).
+  fdds <- qs::qread(file.path(de_results_dir, ct, "Roussos_dds_checkpoint.qs"))
+  mr <- matrixStats::rowMedians(as.matrix(DESeq2::counts(fdds, normalized = FALSE)))
+  names(mr) <- rownames(fdds)
+  rm(fdds); gc()
+  de$baseMean <- unname(mr[de$gene])
 
   # Pool dispersions across all runs (median per gene for stability).
   disp_list <- list()

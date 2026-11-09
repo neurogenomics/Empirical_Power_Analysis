@@ -165,6 +165,11 @@ for (ct in names(cts)) {
       donor_floor(filter(grid, bin == "Large", cell_type == ct), "mean_precision", 0.9), "donors",
       sprintf("Smallest donor count D such that large-effect (|LFC| > 3) precision is above 0.90 at every design with >= D donors; %s, method-pooled, cells mode, all truth genes", ct), src)
 }
+for (ct in names(cts)) {
+  add(paste0("precision_large_floor_80_", cts[[ct]]),
+      donor_floor(filter(grid, bin == "Large", cell_type == ct), "mean_precision", 0.8), "donors",
+      sprintf("Smallest donor count D such that large-effect (|LFC| > 3) precision is above 0.80 at every design with >= D donors; %s, method-pooled, cells mode, all truth genes", ct), src)
+}
 add("precision_large_floor_90_all",
     donor_floor(filter(grid, bin == "Large"), "mean_precision", 0.9), "donors",
     "Smallest donor count D such that large-effect (|LFC| > 3) precision is above 0.90 at every design with >= D donors in all three cell types; method-pooled, cells mode, all truth genes", src)
@@ -182,33 +187,52 @@ add("precision_tiny_reaches_80_all", as.numeric(any(tny$mean_precision >= 0.8, n
 add("precision_tiny_n_cells_80_oligo", sum(g_oligo("Tiny")$mean_precision >= 0.8, na.rm = TRUE), "grid cells",
     paste("Number of tiny-effect grid cells with precision >= 0.80;", GRID_DEF), src)
 
-# --- 5. Depth / cell-count equalisation (astrocytes, |LFC| > 0.2) -------------
+# --- 5. Depth / cell-count equalisation (astrocytes and oligodendrocytes) -----
+# Unsuffixed keys are astrocytes (the original text); *_oligo keys are the
+# oligodendrocyte rows of the same table. Both are equalised to microglia.
 src <- "Depth_Eq_DEG_Loss/deg_loss_table.csv"
-dt <- rd(src)
-if ("Cell type" %in% names(dt)) dt <- dt[dt[["Cell type"]] == "Astrocytes", ]
-pct_of_native <- function(config, column) {
-  s <- dt[dt$Configuration == config, column]
-  stopifnot(length(s) == 1)
-  as.numeric(sub(".*\\(([0-9.]+)%\\).*", "\\1", s))
+dt_all <- rd(src)
+eq_cts <- c(Astrocytes = "", Oligodendrocytes = "_oligo")
+eq_cfgs <- c(depth_eq = "Depth-equalised", cell_eq = "Cell-count-equalised",
+             full_eq = "Depth + cell equalised")
+eq_cfg_txt <- c(depth_eq = "depth (UMI-per-cell) equalisation",
+                cell_eq = "cell-count equalisation",
+                full_eq = "depth + cell-count equalisation")
+for (ct_name in names(eq_cts)) {
+  dt <- dt_all[dt_all[["Cell type"]] == ct_name, ]
+  pct_of_native <- function(config, column) {
+    s <- dt[dt$Configuration == config, column]
+    stopifnot(length(s) == 1)
+    as.numeric(sub(".*\\(([0-9.]+)%\\).*", "\\1", s))
+  }
+  sfx <- eq_cts[[ct_name]]
+  ct_lc <- tolower(ct_name)
+  for (m in c("DESeq2", "edgeR")) {
+    add(paste0("deg_loss_pct_full_eq_", tolower(m), sfx),
+        100 - pct_of_native("Depth + cell equalised", sprintf("%s (|LFC| > 0.2)", m)), "percent",
+        sprintf("%s truth DEGs (|LFC| > 0.2) lost under depth + cell-count equalisation to microglia, %s, %% of native", ct_lc, m), src)
+    for (cf in c("depth_eq", "cell_eq")) {
+      add(paste0("deg_retained_pct_", cf, "_", tolower(m), sfx),
+          pct_of_native(eq_cfgs[[cf]], sprintf("%s (|LFC| > 0.2)", m)), "percent",
+          sprintf("%s truth DEGs (|LFC| > 0.2) retained under %s to microglia alone, %s, %% of native", ct_lc, eq_cfg_txt[[cf]], m), src)
+    }
+  }
+  for (cf in names(eq_cfgs)) {
+    add(paste0("deg_limma_pct_native_", cf, sfx), pct_of_native(eq_cfgs[[cf]], "limma (|LFC| > 0.2)"), "percent",
+        sprintf("limma-voom %s truth DEGs (|LFC| > 0.2) under %s to microglia, %% of native", ct_lc, eq_cfg_txt[[cf]]), src)
+  }
 }
-for (m in c("DESeq2", "edgeR")) {
-  add(paste0("deg_loss_pct_full_eq_", tolower(m)),
-      100 - pct_of_native("Depth + cell equalised", sprintf("%s (|LFC| > 0.2)", m)), "percent",
-      sprintf("Astrocyte truth DEGs (|LFC| > 0.2) lost under depth + cell-count equalisation, %s, %% of native", m), src)
-}
-add("deg_limma_pct_native_cell_eq", pct_of_native("Cell-count-equalised", "limma (|LFC| > 0.2)"), "percent",
-    "limma-voom astrocyte truth DEGs (|LFC| > 0.2) under cell-count equalisation, % of native", src)
-add("deg_limma_pct_native_full_eq", pct_of_native("Depth + cell equalised", "limma (|LFC| > 0.2)"), "percent",
-    "limma-voom astrocyte truth DEGs (|LFC| > 0.2) under depth + cell-count equalisation, % of native", src)
 
 src <- "R/depth_equalization/config.R"
-cfg <- new.env()
 old <- Sys.getenv("DEPTH_EQ_CELL_TYPE", unset = NA)
-Sys.setenv(DEPTH_EQ_CELL_TYPE = "Astro")
-sys.source(project_path(src), envir = cfg)
+for (ct in c("Astro", "Oligo")) {
+  cfg <- new.env()
+  Sys.setenv(DEPTH_EQ_CELL_TYPE = ct)
+  sys.source(project_path(src), envir = cfg)
+  add(paste0("depth_eq_factor_", tolower(ct)), cfg$DOWNSAMPLE_FRACTION, "proportion",
+      sprintf("Multinomial downsampling fraction applied to %s UMIs (microglia mean / %s mean UMIs per cell)", ct, ct), src)
+}
 if (is.na(old)) Sys.unsetenv("DEPTH_EQ_CELL_TYPE") else Sys.setenv(DEPTH_EQ_CELL_TYPE = old)
-add("depth_eq_factor_astro", cfg$DOWNSAMPLE_FRACTION, "proportion",
-    "Multinomial downsampling fraction applied to astrocyte UMIs (microglia mean / astrocyte mean UMIs per cell)", src)
 
 # --- 6. XGBoost power model -----------------------------------------------------
 xgb <- "Power_Curve_Fitting/Models/xgboost"

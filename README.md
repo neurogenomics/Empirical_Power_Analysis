@@ -86,7 +86,6 @@ Supplementary figures are numbered by `_supp_fig_index.R`, the single source of 
 | Method-pooled precision heatmaps | `precision_heatmaps` | `Datalink/Cartesian_Downsampling/{Astro,Micro,Oligo}/Roussos/{cells,reads}/all_methods/Plots/Mean_Precision_Total.png` |
 | Method-pooled discrete recall heatmaps | `recall_discrete_heatmaps` | `Datalink/Cartesian_Downsampling/{Astro,Micro,Oligo}/Roussos/{cells,reads}/all_methods/Plots/Mean_Recall_Total.png` |
 | Chromosome-stratified recall (autosomal vs sex-chromosome) | `recall_chrom_stratified` | `Datalink/Cartesian_Downsampling/{Astro,Micro,Oligo}/Roussos/cells/all_methods/Plots/Mean_Recall_{Autosomal,SexChr}.png` |
-| DEG chromosome-distribution grid | `deg_chrom_distribution` | `Datalink/DE_Diagnostics/Chromosome_Grid/DEG_Chr_Grid_Combined.png` |
 | XGBoost SHAP dependence / violin (winner + reweighting configs) | `xgb_shap_dependence`, `xgb_shap_violin`, `xgb_shap_dependence_by_config` | `Datalink/Power_Curve_Fitting/Models/xgboost/shap_figures/{median,winner_alpha_0,winner_alpha_0.5,winner_alpha_1}/shap_{dependence,violin}.png` |
 
 ("Roussos" in paths is the lab's legacy name for the PsychAD cohort.)

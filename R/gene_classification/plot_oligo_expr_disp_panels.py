@@ -11,7 +11,11 @@
 #         (per column and |LFC|: genes, expressed genes, and % of expressed genes
 #         in each class; the numbers in the column headers, read by the text)
 #
-# Columns (x axis), ordered by the median mean expression of their expressed genes:
+# Genes with a median raw count of 0 (more than half the donors have no reads)
+# are dropped before anything else: they are not plotted, not counted in n, and
+# do not enter the column order or the % headers (Chris, 2026-11-09).
+#
+# Columns (x axis), ordered by the median gene count of their expressed genes:
 #   * seven Lambert TF families (DNA-binding domain) plus "Other TF" (all other
 #     TFs), purple; TFs not expressed in oligodendrocytes are grey points on a
 #     floor below the dotted line and are counted as "n.e." in the label;
@@ -186,6 +190,9 @@ def main():
     df["expressed"] = as_bool(df.expressed_in_oligo)
     df["is_tf"] = as_bool(df.is_tf_lambert)
     df["lof_intol"] = as_bool(df.lof_intol)
+    zero = df.expressed & ~(df.basemean > 0)
+    print(f"dropping {int(zero.sum())} genes with median raw count 0")
+    df = df[~zero]
     groups = build_groups(df)
     group_summary(groups).to_csv(os.path.join(GC_DIR, "oligo_gene_group_power_summary.csv"),
                                  index=False)
@@ -206,10 +213,6 @@ def main():
             if block == "A":
                 draw_panel(ax, groups, "basemean", tag, label, floor_y=3.3e-3, line_y=5e-3,
                            ylim=(1.4e-3, 1.3e5), ticks=[1e-1, 1e1, 1e3, 1e5])
-                ax.axhline(15, color="#888888", ls="--", lw=1.2, zorder=1)
-                if k == 0:
-                    ax.text(len(groups) - 0.55, 15 * 1.15, "mean expression 15 (approx. power floor)",
-                            ha="right", va="bottom", fontsize=9, color="#777777")
                 ax.set_ylabel("Gene counts\n(log)", fontsize=15)
             else:
                 draw_panel(ax, groups, "dispersion", tag, label, floor_y=0.5 * d_lo,

@@ -446,12 +446,6 @@ knitr::include_graphics(c(
 ))
 ```
 
-## Supplementary Fig. `r SF("deg_chrom_distribution")`. DEG chromosome distribution
-
-```{r SuppFig11-Chr-Distribution, out.width="99%", fig.cap="Chromosomal origin of sex-biased DEGs from the PsychAD full ground truth, stratified by |LFC| magnitude and chromosome type (autosomal, X, Y). Top row: counts by chromosome type and LFC bin (1.0-2.0, 2.0-3.0, >3.0) for astrocytes (left), microglia (centre), and oligodendrocytes (right). Bottom row: corresponding proportions. At |LFC| > 3.0, DEGs are predominantly Y-linked; at moderate LFC, autosomal contribution increases."}
-knitr::include_graphics("Datalink/DE_Diagnostics/Chromosome_Grid/DEG_Chr_Grid_Combined.png")
-```
-
 ## Supplementary Fig. `r SF("xgb_shap_violin")`. Distribution of covariate effects across the grid (SHAP violin)
 
 ```{r SuppFig-SHAP-Violin, out.width="99%", fig.cap="SHAP violin summarising the distribution of each covariate's contribution to predicted detection across the full realistic grid for the production XGBoost model. The spread of each violin is the sensitivity of predicted power to that covariate over its observed range: effect size (|LFC|), donor count, and gene counts carry the widest, most skewed distributions, whereas UMIs per cell, cell type, and DE method are tightly concentrated near zero. Replaces the archived logistic covariate sensitivity grid."}
@@ -651,7 +645,7 @@ knitr::kable(autosomal_vs_sexchr,
 
 ## Supplementary Table 3. DEG loss under depth and cell-count equalisation, across DE methods and |LFC| thresholds {#supp-table-3}
 
-Mean number of ground-truth sex-biased DEGs recovered in the PsychAD astrocyte truth set under a 2x2 grid of sequencing-depth and cell-count equalisation, computed independently for each of the three DE methods at two effect-size thresholds. Each cell reports the mean DEG count over 10 robustness runs (50% donor split) with, in parentheses, that count as a percentage of the native (full depth, full cells) count for the same method and threshold. "Depth-equalised" multinomially downsamples every astrocyte to microglia-equivalent UMIs per cell (factor `r val("depth_eq_factor_astro", digits = 4)`); "Cell-count-equalised" randomly subsamples each donor's astrocytes to microglia-equivalent cell counts at native depth; "Depth + cell equalised" applies both. At the strict |LFC| > 1 threshold all three methods behave consistently, losing DEGs monotonically as cells and depth are reduced. At the permissive |LFC| > 0.2 threshold DESeq2 and edgeR remain well behaved (roughly 55% of DEGs lost under full equalisation), but limma-voom becomes numerically unstable under cell downsampling, inflating its DEG count to several times the native value (327% and 525% of native). The contrast between the two thresholds is the reason limma-voom is excluded from the permissive-threshold analysis.
+Mean number of ground-truth sex-biased DEGs recovered in the PsychAD astrocyte and oligodendrocyte truth sets under a 2x2 grid of sequencing-depth and cell-count equalisation to microglia, computed independently for each cell type, each of the three DE methods and two effect-size thresholds. Each cell reports the mean DEG count over 10 robustness runs (50% donor split) with, in parentheses, that count as a percentage of the native (full depth, full cells) count for the same cell type, method and threshold. "Depth-equalised" multinomially downsamples every cell to microglia-equivalent UMIs per cell (factor `r val("depth_eq_factor_astro", digits = 4)` for astrocytes and `r val("depth_eq_factor_oligo", digits = 4)` for oligodendrocytes); "Cell-count-equalised" randomly subsamples each donor's cells to microglia-equivalent cell counts at native depth; "Depth + cell equalised" applies both. At the strict |LFC| > 1 threshold all three methods behave consistently in both cell types, losing DEGs as cells and depth are reduced, and losing the most when both are reduced. At the permissive |LFC| > 0.2 threshold DESeq2 and edgeR remain well behaved, losing `r val("deg_loss_pct_full_eq_deseq2", digits = 0)`% and `r val("deg_loss_pct_full_eq_edger", digits = 0)`% of astrocyte DEGs and `r val("deg_loss_pct_full_eq_deseq2_oligo", digits = 0)`% and `r val("deg_loss_pct_full_eq_edger_oligo", digits = 0)`% of oligodendrocyte DEGs under full equalisation, but limma-voom becomes numerically unstable. In astrocytes it inflates its DEG count under cell downsampling (`r val("deg_limma_pct_native_cell_eq", digits = 0)`% of native, and `r val("deg_limma_pct_native_full_eq", digits = 0)`% with depth equalisation as well); in oligodendrocytes it inflates under depth equalisation alone (`r val("deg_limma_pct_native_depth_eq_oligo", digits = 0)`%) but shrinks under cell downsampling (`r val("deg_limma_pct_native_cell_eq_oligo", digits = 0)`%, and `r val("deg_limma_pct_native_full_eq_oligo", digits = 0)`% with both). The contrast between the two thresholds is the reason limma-voom is excluded from the permissive-threshold analysis.
 
 ```{r supptable3-deg-loss, echo=FALSE}
 deg_loss_table <- read.csv(
@@ -660,9 +654,9 @@ deg_loss_table <- read.csv(
 )
 
 knitr::kable(deg_loss_table,
-             caption = "Mean ground-truth DEG count (percentage of native count) under depth and cell-count equalisation, by DE method and |LFC| threshold. limma-voom is numerically unstable at |LFC| > 0.2 under cell downsampling.",
+             caption = "Mean ground-truth DEG count (percentage of native count) under depth and cell-count equalisation to microglia, by cell type, DE method and |LFC| threshold. limma-voom is numerically unstable at |LFC| > 0.2.",
              row.names = FALSE,
-             align = c("l", rep("r", 6)))
+             align = c("l", "l", rep("r", 6)))
 ```
 
 ## Supplementary Table 4. Sex label validation by chromosomal marker expression {#supp-table-4}

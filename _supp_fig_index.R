@@ -73,7 +73,6 @@ supp_fig_keys <- c(
 
   # --- Not referenced from main text (kept; appended after referenced set) ---
   "recall_chrom_stratified",          # chromosome-stratified recall heatmaps
-  "deg_chrom_distribution",           # DEG chromosome distribution
   "xgb_shap_violin",                  # SHAP violin: covariate-effect distribution
   "xgb_shap_dependence_by_config"     # SHAP dependence across reweighting configs
 )

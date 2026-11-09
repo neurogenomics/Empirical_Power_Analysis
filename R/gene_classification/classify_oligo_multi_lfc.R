@@ -76,8 +76,11 @@ scorable <- is.finite(gene_df$basemean) & gene_df$basemean > 0 &
 message(sprintf("[multiLFC] %d genes (%d not expressed), %d scorable",
                 nrow(gene_df), sum(!gene_df$expressed_in_oligo), sum(scorable)))
 
+# Unscorable genes (median raw count 0, or no dispersion) get NA, not
+# "Undetectable": they are left out of Figure 6 entirely (Chris, 2026-11-09).
 classify_trinary <- function(p) {
-  cls <- rep("Undetectable", length(p))
+  cls <- rep(NA_character_, length(p))
+  cls[!is.na(p) & p <= 0.4]           <- "Undetectable"
   cls[!is.na(p) & p > 0.4 & p <= 0.8] <- "Unsure"
   cls[!is.na(p) & p > 0.8]            <- "Detectable"
   cls
